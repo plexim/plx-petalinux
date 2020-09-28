@@ -1,0 +1,1 @@
+SUBSYSTEM=="input", ATTRS{name}=="amba:gpio-keys", SYMLINK+="input/by-id/display-buttons"

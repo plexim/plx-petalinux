@@ -1,0 +1,42 @@
+From 5e60c39a2ad683d0399d29014a0f4216b61c3dd4 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Fri, 22 Jun 2018 12:03:44 +0100
+Subject: [PATCH] SDEI: Fix name of internal function
+
+The function end_sdei_explicit_dispatch() was intended to be
+end_sdei_synchronous_dispatch() which does the opposite of
+begin_sdei_synchronous_dispatch(). This patch fixes that.
+
+No functional changes.
+
+Change-Id: I141bd91eb342ecf4ddfd05b49513eee4549e7a56
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_intr_mgmt.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index 264ab4435..a37188ac4 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -601,7 +601,7 @@ int sdei_dispatch_event(int ev_num)
+ 	return 0;
+ }
+ 
+-static void end_sdei_explicit_dispatch(struct jmpbuf *buffer)
++static void end_sdei_synchronous_dispatch(struct jmpbuf *buffer)
+ {
+ 	longjmp(buffer);
+ }
+@@ -679,7 +679,7 @@ int sdei_event_complete(int resume, uint64_t pc)
+ 	}
+ 
+ 	/* End the outstanding dispatch */
+-	end_sdei_explicit_dispatch(disp_ctx->dispatch_jmp);
++	end_sdei_synchronous_dispatch(disp_ctx->dispatch_jmp);
+ 
+ 	return 0;
+ }
+-- 
+2.21.1 (Apple Git-122.3)
+

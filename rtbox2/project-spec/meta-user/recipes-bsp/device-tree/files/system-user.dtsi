@@ -1,0 +1,726 @@
+/include/ "system-conf.dtsi"
+/ {
+	model = "Enlustra XU1 SOM";
+	compatible = "xlnx,zynqmp";
+
+	aliases {
+		ethernet0 = &gem0;
+		ethernet1 = &gem3;
+		ethernet2 = &gem1;
+		ethernet3 = &gem2;
+                mmc0 = &sdhci1;
+                mmc1 = &sdhci0;
+                spi0 = &qspi;
+	};
+
+	mdio0: mdio@ff0b0000 {
+		compatible = "cdns,macb-mdio";
+		reg = <0x0 0xff0b0000 0x0 0x1000>;
+		clocks = <&clk 45>, <&clk 45>, <&clk 49>;
+		clock-names = "pclk", "tx_clk", "hclk";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		phy7: ethernet-phy@7 {
+			reg = <7>;
+			txc-skew-ps = <1800>;
+			txen-skew-ps = <420>;
+			txd0-skew-ps = <420>;
+			txd1-skew-ps = <420>;
+			txd2-skew-ps = <420>;
+			txd3-skew-ps = <420>;
+			rxc-skew-ps = <900>;
+			rxdv-skew-ps = <420>;
+			rxd0-skew-ps = <420>;
+			rxd1-skew-ps = <420>;
+			rxd2-skew-ps = <420>;
+			rxd3-skew-ps = <420>;
+		};
+		phy3: ethernet-phy@3 {
+			reg = <3>;
+			txc-skew-ps = <1800>;
+			txen-skew-ps = <420>;
+			txd0-skew-ps = <420>;
+			txd1-skew-ps = <420>;
+			txd2-skew-ps = <420>;
+			txd3-skew-ps = <420>;
+			rxc-skew-ps = <900>;
+			rxdv-skew-ps = <420>;
+			rxd0-skew-ps = <420>;
+			rxd1-skew-ps = <420>;
+			rxd2-skew-ps = <420>;
+			rxd3-skew-ps = <420>;
+		};
+	};
+
+	mdio1: mdio@ff0c0000 {
+		compatible = "cdns,macb-mdio";
+		reg = <0x0 0xff0c0000 0x0 0x1000>;
+		clocks = <&clk 45>, <&clk 45>, <&clk 49>;
+		clock-names = "pclk", "tx_clk", "hclk";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		phy9: ethernet-phy@9 {
+			reg = <9>;
+			xlnx,phy-type = <4>;
+		};
+/*
+		phy12_1: ethernet-phy@12 {
+			reg = <12>;
+	                ti,rx-internal-delay = <0x8>;
+	                ti,tx-internal-delay = <0xa>;
+	                ti,fifo-depth = <0x1>;
+		};
+*/
+	};
+	mdio2: mdio@ff0d0000 {
+		compatible = "cdns,macb-mdio";
+		reg = <0x0 0xff0d0000 0x0 0x1000>;
+		clocks = <&clk 45>, <&clk 45>, <&clk 49>;
+		clock-names = "pclk", "tx_clk", "hclk";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		phy10: ethernet-phy@10 {
+			reg = <10>;
+			xlnx,phy-type = <4>;
+		};
+/*
+		phy12_2: ethernet-phy@12 {
+			reg = <12>;
+	                ti,rx-internal-delay = <0x8>;
+	                ti,tx-internal-delay = <0xa>;
+	                ti,fifo-depth = <0x1>;
+		};
+*/
+	};
+};
+
+&gem0 {
+	/* phy-mode = "rgmii-id"; */
+	phy-handle = <&phy3>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gem0_default>;
+};
+
+&gem1 {
+	phy-mode = "rgmii-id";
+	phy-handle = <&phy9>;
+};
+
+&gem2 {
+	local-mac-address = [02 0a 35 00 02 92];
+	/* phy-mode = "rgmii-id"; */
+	phy-handle = <&phy10>;
+};
+
+&gem3 {
+	local-mac-address = [02 0a 35 00 02 91];
+	/* phy-mode = "rgmii-id"; */
+	phy-handle = <&phy7>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gem3_default>;
+};
+
+&uart1 {
+	status = "disabled";
+};
+
+&i2c0 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c0_default>;
+	pinctrl-1 = <&pinctrl_i2c0_gpio>;
+	scl-gpios = <&gpio 10 0>;
+	sda-gpios = <&gpio 11 0>;
+        max6650@48 {
+                compatible = "max6650";
+                reg = <0x48>;
+        };
+	ina3221@40 {
+		compatible = "ina3221";
+		reg = <0x40>;
+	};
+	atsha204a@64 {
+		compatible = "atmel,atsha204a";
+		reg = <0 0x64>;
+	};
+        gpio@74 {
+                compatible = "nxp,pca9539";
+                reg = <0x74 >;
+        };
+        ad0805@69 {
+                compatible = "abracon,ab0805";
+		abracon,tc-diode = "schottky";
+		abracon,tc-resistor = <6>;
+                reg = <0x69 >;
+        };
+        eeprom@52 {
+                compatible = "at,24c32";
+                reg = <0x52>;
+        };
+        i2c-switch@70 {
+                compatible = "nxp,pca9548";
+                reg = <0x70>;
+                i2c@0 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <0>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+                i2c@1 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <1>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+                i2c@2 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <2>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+                i2c@3 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <3>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+                i2c@4 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <4>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+                i2c@5 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <5>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+                i2c@6 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <6>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+                i2c@7 {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        reg = <7>;
+
+                        eeprom@50 {
+                                compatible = "at,24c02";
+                                reg = <0x50>;
+                        };
+                        eeprom@51 {
+                                compatible = "at,24c02";
+                                reg = <0x51>;
+                        };
+                };
+        };
+
+};
+
+&i2c1 {
+        status = "disabled";
+};
+
+&qspi {
+	is-dual = <0>;
+        bytemode = <0>;
+};
+
+&flash0 {
+		compatible = "s25fl512s";
+		reg = <0x0>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <4>;
+		spi-max-frequency = <50000000>;
+};
+
+&rtc {
+	status = "okay";
+};
+
+&sata {
+	phy-names = "sata-phy";
+	phys = <&lane0 1 0 0 150000000>;
+	/delete-property/iommus;
+};
+
+/* SD1 with level shifter */
+&sdhci1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sdhci1_default>;
+	xlnx,mio_bank = <1>;
+        nvmem-cells = <&soc_revision>;
+	nvmem-cell-names = "soc_revision";
+	no-1-8-v;
+};
+
+&sdhci0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sdhci0_default>;
+	non-removable;
+	disable-wp;
+        xlnx,mio_bank = <0x0>;
+	nvmem-cells = <&soc_revision>;
+	nvmem-cell-names = "soc_revision";
+	no-1-8-v;
+	is_emmc;
+};
+
+&serdes {
+	status = "okay";
+};
+
+/* ULPI SMSC USB3320 */
+&usb0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usb0_default>;
+};
+
+&usb1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usb1_default>;
+};
+
+&dwc3_0 {
+	status = "okay";
+	dr_mode = "host";
+	snps,usb3_lpm_capable;
+	phy-names = "usb3-phy";
+	phys = <&lane1 4 0 2 100000000>;
+};
+
+&dwc3_1 {
+	dr_mode = "host";
+	interrupts = <0 70 4>, <0 74 4>, <0 76 4>;
+	maximum-speed = "high-speed";
+};
+
+&cpu_opp_table {
+	opp00 {
+		opp-hz = /bits/ 64 <1499999985>;
+		opp-microvolt = <1000000>;
+		clock-latency-ns = <500000>;
+	};
+
+	opp01 {
+		opp-hz = /bits/ 64 <799999983>;
+		opp-microvolt = <1000000>;
+		clock-latency-ns = <500000>;
+	};
+
+	opp02 {
+		opp-hz = /bits/ 64 <499999995>;
+		opp-microvolt = <1000000>;
+		clock-latency-ns = <500000>;
+	};
+
+	opp03 {
+		opp-hz = /bits/ 64 <379999996>;
+		opp-microvolt = <1000000>;
+		clock-latency-ns = <500000>;
+	};
+
+	opp04 {
+		opp-hz = /bits/ 64 <299999997>;
+		opp-microvolt = <1000000>;
+		clock-latency-ns = <500000>;
+	};
+};
+
+&SFP_axi_gpio_0 {
+	status = "disabled";
+};
+
+&Version_axi_gpio_0 {
+	status = "disabled";
+};
+
+&pinctrl0 {
+	status = "okay";
+
+	pinctrl_i2c0_default: i2c0-default {
+		mux {
+			groups = "i2c0_2_grp";
+			function = "i2c0";
+		};
+
+		conf {
+			groups = "i2c0_2_grp";
+			bias-pull-up;
+			slew-rate = <1>;
+			io-standard = <1>;
+		};
+	};
+
+	pinctrl_i2c0_gpio: i2c0-gpio {
+		mux {
+			groups = "gpio0_10_grp", "gpio0_11_grp";
+			function = "gpio0";
+		};
+
+		conf {
+			groups = "gpio0_10_grp", "gpio0_11_grp";
+			slew-rate = <1>;
+			io-standard = <1>;
+		};
+	};
+
+
+	pinctrl_usb0_default: usb0-default {
+		mux {
+			groups = "usb0_0_grp";
+			function = "usb0";
+		};
+
+		conf {
+			groups = "usb0_0_grp";
+			slew-rate = <1>;
+			io-standard = <1>;
+		};
+
+		conf-rx {
+			pins = "MIO52", "MIO53", "MIO55";
+			bias-high-impedance;
+		};
+
+		conf-tx {
+			pins = "MIO54", "MIO56", "MIO57", "MIO58", "MIO59",
+				   "MIO60", "MIO61", "MIO62", "MIO63";
+			bias-disable;
+		};
+	};
+
+	pinctrl_usb1_default: usb1-default {
+		mux {
+			groups = "usb1_0_grp";
+			function = "usb1";
+		};
+
+		conf {
+			groups = "usb1_0_grp";
+			slew-rate = <1>;
+			io-standard = <1>;
+		};
+
+		conf-rx {
+			pins = "MIO64", "MIO65", "MIO66";
+			bias-high-impedance;
+		};
+
+		conf-tx {
+			pins = "MIO67", "MIO68", "MIO69", "MIO70", "MIO71",
+				   "MIO72", "MIO73", "MIO74", "MIO75";
+			bias-disable;
+		};
+		conf-phy-reset {
+			pins = "MIO23";
+			bias-high-impedance;
+		};
+	};
+
+	pinctrl_gem3_default: gem3-default {
+		mux {
+			function = "ethernet3";
+			groups = "ethernet3_0_grp";
+		};
+
+		conf {
+			groups = "ethernet3_0_grp";
+			slew-rate = <1>;
+			io-standard = <1>;
+		};
+
+		conf-rx {
+			pins = "MIO70", "MIO71", "MIO72", "MIO73", "MIO74",
+									"MIO75";
+			bias-high-impedance;
+			low-power-disable;
+		};
+
+		conf-tx {
+			pins = "MIO64", "MIO65", "MIO66", "MIO67", "MIO68",
+									"MIO69";
+			bias-disable;
+			low-power-enable;
+		};
+	};
+
+	pinctrl_gem0_default: gem0-default {
+		mux {
+			function = "ethernet0";
+			groups = "ethernet0_0_grp";
+		};
+
+		conf {
+			groups = "ethernet0_0_grp";
+			slew-rate = <1>;
+			io-standard = <1>;
+		};
+
+		conf-rx {
+			pins = "MIO32", "MIO33", "MIO34", "MIO35", "MIO36",
+									"MIO37";
+			bias-high-impedance;
+			low-power-disable;
+		};
+
+		conf-tx {
+			pins = "MIO26", "MIO27", "MIO28", "MIO29", "MIO30",
+									"MIO31";
+			bias-disable;
+			low-power-enable;
+		};
+	};
+
+	pinctrl_sdhci0_default: sdhci0-default {
+		mux {
+			groups = "sdio0_0_grp";
+			function = "sdio0";
+		};
+
+		conf {
+			groups = "sdio0_0_grp";
+			slew-rate = <1>;
+			io-standard = <1>;
+			bias-disable;
+		};
+	};
+
+	pinctrl_sdhci1_default: sdhci1-default {
+		mux {
+			groups = "sdio1_2_grp";
+			function = "sdio1";
+		};
+
+		conf {
+			groups = "sdio1_2_grp";
+			slew-rate = <1>;
+			io-standard = <1>;
+			bias-disable;
+		};
+
+		mux-cd {
+			groups = "sdio1_cd_0_grp";
+			function = "sdio1_cd";
+		};
+
+		conf-cd {
+			groups = "sdio1_cd_0_grp";
+			bias-high-impedance;
+			bias-pull-up;
+			slew-rate = <1>;
+			io-standard = <1>;
+		};
+
+	};
+};
+
+
+/ {
+	/* 
+	 * Memory region reserved for:
+	 * -- R5 firmware; 
+	 * -- A53-R5 shared memory buffer.
+	 */
+        reserved-memory {
+                #address-cells = <2>;
+                #size-cells = <2>;
+                ranges;
+                rproc_reserved_0: rproc@3e000000 {
+                        no-map;
+                        reg = <0x0 0x3e000000 0x0 0x2000000>;
+                };
+		reserved: buffer@40000000 {
+			no-map;
+			reg = <0x0 0x40000000 0x0 0x00400000>;
+		};
+        };
+	reserved-driver@40000000 {
+		compatible = "xlnx,reserved-memory";
+		memory-region = <&reserved>;
+	};
+	/*
+	 * Entries used by libmetal to access:
+	 * -- shared memory buffer;
+	 * -- inter-processor interrupt registers.
+	 */	
+        amba {
+                /*
+                vring: vring@0 {
+                        compatible = "vring_uio";
+                        reg = <0x0 0x3ed40000 0x0 0x40000>;
+                };
+                */
+
+                shm0: shm@0 {
+                        compatible = "shm_uio";
+                        reg = <0x0 0x3f000000 0x0 0x1000000>;
+                };
+
+                ipi0: ipi@0 {
+                        compatible = "ipi_uio";
+                        reg = <0x0 0xff340000 0x0 0x1000>;
+                        interrupt-parent = <&gic>;
+                        interrupts = <0 29 4>;
+                };
+        };
+};
+
+
+
+/* zynqmp-r5-remoteproc driver. */
+
+/{
+       power-domains {
+                pd_r5_0: pd_r5_0 {
+                        #power-domain-cells = <0x0>;
+                        pd-id = <0x7>;
+                };
+                pd_tcm_0_a: pd_tcm_0_a {
+                        #power-domain-cells = <0x0>;
+                        pd-id = <0xf>;
+                };
+                pd_tcm_0_b: pd_tcm_0_b {
+                        #power-domain-cells = <0x0>;
+                        pd-id = <0x10>;
+                };
+        };
+
+        amba {
+                r5_0_tcm_a: tcm@ffe00000 {
+                        compatible = "mmio-sram";
+                        reg = <0x0 0xFFE00000 0x0 0x10000>;
+                        pd-handle = <&pd_tcm_0_a>;
+                };
+                r5_0_tcm_b: tcm@ffe20000 {
+                        compatible = "mmio-sram";
+                        reg = <0x0 0xFFE20000 0x0 0x10000>;
+                        pd-handle = <&pd_tcm_0_b>;
+                };
+                elf_ddr_0: ddr@3ed00000 {
+                        compatible = "mmio-sram";
+                        reg = <0x0 0x3e000000 0x0 0x1000000>;
+                };
+                test_r5_0: zynqmp_r5_rproc@0 {
+                        compatible = "xlnx,zynqmp-r5-remoteproc-1.0";
+                        reg = <0x0 0xff9a0100 0x0 0x100>,
+                              /* <0x0 0xff340000 0x0 0x100>, */
+                              <0x0 0xff9a0000 0x0 0x100>;
+                        reg-names = "rpu_base",
+                                    /* "ipi", */
+                                    "rpu_glbl_base";
+                        dma-ranges;
+                        core_conf = "split0";
+                        srams = <&r5_0_tcm_a &r5_0_tcm_b &elf_ddr_0>;
+                        pd-handle = <&pd_r5_0>;
+                        /*
+			interrupt-parent = <&gic>;
+                        interrupts = <0 29 4>;
+			*/
+                };
+        };
+};
+
+
+/* 
+ * Bind the display buttons to the 'gpio-keys' driver.
+ */
+
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/gpio/gpio.h>
+&amba {
+        gpio-keys {
+                compatible = "gpio-keys";
+                #address-cells = <1>;
+                #size-cells = <0>;
+                autorepeat;
+
+                display-button-back {
+                        label = "display-button-back";
+                        gpios = <&gpio 39 GPIO_ACTIVE_LOW>;
+                        linux,input-type = <EV_KEY>;
+                        linux,code = <KEY_BACKSPACE>;
+                };
+
+                display-button-enter {
+                        label = "display-button-enter";
+                        gpios = <&gpio 38 GPIO_ACTIVE_LOW>;
+                        linux,input-type = <EV_KEY>;
+                        linux,code = <KEY_ENTER>;
+                };
+
+                display-button-up {
+                        label = "display-button-up";
+                        gpios = <&gpio 41 GPIO_ACTIVE_LOW>;
+                        linux,input-type = <EV_KEY>;
+                        linux,code = <KEY_UP>;
+                };
+
+                display-button-down {
+                        label = "display-button-down";
+                        gpios = <&gpio 40 GPIO_ACTIVE_LOW>;
+                        linux,input-type = <EV_KEY>;
+                        linux,code = <KEY_DOWN>;
+                };
+        };
+};
+

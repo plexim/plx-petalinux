@@ -1,0 +1,31 @@
+From a8778dd53ce3b44204b1ef7f12a0f2ec39d3980a Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Fri, 22 Jun 2018 12:00:20 +0100
+Subject: [PATCH] SDEI: Fix determining client EL
+
+commit 2ccfcb2ea555eb86122e7780010cc50fcee08f54 ("SDEI: Determine client
+EL from NS context's SCR_EL3") intended to read from SCR_EL3, but
+wrongly read from SPSR_EL3 instead. This patch fixes that.
+
+Change-Id: I8ffea39cc98ef59cb8e7a4c6ef4cb12011c58536
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_private.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/services/std_svc/sdei/sdei_private.h b/services/std_svc/sdei/sdei_private.h
+index ea602878b..874fc22db 100644
+--- a/services/std_svc/sdei/sdei_private.h
++++ b/services/std_svc/sdei/sdei_private.h
+@@ -164,7 +164,7 @@ static inline unsigned int sdei_client_el(void)
+ 	cpu_context_t *ns_ctx = cm_get_context(NON_SECURE);
+ 	el3_state_t *el3_ctx = get_el3state_ctx(ns_ctx);
+ 
+-	return read_ctx_reg(el3_ctx, CTX_SPSR_EL3) & SCR_HCE_BIT ? MODE_EL2 :
++	return read_ctx_reg(el3_ctx, CTX_SCR_EL3) & SCR_HCE_BIT ? MODE_EL2 :
+ 		MODE_EL1;
+ }
+ 
+-- 
+2.21.1 (Apple Git-122.3)
+

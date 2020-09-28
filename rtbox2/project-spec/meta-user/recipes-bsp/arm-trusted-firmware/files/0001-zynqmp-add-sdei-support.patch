@@ -1,0 +1,178 @@
+From e79559b951a151d840162e32720600d44eb778f7 Mon Sep 17 00:00:00 2001
+From: Jan Kiszka <jan.kiszka@siemens.com>
+Date: Tue, 14 Jul 2020 22:36:59 +0200
+Subject: [PATCH] WIP: zynqmp: Add SDEI support
+
+Change-Id: I16db1549b048757c74b5b986466fbd55dd9c65c1
+---
+ plat/xilinx/zynqmp/include/platform_def.h | 27 ++++++++++++++-----
+ plat/xilinx/zynqmp/platform.mk            |  5 ++++
+ plat/xilinx/zynqmp/zynqmp_ehf.c           | 26 ++++++++++++++++++
+ plat/xilinx/zynqmp/zynqmp_sdei.c          | 44 +++++++++++++++++++++++++++++++
+ 4 files changed, 95 insertions(+), 7 deletions(-)
+ create mode 100644 plat/xilinx/zynqmp/zynqmp_ehf.c
+ create mode 100644 plat/xilinx/zynqmp/zynqmp_sdei.c
+
+diff --git a/plat/xilinx/zynqmp/include/platform_def.h b/plat/xilinx/zynqmp/include/platform_def.h
+index 27968409e..ad65e9539 100644
+--- a/plat/xilinx/zynqmp/include/platform_def.h
++++ b/plat/xilinx/zynqmp/include/platform_def.h
+@@ -36,8 +36,8 @@
+  * little space for growth.
+  */
+ #ifndef ZYNQMP_ATF_MEM_BASE
+-#if !DEBUG
+-# define BL31_BASE			0xfffea000
++#if !DEBUG && !defined(SDEI_SUPPORT)
++# define BL31_BASE			0xfffe7000
+ # define BL31_LIMIT			0xffffffff
+ #else
+ # define BL31_BASE			0x1000
+@@ -91,6 +91,21 @@
+ #define CACHE_WRITEBACK_SHIFT   6
+ #define CACHE_WRITEBACK_GRANULE (1 << CACHE_WRITEBACK_SHIFT)
+ 
++/* Platform macros to support exception handling framework */
++#define PLAT_PRI_BITS			U(3)
++#define PLAT_SDEI_CRITICAL_PRI		0x10
++#define PLAT_SDEI_NORMAL_PRI		0x20
++
++/* SDEI dynamic private event numbers */
++#define ZYNQMP_SDEI_DP_EVENT_0		U(100)
++#define ZYNQMP_SDEI_DP_EVENT_1		U(101)
++#define ZYNQMP_SDEI_DP_EVENT_2		U(102)
++
++/* SDEI dynamic shared event numbers */
++#define ZYNQMP_SDEI_DS_EVENT_0		U(200)
++#define ZYNQMP_SDEI_DS_EVENT_1		U(201)
++#define ZYNQMP_SDEI_DS_EVENT_2		U(202)
++
+ #define PLAT_ARM_GICD_BASE	BASE_GICD_BASE
+ #define PLAT_ARM_GICC_BASE	BASE_GICC_BASE
+ /*
+@@ -102,8 +117,6 @@
+ #define PLAT_ARM_G1S_IRQ_PROPS(grp) \
+ 	INTR_PROP_DESC(ARM_IRQ_SEC_PHY_TIMER, GIC_HIGHEST_SEC_PRIORITY, grp, \
+ 			GIC_INTR_CFG_LEVEL), \
+-	INTR_PROP_DESC(ARM_IRQ_SEC_SGI_0, GIC_HIGHEST_SEC_PRIORITY, grp, \
+-			GIC_INTR_CFG_EDGE), \
+ 	INTR_PROP_DESC(ARM_IRQ_SEC_SGI_1, GIC_HIGHEST_SEC_PRIORITY, grp, \
+ 			GIC_INTR_CFG_EDGE), \
+ 	INTR_PROP_DESC(ARM_IRQ_SEC_SGI_2, GIC_HIGHEST_SEC_PRIORITY, grp, \
+@@ -124,8 +137,6 @@
+ 			GIC_INTR_CFG_LEVEL), \
+ 	INTR_PROP_DESC(IRQ_TTC3_1, GIC_HIGHEST_SEC_PRIORITY, grp, \
+ 			GIC_INTR_CFG_EDGE), \
+-	INTR_PROP_DESC(ARM_IRQ_SEC_SGI_0, GIC_HIGHEST_SEC_PRIORITY, grp, \
+-			GIC_INTR_CFG_EDGE), \
+ 	INTR_PROP_DESC(ARM_IRQ_SEC_SGI_1, GIC_HIGHEST_SEC_PRIORITY, grp, \
+ 			GIC_INTR_CFG_EDGE), \
+ 	INTR_PROP_DESC(ARM_IRQ_SEC_SGI_2, GIC_HIGHEST_SEC_PRIORITY, grp, \
+@@ -142,6 +153,8 @@
+ 			GIC_INTR_CFG_EDGE)
+ #endif
+ 
+-#define PLAT_ARM_G0_IRQ_PROPS(grp)
++#define PLAT_ARM_G0_IRQ_PROPS(grp) \
++	INTR_PROP_DESC(ARM_IRQ_SEC_SGI_0, PLAT_SDEI_NORMAL_PRI,	grp, \
++			GIC_INTR_CFG_EDGE)
+ 
+ #endif /* PLATFORM_DEF_H */
+diff --git a/plat/xilinx/zynqmp/platform.mk b/plat/xilinx/zynqmp/platform.mk
+index 44f20f69f..c9c0a3989 100644
+--- a/plat/xilinx/zynqmp/platform.mk
++++ b/plat/xilinx/zynqmp/platform.mk
+@@ -88,6 +91,8 @@ BL31_SOURCES		+=	drivers/arm/cci/cci.c				\
+ 				plat/xilinx/zynqmp/plat_topology.c		\
+ 				plat/xilinx/zynqmp/sip_svc_setup.c		\
+ 				plat/xilinx/zynqmp/zynqmp_ipi.c		\
++				plat/xilinx/zynqmp/zynqmp_ehf.c			\
++				plat/xilinx/zynqmp/zynqmp_sdei.c		\
+ 				plat/xilinx/zynqmp/pm_service/pm_svc_main.c	\
+ 				plat/xilinx/zynqmp/pm_service/pm_api_sys.c	\
+ 				plat/xilinx/zynqmp/pm_service/pm_api_pinctrl.c	\
+diff --git a/plat/xilinx/zynqmp/zynqmp_ehf.c b/plat/xilinx/zynqmp/zynqmp_ehf.c
+new file mode 100644
+index 000000000..cce01e5cd
+--- /dev/null
++++ b/plat/xilinx/zynqmp/zynqmp_ehf.c
+@@ -0,0 +1,26 @@
++/*
++ * Copyright (c) 2017-2019, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) Siemens AG, 2020
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++#include <platform_def.h>
++
++#include <ehf.h>
++
++/*
++ * Enumeration of priority levels on ARM platforms.
++ */
++ehf_pri_desc_t zynqmp_exceptions[] = {
++#if SDEI_SUPPORT
++	/* Critical priority SDEI */
++	EHF_PRI_DESC(PLAT_PRI_BITS, PLAT_SDEI_CRITICAL_PRI),
++
++	/* Normal priority SDEI */
++	EHF_PRI_DESC(PLAT_PRI_BITS, PLAT_SDEI_NORMAL_PRI),
++#endif
++};
++
++/* Plug in ARM exceptions to Exception Handling Framework. */
++EHF_REGISTER_PRIORITIES(zynqmp_exceptions, ARRAY_SIZE(zynqmp_exceptions), PLAT_PRI_BITS);
+diff --git a/plat/xilinx/zynqmp/zynqmp_sdei.c b/plat/xilinx/zynqmp/zynqmp_sdei.c
+new file mode 100644
+index 000000000..d9627179a
+--- /dev/null
++++ b/plat/xilinx/zynqmp/zynqmp_sdei.c
+@@ -0,0 +1,44 @@
++/*
++ * Copyright (c) 2017-2020, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) Siemens AG, 2020
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++/* SDEI configuration for ARM platforms */
++
++#include <ehf.h>
++#include <debug.h>
++#include <sdei.h>
++
++#include <platform.h>
++#include <platform_def.h>
++
++int arm_validate_ns_entrypoint(uintptr_t entrypoint)
++{
++	// FIXME: perform actual validation
++	return 0;
++}
++
++/* Private event mappings */
++static sdei_ev_map_t zynqmp_sdei_private[] = {
++      SDEI_DEFINE_EVENT_0(8),
++      SDEI_PRIVATE_EVENT(ZYNQMP_SDEI_DP_EVENT_0, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC),
++      SDEI_PRIVATE_EVENT(ZYNQMP_SDEI_DP_EVENT_1, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC),
++      SDEI_PRIVATE_EVENT(ZYNQMP_SDEI_DP_EVENT_2, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC),
++};
++
++/* Shared event mappings */
++static sdei_ev_map_t zynqmp_sdei_shared[] = {
++      SDEI_SHARED_EVENT(ZYNQMP_SDEI_DS_EVENT_0, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC),
++      SDEI_SHARED_EVENT(ZYNQMP_SDEI_DS_EVENT_1, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC),
++      SDEI_SHARED_EVENT(ZYNQMP_SDEI_DS_EVENT_2, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC),
++};
++
++void plat_sdei_setup(void)
++{
++	INFO("SDEI platform setup\n");
++}
++
++/* Export ARM SDEI events */
++REGISTER_SDEI_MAP(zynqmp_sdei_private, zynqmp_sdei_shared);
+-- 
+2.11.0
+

@@ -1,0 +1,25 @@
+From 81597dc1540f7d2129f063b105c4beb5cba46ba1 Mon Sep 17 00:00:00 2001
+From: Oliver Schwartz <Oliver.Schwartz@gmx.de>
+Date: Thu, 21 Nov 2019 14:12:36 +0100
+Subject: [PATCH] Allow normal access to mapped PCI shmem.
+
+---
+ drivers/uio/uio.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/uio/uio.c b/drivers/uio/uio.c
+index ff04b7f..bce5a14 100644
+--- a/drivers/uio/uio.c
++++ b/drivers/uio/uio.c
+@@ -656,7 +656,7 @@ static int uio_mmap_physical(struct vm_area_struct *vma)
+ 		return -EINVAL;
+ 
+ 	vma->vm_ops = &uio_physical_vm_ops;
+-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
++	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+ 
+ 	/*
+ 	 * We cannot use the vm_iomap_memory() helper here,
+-- 
+2.7.4
+

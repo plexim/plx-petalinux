@@ -1,0 +1,46 @@
+From f933b44bd6c35df1ee3685cbf8a88c3498116138 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Thu, 1 Feb 2018 08:05:36 +0000
+Subject: [PATCH] SDEI: Mask events after CPU wakeup
+
+The specification requires that, after wakeup from a CPU suspend, the
+dispatcher must mask all events on the CPU. This patch adds the feature
+to the SDEI dispatcher by subscribing to the PSCI suspend to power down
+event, and masking all events on the PE.
+
+Change-Id: I9fe1d1bc2a58379ba7bba953a8d8b275fc18902c
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_main.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/services/std_svc/sdei/sdei_main.c b/services/std_svc/sdei/sdei_main.c
+index 9b78d7fbc..990d02876 100644
+--- a/services/std_svc/sdei/sdei_main.c
++++ b/services/std_svc/sdei/sdei_main.c
+@@ -81,6 +81,15 @@ static void *sdei_cpu_on_init(const void *arg)
+ 	return NULL;
+ }
+ 
++/* CPU initialisation after wakeup from suspend */
++static void *sdei_cpu_wakeup_init(const void *arg)
++{
++	/* All PEs wake up with SDEI events masked */
++	sdei_pe_mask();
++
++	return 0;
++}
++
+ /* Initialise an SDEI class */
+ static void sdei_class_init(sdei_class_t class)
+ {
+@@ -1075,3 +1086,6 @@ uint64_t sdei_smc_handler(uint32_t smc_fid,
+ 
+ /* Subscribe to PSCI CPU on to initialize per-CPU SDEI configuration */
+ SUBSCRIBE_TO_EVENT(psci_cpu_on_finish, sdei_cpu_on_init);
++
++/* Subscribe to PSCI CPU suspend finisher for per-CPU configuration */
++SUBSCRIBE_TO_EVENT(psci_suspend_pwrdown_finish, sdei_cpu_wakeup_init);
+-- 
+2.21.1 (Apple Git-122.3)
+

@@ -1,0 +1,44 @@
+From 90a9213bfbb53366152f8030e4fc4b162c23ac04 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Thu, 11 Oct 2018 09:50:26 +0100
+Subject: [PATCH] SDEI: Unconditionally resume Secure if it was interrupted
+
+Secure world execution nearly always expect a controlled exit to
+Non-secure world. SDEI interrupts, although targets EL3, occur on behalf
+of Non-secure world, and may have higher priority than Secure world
+interrupts. Therefore they might preempt Secure execution, and yield
+execution to Non-secure SDEI handler. Upon completion of SDEI event
+handling (regardless of whether it's COPLETE or COMPLETE_AND_RESUME), we
+must resume Secure execution if it was preempted.
+
+Change-Id: I6edd991032588588427ba2fe6c3d7668f7080e3d
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_intr_mgmt.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index e834a2b90..fa778c04e 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -485,15 +485,14 @@ int sdei_intr_handler(uint32_t intr_raw, uint32_t flags, void *handle,
+ 	/*
+ 	 * We reach here when client completes the event.
+ 	 *
+-	 * If the cause of dispatch originally interrupted the Secure world, and
+-	 * if Non-secure world wasn't allowed to preempt Secure execution,
++	 * If the cause of dispatch originally interrupted the Secure world,
+ 	 * resume Secure.
+ 	 *
+ 	 * No need to save the Non-secure context ahead of a world switch: the
+ 	 * Non-secure context was fully saved before dispatch, and has been
+ 	 * returned to its pre-dispatch state.
+ 	 */
+-	if ((sec_state == SECURE) && (ehf_is_ns_preemption_allowed() == 0))
++	if (sec_state == SECURE)
+ 		restore_and_resume_secure_context();
+ 
+ 	/*
+-- 
+2.21.1 (Apple Git-122.3)
+

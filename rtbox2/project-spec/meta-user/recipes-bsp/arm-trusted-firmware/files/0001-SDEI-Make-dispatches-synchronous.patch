@@ -1,0 +1,552 @@
+From cdb6ac94ecb3c4caa784cd4d7580cf6252146196 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Fri, 16 Feb 2018 12:07:48 +0000
+Subject: [PATCH] SDEI: Make dispatches synchronous
+
+SDEI event dispatches currently only sets up the Non-secure context
+before returning to the caller. The actual dispatch only happens upon
+exiting EL3 next time.
+
+However, for various error handling scenarios, it's beneficial to have
+the dispatch happen synchronously. I.e. when receiving SDEI interrupt,
+or for a successful sdei_dispatch_event() call, the event handler is
+executed; and upon the event completion, dispatcher execution resumes
+after the point of dispatch. The jump primitives introduced in the
+earlier patch facilitates this feature.
+
+With this patch:
+
+  - SDEI interrupts and calls to sdei_dispatch_event prepares the NS
+    context for event dispatch, then sets a jump point, and immediately
+    exits EL3. This results in the client handler executing in
+    Non-secure.
+
+  - When the SDEI client completes the dispatched event, the SDEI
+    dispatcher does a longjmp to the jump pointer created earlier. For
+    the caller of the sdei_dispatch_event() in particular, this would
+    appear as if call returned successfully.
+
+The dynamic workaround for CVE_2018_3639 is slightly shifted around as
+part of related minor refactoring. It doesn't affect the workaround
+functionality.
+
+Documentation updated.
+
+NOTE: This breaks the semantics of the explicit dispatch API, and any
+exiting usages should be carefully reviewed.
+
+Change-Id: Ib9c876d27ea2af7fb22de49832e55a0da83da3f9
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ bl31/bl31.mk                              |   3 +-
+ docs/plantuml/sdei_explicit_dispatch.puml |  32 +++--
+ docs/plantuml/sdei_explicit_dispatch.svg  |   2 +-
+ docs/sdei.rst                             |  50 +++----
+ include/services/sdei.h                   |   2 +-
+ services/std_svc/sdei/sdei_dispatch.S     |  26 ++++
+ services/std_svc/sdei/sdei_intr_mgmt.c    | 160 ++++++++++++----------
+ services/std_svc/sdei/sdei_private.h      |   2 +
+ 8 files changed, 155 insertions(+), 122 deletions(-)
+ create mode 100644 services/std_svc/sdei/sdei_dispatch.S
+
+diff --git a/bl31/bl31.mk b/bl31/bl31.mk
+index 51a831245..307ddab69 100644
+--- a/bl31/bl31.mk
++++ b/bl31/bl31.mk
+@@ -42,7 +42,8 @@ ifeq (${SDEI_SUPPORT},1)
+ ifeq (${EL3_EXCEPTION_HANDLING},0)
+   $(error EL3_EXCEPTION_HANDLING must be 1 for SDEI support)
+ endif
+-BL31_SOURCES		+=	services/std_svc/sdei/sdei_event.c	\
++BL31_SOURCES		+=	services/std_svc/sdei/sdei_dispatch.S	\
++				services/std_svc/sdei/sdei_event.c	\
+ 				services/std_svc/sdei/sdei_intr_mgmt.c	\
+ 				services/std_svc/sdei/sdei_main.c	\
+ 				services/std_svc/sdei/sdei_state.c
+diff --git a/docs/plantuml/sdei_explicit_dispatch.puml b/docs/plantuml/sdei_explicit_dispatch.puml
+index c80fcd118..90ff23cce 100644
+--- a/docs/plantuml/sdei_explicit_dispatch.puml
++++ b/docs/plantuml/sdei_explicit_dispatch.puml
+@@ -1,5 +1,5 @@
+ /'
+- ' Copyright (c) 2017, ARM Limited and Contributors. All rights reserved.
++ ' Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+  '
+  ' SPDX-License-Identifier: BSD-3-Clause
+  '/
+@@ -9,7 +9,8 @@
+ autonumber "<b>[#]</b>"
+ participant "SDEI client" as EL2
+ participant EL3
+-participant "Secure Partition" as SP
++participant SDEI
++participant "RAS Driver" as RAS
+ 
+ activate EL2
+ EL2->EL3: **SDEI_EVENT_REGISTER**(ev, handler, ...)
+@@ -24,21 +25,26 @@ EL3->EL2: 1
+ EL3<--]: **CRITICAL EVENT**
+ activate EL3 #red
+ note over EL3: Critical event triage
+-EL3->SP: dispatch
+-activate SP #salmon
+-note over SP: Critical event handling
+-SP->EL3: done
+-deactivate SP
+-EL3-->EL3: sdei_dispatch_event(ev)
+-note over EL3: Prepare SDEI dispatch
+-EL3->EL2: dispatch
++EL3->RAS: dispatch to handle
++deactivate EL3
++activate RAS #salmon
++note over RAS: Critical event handling
++RAS-->SDEI: sdei_dispatch_event(ev)
++deactivate RAS
++activate SDEI #salmon
++note over SDEI: Prepare SDEI dispatch
++SDEI->EL2: dispatch
+ activate EL2 #salmon
+ note over EL2: SDEI handler
+-EL2->EL3: **SDEI_EVENT_COMPLETE()**
++EL2->SDEI: **SDEI_EVENT_COMPLETE()**
+ deactivate EL2
+-note over EL3: Complete SDEI dispatch
++note over SDEI: Complete SDEI dispatch
++SDEI-->RAS: return
++deactivate SDEI
++activate RAS #salmon
++RAS->EL3: error handling done
++deactivate RAS
+ EL3->EL2: resumes preempted execution
+-deactivate EL3
+ 
+ ... <<Normal execution resumes>> ...
+ 
+diff --git a/docs/plantuml/sdei_explicit_dispatch.svg b/docs/plantuml/sdei_explicit_dispatch.svg
+index 182df0af6..e12cae2fa 100644
+--- a/docs/plantuml/sdei_explicit_dispatch.svg
++++ b/docs/plantuml/sdei_explicit_dispatch.svg
+@@ -1 +1 @@
+-<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="767px" preserveAspectRatio="none" style="width:692px;height:767px;" version="1.1" viewBox="0 0 692 767" width="692px" zoomAndPan="magnify"><defs><filter height="300%" id="fueepysa066oi" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><rect fill="#FFFFFF" filter="url(#fueepysa066oi)" height="174.7969" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="48.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="66.5" y1="48.2969" y2="48.2969"/><rect fill="#FFFFFF" filter="url(#fueepysa066oi)" height="412.5938" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="263.8984" y2="676.4922"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="263.8984" y2="676.4922"/><rect fill="#FFFFFF" filter="url(#fueepysa066oi)" height="1" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="717.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="717.2969" y2="718.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="717.2969" y2="718.2969"/><rect fill="#FA8072" filter="url(#fueepysa066oi)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="61.5" y="531.8281"/><rect fill="#FF0000" filter="url(#fueepysa066oi)" height="383.4609" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="375.5" y="284.8984"/><rect fill="#FA8072" filter="url(#fueepysa066oi)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="588.5" y="353.1641"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="61" x2="61" y1="38.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="61" x2="61" y1="223.0938" y2="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="61" x2="61" y1="263.8984" y2="676.4922"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="61" x2="61" y1="676.4922" y2="717.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="61" x2="61" y1="717.2969" y2="727.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="380" x2="380" y1="38.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="380" x2="380" y1="223.0938" y2="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="380" x2="380" y1="263.8984" y2="676.4922"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="380" x2="380" y1="676.4922" y2="717.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="380" x2="380" y1="717.2969" y2="727.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="593" x2="593" y1="38.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="593" x2="593" y1="223.0938" y2="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="593" x2="593" y1="263.8984" y2="676.4922"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="593" x2="593" y1="676.4922" y2="717.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="593" x2="593" y1="717.2969" y2="727.2969"/><rect fill="#FEFECE" filter="url(#fueepysa066oi)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="87" x="16" y="3"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="73" x="23" y="22.9951">SDEI client</text><rect fill="#FEFECE" filter="url(#fueepysa066oi)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="87" x="16" y="726.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="73" x="23" y="746.292">SDEI client</text><rect fill="#FEFECE" filter="url(#fueepysa066oi)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="39" x="359" y="3"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="25" x="366" y="22.9951">EL3</text><rect fill="#FEFECE" filter="url(#fueepysa066oi)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="39" x="359" y="726.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="25" x="366" y="746.292">EL3</text><rect fill="#FEFECE" filter="url(#fueepysa066oi)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="123" x="530" y="3"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="109" x="537" y="22.9951">Secure Partition</text><rect fill="#FEFECE" filter="url(#fueepysa066oi)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="123" x="530" y="726.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="109" x="537" y="746.292">Secure Partition</text><rect fill="#FFFFFF" filter="url(#fueepysa066oi)" height="174.7969" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="48.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="66.5" y1="48.2969" y2="48.2969"/><rect fill="#FFFFFF" filter="url(#fueepysa066oi)" height="412.5938" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="263.8984" y2="676.4922"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="263.8984" y2="676.4922"/><rect fill="#FFFFFF" filter="url(#fueepysa066oi)" height="1" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="717.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="717.2969" y2="718.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="717.2969" y2="718.2969"/><rect fill="#FA8072" filter="url(#fueepysa066oi)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="61.5" y="531.8281"/><rect fill="#FF0000" filter="url(#fueepysa066oi)" height="383.4609" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="375.5" y="284.8984"/><rect fill="#FA8072" filter="url(#fueepysa066oi)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="588.5" y="353.1641"/><polygon fill="#A80036" points="368.5,65.2969,378.5,69.2969,368.5,73.2969,372.5,69.2969" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="374.5" y1="69.2969" y2="69.2969"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="73.5" y="64.3638">[1]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="164" x="98.5" y="64.3638">SDEI_EVENT_REGISTER</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="101" x="262.5" y="64.3638">(ev, handler, ...)</text><polygon fill="#A80036" points="77.5,94.4297,67.5,98.4297,77.5,102.4297,73.5,98.4297" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="98.4297" y2="98.4297"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="83.5" y="93.4966">[2]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="51" x="108.5" y="93.4966">success</text><polygon fill="#A80036" points="368.5,123.5625,378.5,127.5625,368.5,131.5625,372.5,127.5625" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="374.5" y1="127.5625" y2="127.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="73.5" y="122.6294">[3]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="151" x="98.5" y="122.6294">SDEI_EVENT_ENABLE</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="25" x="249.5" y="122.6294">(ev)</text><polygon fill="#A80036" points="77.5,152.6953,67.5,156.6953,77.5,160.6953,73.5,156.6953" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="156.6953" y2="156.6953"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="83.5" y="151.7622">[4]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="51" x="108.5" y="151.7622">success</text><polygon fill="#A80036" points="368.5,181.8281,378.5,185.8281,368.5,189.8281,372.5,185.8281" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="374.5" y1="185.8281" y2="185.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="73.5" y="180.895">[5]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="129" x="98.5" y="180.895">SDEI_PE_UNMASK</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="10" x="227.5" y="180.895">()</text><polygon fill="#A80036" points="77.5,210.9609,67.5,214.9609,77.5,218.9609,73.5,214.9609" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="214.9609" y2="214.9609"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="83.5" y="210.0278">[6]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="8" x="108.5" y="210.0278">1</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="142" x="256.5" y="247.3042">&lt;&lt;Business as usual&gt;&gt;</text><polygon fill="#A80036" points="396.5,280.8984,386.5,284.8984,396.5,288.8984,392.5,284.8984" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" x1="390.5" x2="680" y1="284.8984" y2="284.8984"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="402.5" y="279.9653">[7]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="116" x="427.5" y="279.9653">CRITICAL EVENT</text><polygon fill="#FBFB77" filter="url(#fueepysa066oi)" points="306,298.0313,306,323.0313,451,323.0313,451,308.0313,441,298.0313,306,298.0313" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="441" x2="441" y1="298.0313" y2="308.0313"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="451" x2="441" y1="308.0313" y2="308.0313"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="124" x="312" y="315.0981">Critical event triage</text><polygon fill="#A80036" points="576.5,349.1641,586.5,353.1641,576.5,357.1641,580.5,353.1641" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="385.5" x2="582.5" y1="353.1641" y2="353.1641"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="392.5" y="348.231">[8]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="54" x="417.5" y="348.231">dispatch</text><polygon fill="#FBFB77" filter="url(#fueepysa066oi)" points="510,366.2969,510,391.2969,672,391.2969,672,376.2969,662,366.2969,510,366.2969" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="662" x2="662" y1="366.2969" y2="376.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="672" x2="662" y1="376.2969" y2="376.2969"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="141" x="516" y="383.3638">Critical event handling</text><polygon fill="#A80036" points="396.5,417.4297,386.5,421.4297,396.5,425.4297,392.5,421.4297" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="390.5" x2="592.5" y1="421.4297" y2="421.4297"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="402.5" y="416.4966">[9]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="32" x="427.5" y="416.4966">done</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" x1="385.5" x2="427.5" y1="450.6953" y2="450.6953"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" x1="427.5" x2="427.5" y1="450.6953" y2="463.6953"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" x1="386.5" x2="427.5" y1="463.6953" y2="463.6953"/><polygon fill="#A80036" points="396.5,459.6953,386.5,463.6953,396.5,467.6953,392.5,463.6953" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="392.5" y="445.6294">[10]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="155" x="426.5" y="445.6294">sdei_dispatch_event(ev)</text><polygon fill="#FBFB77" filter="url(#fueepysa066oi)" points="297,476.6953,297,501.6953,460,501.6953,460,486.6953,450,476.6953,297,476.6953" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="450" x2="450" y1="476.6953" y2="486.6953"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="460" x2="450" y1="486.6953" y2="486.6953"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="142" x="303" y="493.7622">Prepare SDEI dispatch</text><polygon fill="#A80036" points="82.5,527.8281,72.5,531.8281,82.5,535.8281,78.5,531.8281" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="76.5" x2="374.5" y1="531.8281" y2="531.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="88.5" y="526.895">[11]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="54" x="122.5" y="526.895">dispatch</text><polygon fill="#FBFB77" filter="url(#fueepysa066oi)" points="8,544.9609,8,569.9609,111,569.9609,111,554.9609,101,544.9609,8,544.9609" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="101" x2="101" y1="544.9609" y2="554.9609"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="111" x2="101" y1="554.9609" y2="554.9609"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="82" x="14" y="562.0278">SDEI handler</text><polygon fill="#A80036" points="363.5,596.0938,373.5,600.0938,363.5,604.0938,367.5,600.0938" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="369.5" y1="600.0938" y2="600.0938"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="73.5" y="595.1606">[12]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="184" x="107.5" y="595.1606">SDEI_EVENT_COMPLETE()</text><polygon fill="#FBFB77" filter="url(#fueepysa066oi)" points="291,613.2266,291,638.2266,466,638.2266,466,623.2266,456,613.2266,291,613.2266" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="456" x2="456" y1="613.2266" y2="623.2266"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="466" x2="456" y1="623.2266" y2="623.2266"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="154" x="297" y="630.2935">Complete SDEI dispatch</text><polygon fill="#A80036" points="77.5,664.3594,67.5,668.3594,77.5,672.3594,73.5,668.3594" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="668.3594" y2="668.3594"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="83.5" y="663.4263">[13]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="197" x="117.5" y="663.4263">resumes preempted execution</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="190" x="232.5" y="700.7026">&lt;&lt;Normal execution resumes&gt;&gt;</text></g></svg>
+\ No newline at end of file
++<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="783px" preserveAspectRatio="none" style="width:745px;height:783px;" version="1.1" viewBox="0 0 745 783" width="745px" zoomAndPan="magnify"><defs><filter height="300%" id="f18zq03ani7xpz" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><rect fill="#FFFFFF" filter="url(#f18zq03ani7xpz)" height="174.7969" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="48.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="66.5" y1="48.2969" y2="48.2969"/><rect fill="#FFFFFF" filter="url(#f18zq03ani7xpz)" height="428.7266" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="263.8984" y2="692.625"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="263.8984" y2="692.625"/><rect fill="#FFFFFF" filter="url(#f18zq03ani7xpz)" height="1" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="733.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="733.4297" y2="734.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="733.4297" y2="734.4297"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="61.5" y="489.8281"/><rect fill="#FF0000" filter="url(#f18zq03ani7xpz)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="375.5" y="285.0313"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="204.7969" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="432" y="421.5625"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="641" y="353.2969"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="29.1328" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="641" y="626.3594"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="61" x2="61" y1="38.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="61" x2="61" y1="223.0938" y2="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="61" x2="61" y1="263.8984" y2="692.625"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="61" x2="61" y1="692.625" y2="733.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="61" x2="61" y1="733.4297" y2="743.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="380" x2="380" y1="38.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="380" x2="380" y1="223.0938" y2="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="380" x2="380" y1="263.8984" y2="692.625"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="380" x2="380" y1="692.625" y2="733.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="380" x2="380" y1="733.4297" y2="743.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="437" x2="437" y1="38.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="437" x2="437" y1="223.0938" y2="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="437" x2="437" y1="263.8984" y2="692.625"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="437" x2="437" y1="692.625" y2="733.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="437" x2="437" y1="733.4297" y2="743.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="646" x2="646" y1="38.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="646" x2="646" y1="223.0938" y2="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="646" x2="646" y1="263.8984" y2="692.625"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 1.0,4.0;" x1="646" x2="646" y1="692.625" y2="733.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="646" x2="646" y1="733.4297" y2="743.4297"/><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="87" x="16" y="3"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="73" x="23" y="22.9951">SDEI client</text><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="87" x="16" y="742.4297"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="73" x="23" y="762.4248">SDEI client</text><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="39" x="359" y="3"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="25" x="366" y="22.9951">EL3</text><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="39" x="359" y="742.4297"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="25" x="366" y="762.4248">EL3</text><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="46" x="412" y="3"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="32" x="419" y="22.9951">SDEI</text><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="46" x="412" y="742.4297"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="32" x="419" y="762.4248">SDEI</text><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="86" x="601" y="3"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="72" x="608" y="22.9951">RAS Driver</text><rect fill="#FEFECE" filter="url(#f18zq03ani7xpz)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="86" x="601" y="742.4297"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="72" x="608" y="762.4248">RAS Driver</text><rect fill="#FFFFFF" filter="url(#f18zq03ani7xpz)" height="174.7969" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="48.2969"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="48.2969" y2="223.0938"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="66.5" y1="48.2969" y2="48.2969"/><rect fill="#FFFFFF" filter="url(#f18zq03ani7xpz)" height="428.7266" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="263.8984"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="263.8984" y2="692.625"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="263.8984" y2="692.625"/><rect fill="#FFFFFF" filter="url(#f18zq03ani7xpz)" height="1" style="stroke: #FFFFFF; stroke-width: 1.0;" width="10" x="56.5" y="733.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="56.5" x2="56.5" y1="733.4297" y2="734.4297"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="66.5" y1="733.4297" y2="734.4297"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="61.5" y="489.8281"/><rect fill="#FF0000" filter="url(#f18zq03ani7xpz)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="375.5" y="285.0313"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="204.7969" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="432" y="421.5625"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="68.2656" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="641" y="353.2969"/><rect fill="#FA8072" filter="url(#f18zq03ani7xpz)" height="29.1328" style="stroke: #A80036; stroke-width: 1.0;" width="10" x="641" y="626.3594"/><polygon fill="#A80036" points="368.5,65.4297,378.5,69.4297,368.5,73.4297,372.5,69.4297" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="374.5" y1="69.4297" y2="69.4297"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="73.5" y="64.3638">[1]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="164" x="98.5" y="64.3638">SDEI_EVENT_REGISTER</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="101" x="262.5" y="64.3638">(ev, handler, ...)</text><polygon fill="#A80036" points="77.5,94.5625,67.5,98.5625,77.5,102.5625,73.5,98.5625" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="98.5625" y2="98.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="83.5" y="93.4966">[2]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="51" x="108.5" y="93.4966">success</text><polygon fill="#A80036" points="368.5,123.6953,378.5,127.6953,368.5,131.6953,372.5,127.6953" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="374.5" y1="127.6953" y2="127.6953"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="73.5" y="122.6294">[3]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="151" x="98.5" y="122.6294">SDEI_EVENT_ENABLE</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="25" x="249.5" y="122.6294">(ev)</text><polygon fill="#A80036" points="77.5,152.8281,67.5,156.8281,77.5,160.8281,73.5,156.8281" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="156.8281" y2="156.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="83.5" y="151.7622">[4]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="51" x="108.5" y="151.7622">success</text><polygon fill="#A80036" points="368.5,181.9609,378.5,185.9609,368.5,189.9609,372.5,185.9609" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="374.5" y1="185.9609" y2="185.9609"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="73.5" y="180.895">[5]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="129" x="98.5" y="180.895">SDEI_PE_UNMASK</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="10" x="227.5" y="180.895">()</text><polygon fill="#A80036" points="77.5,211.0938,67.5,215.0938,77.5,219.0938,73.5,215.0938" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="215.0938" y2="215.0938"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="83.5" y="210.0278">[6]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="8" x="108.5" y="210.0278">1</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="142" x="282.75" y="247.3042">&lt;&lt;Business as usual&gt;&gt;</text><polygon fill="#A80036" points="396.5,281.0313,386.5,285.0313,396.5,289.0313,392.5,285.0313" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" x1="390.5" x2="733" y1="285.0313" y2="285.0313"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="402.5" y="279.9653">[7]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="116" x="427.5" y="279.9653">CRITICAL EVENT</text><path d="M306,298.0313 L306,323.0313 L451,323.0313 L451,308.0313 L441,298.0313 L306,298.0313 " fill="#FBFB77" filter="url(#f18zq03ani7xpz)" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M441,298.0313 L441,308.0313 L451,308.0313 L441,298.0313 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="124" x="312" y="315.0981">Critical event triage</text><polygon fill="#A80036" points="629,349.2969,639,353.2969,629,357.2969,633,353.2969" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="380.5" x2="635" y1="353.2969" y2="353.2969"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="387.5" y="348.231">[8]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="118" x="412.5" y="348.231">dispatch to handle</text><path d="M563,366.2969 L563,391.2969 L725,391.2969 L725,376.2969 L715,366.2969 L563,366.2969 " fill="#FBFB77" filter="url(#f18zq03ani7xpz)" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M715,366.2969 L715,376.2969 L725,376.2969 L715,366.2969 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="141" x="569" y="383.3638">Critical event handling</text><polygon fill="#A80036" points="453,417.5625,443,421.5625,453,425.5625,449,421.5625" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" x1="447" x2="645" y1="421.5625" y2="421.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="21" x="459" y="416.4966">[9]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="155" x="484" y="416.4966">sdei_dispatch_event(ev)</text><path d="M353,434.5625 L353,459.5625 L516,459.5625 L516,444.5625 L506,434.5625 L353,434.5625 " fill="#FBFB77" filter="url(#f18zq03ani7xpz)" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M506,434.5625 L506,444.5625 L516,444.5625 L506,434.5625 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="142" x="359" y="451.6294">Prepare SDEI dispatch</text><polygon fill="#A80036" points="82.5,485.8281,72.5,489.8281,82.5,493.8281,78.5,489.8281" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="76.5" x2="431" y1="489.8281" y2="489.8281"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="88.5" y="484.7622">[10]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="54" x="122.5" y="484.7622">dispatch</text><path d="M8,502.8281 L8,527.8281 L111,527.8281 L111,512.8281 L101,502.8281 L8,502.8281 " fill="#FBFB77" filter="url(#f18zq03ani7xpz)" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M101,502.8281 L101,512.8281 L111,512.8281 L101,502.8281 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="82" x="14" y="519.895">SDEI handler</text><polygon fill="#A80036" points="420,554.0938,430,558.0938,420,562.0938,424,558.0938" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="66.5" x2="426" y1="558.0938" y2="558.0938"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="73.5" y="553.0278">[11]</text><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="184" x="107.5" y="553.0278">SDEI_EVENT_COMPLETE()</text><path d="M347,571.0938 L347,596.0938 L522,596.0938 L522,581.0938 L512,571.0938 L347,571.0938 " fill="#FBFB77" filter="url(#f18zq03ani7xpz)" style="stroke: #A80036; stroke-width: 1.0;"/><path d="M512,571.0938 L512,581.0938 L522,581.0938 L512,571.0938 " fill="#FBFB77" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="154" x="353" y="588.1606">Complete SDEI dispatch</text><polygon fill="#A80036" points="629,622.3594,639,626.3594,629,630.3594,633,626.3594" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 2.0,2.0;" x1="437" x2="635" y1="626.3594" y2="626.3594"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="444" y="621.2935">[12]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="39" x="478" y="621.2935">return</text><polygon fill="#A80036" points="391.5,651.4922,381.5,655.4922,391.5,659.4922,387.5,655.4922" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="385.5" x2="645" y1="655.4922" y2="655.4922"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="397.5" y="650.4263">[13]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="125" x="431.5" y="650.4263">error handling done</text><polygon fill="#A80036" points="77.5,680.625,67.5,684.625,77.5,688.625,73.5,684.625" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="71.5" x2="379.5" y1="684.625" y2="684.625"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="30" x="83.5" y="679.5591">[14]</text><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="197" x="117.5" y="679.5591">resumes preempted execution</text><text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacingAndGlyphs" textLength="190" x="258.75" y="716.8354">&lt;&lt;Normal execution resumes&gt;&gt;</text></g></svg>
+\ No newline at end of file
+diff --git a/docs/sdei.rst b/docs/sdei.rst
+index ed6a85abe..531145f87 100644
+--- a/docs/sdei.rst
++++ b/docs/sdei.rst
+@@ -233,14 +233,10 @@ this purpose. The API has the following signature:
+ 
+ ::
+ 
+-        int sdei_dispatch_event(int ev_num, unsigned int preempted_sec_state);
++        int sdei_dispatch_event(int ev_num);
+ 
+--  The parameter ``ev_num`` is the event number to dispatch;
+-
+--  The parameter ``preempted_sec_state`` indicates the context that was
+-   preempted. This must be either ``SECURE`` or ``NON_SECURE``.
+-
+-The API returns ``0`` on success, or ``-1`` on failure.
++The parameter ``ev_num`` is the event number to dispatch. The API returns ``0``
++on success, or ``-1`` on failure.
+ 
+ The following figure depicts a scenario involving explicit dispatch of SDEI
+ event. A commentary is provided below:
+@@ -253,22 +249,18 @@ unlike in `general SDEI dispatch`_, this doesn't involve interrupt binding, as
+ bound or dynamic events can't be explicitly dispatched (see the section below).
+ 
+ At a later point in time, a critical event [#critical-event]_ is trapped into
+-EL3 [7]. EL3 performs a first-level triage of the event, and decides to dispatch
+-to a Secure Partition [#secpart]_ for further handling [8]. The dispatch
+-completes, but intends to involve Non-secure world in further handling, and
+-therefore decides to explicitly dispatch an event [10] (which the client had
+-already registered for [1]). The rest of the sequence is similar to that in the
+-`general SDEI dispatch`_: the requested event is dispatched to the client
+-(assuming all the conditions are met), and when the handler completes, the
+-preempted execution resumes.
++EL3 [7]. EL3 performs a first-level triage of the event, and a RAS component
++assumes further handling [8]. The dispatch completes, but intends to involve
++Non-secure world in further handling, and therefore decides to explicitly
++dispatch an event [10] (which the client had already registered for [1]). The
++rest of the sequence is similar to that in the `general SDEI dispatch`_: the
++requested event is dispatched to the client (assuming all the conditions are
++met), and when the handler completes, the preempted execution resumes.
+ 
+ .. [#critical-event] Examples of critical event are *SError*, *Synchronous
+                      External Abort*, *Fault Handling interrupt*, or *Error
+                      Recovery interrupt* from one of RAS nodes in the system.
+ 
+-.. [#secpart] Dispatching to Secure Partition involves *Secure Partition
+-              Manager*, which isn't depicted in the sequence.
+-
+ Conditions for event dispatch
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+@@ -302,28 +294,22 @@ event to be dispatched:
+ Further, the caller should be aware of the following assumptions made by the
+ dispatcher:
+ 
+--  The caller of the API is a component running in EL3; for example, the *Secure
+-   Partition Manager*.
++-  The caller of the API is a component running in EL3; for example, a RAS
++   driver.
+ 
+ -  The requested dispatch will be permitted by the Exception Handling Framework.
+    I.e. the caller must make sure that the requested dispatch has sufficient
+    priority so as not to cause priority level inversion within Exception
+    Handling Framework.
+ 
+--  At the time of the call, the active context is Secure, and it has been saved.
+-
+--  Upon returning success, the Non-secure context will be restored and setup for
+-   the event dispatch, and it will be the active context. The Non-secure context
+-   should not be modified further by the caller.
++-  The caller must be prepared for the SDEI dispatcher to restore the Non-secure
++   context, and mark that the active context.
+ 
+--  The API returning success only means that the dispatch is scheduled at the
+-   next ``ERET``, and not immediately performed. Also, the caller must be
+-   prepared for this API to return failure and handle accordingly.
++-  The call will block until the SDEI client completes the event (i.e. when the
++   client calls either ``SDEI_EVENT_COMPLETE`` or ``SDEI_COMPLETE_AND_RESUME``).
+ 
+--  Upon completing the event (i.e. when the client calls either
+-   ``SDEI_EVENT_COMPLETE`` or ``SDEI_COMPLETE_AND_RESUME``), the preempted
+-   context is resumed (as indicated by the ``preempted_sec_state`` parameter of
+-   the API).
++-  The caller must be prepared for this API to return failure and handle
++   accordingly.
+ 
+ Porting requirements
+ --------------------
+diff --git a/include/services/sdei.h b/include/services/sdei.h
+index ee3531cb4..79d1d065d 100644
+--- a/include/services/sdei.h
++++ b/include/services/sdei.h
+@@ -183,6 +183,6 @@ uint64_t sdei_smc_handler(uint32_t smc_fid,
+ void sdei_init(void);
+ 
+ /* Public API to dispatch an event to Normal world */
+-int sdei_dispatch_event(int ev_num, unsigned int preempted_sec_state);
++int sdei_dispatch_event(int ev_num);
+ 
+ #endif /* __SDEI_H__ */
+diff --git a/services/std_svc/sdei/sdei_dispatch.S b/services/std_svc/sdei/sdei_dispatch.S
+new file mode 100644
+index 000000000..a7a4a40f7
+--- /dev/null
++++ b/services/std_svc/sdei/sdei_dispatch.S
+@@ -0,0 +1,26 @@
++/*
++ * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++#include <asm_macros.S>
++
++	.globl	begin_sdei_synchronous_dispatch
++
++/*
++ * void begin_sdei_synchronous_dispatch(struct jmpbuf *buffer);
++ *
++ * Begin SDEI dispatch synchronously by setting up a jump point, and exiting
++ * EL3. This jump point is jumped to by the dispatcher after the event is
++ * completed by the client.
++ */
++func begin_sdei_synchronous_dispatch
++	stp	x30, xzr, [sp, #-16]!
++	bl	setjmp
++	cbz	x0, 1f
++	ldp	x30, xzr, [sp], #16
++	ret
++1:
++	b	el3_exit
++endfunc begin_sdei_synchronous_dispatch
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index d6324b9c9..6acb12958 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -31,9 +31,8 @@
+ /* Structure to store information about an outstanding dispatch */
+ typedef struct sdei_dispatch_context {
+ 	sdei_ev_map_t *map;
+-	unsigned int sec_state;
+-	unsigned int intr_raw;
+ 	uint64_t x[SDEI_SAVED_GPREGS];
++	struct jmpbuf *dispatch_jmp;
+ 
+ 	/* Exception state registers */
+ 	uint64_t elr_el3;
+@@ -153,8 +152,8 @@ static sdei_dispatch_context_t *get_outstanding_dispatch(void)
+ 	return &state->dispatch_stack[state->stack_top - 1];
+ }
+ 
+-static void save_event_ctx(sdei_ev_map_t *map, void *tgt_ctx, int sec_state,
+-		unsigned int intr_raw)
++static sdei_dispatch_context_t *save_event_ctx(sdei_ev_map_t *map,
++		void *tgt_ctx)
+ {
+ 	sdei_dispatch_context_t *disp_ctx;
+ 	gp_regs_t *tgt_gpregs;
+@@ -166,26 +165,14 @@ static void save_event_ctx(sdei_ev_map_t *map, void *tgt_ctx, int sec_state,
+ 
+ 	disp_ctx = push_dispatch();
+ 	assert(disp_ctx);
+-	disp_ctx->sec_state = sec_state;
+ 	disp_ctx->map = map;
+-	disp_ctx->intr_raw = intr_raw;
+ 
+ 	/* Save general purpose and exception registers */
+ 	memcpy(disp_ctx->x, tgt_gpregs, sizeof(disp_ctx->x));
+ 	disp_ctx->spsr_el3 = read_ctx_reg(tgt_el3, CTX_SPSR_EL3);
+ 	disp_ctx->elr_el3 = read_ctx_reg(tgt_el3, CTX_ELR_EL3);
+ 
+-#if DYNAMIC_WORKAROUND_CVE_2018_3639
+-	cve_2018_3639_t *tgt_cve_2018_3639;
+-	tgt_cve_2018_3639 = get_cve_2018_3639_ctx(tgt_ctx);
+-
+-	/* Save CVE-2018-3639 mitigation state */
+-	disp_ctx->disable_cve_2018_3639 = read_ctx_reg(tgt_cve_2018_3639,
+-		CTX_CVE_2018_3639_DISABLE);
+-
+-	/* Force SDEI handler to execute with mitigation enabled by default */
+-	write_ctx_reg(tgt_cve_2018_3639, CTX_CVE_2018_3639_DISABLE, 0);
+-#endif
++	return disp_ctx;
+ }
+ 
+ static void restore_event_ctx(sdei_dispatch_context_t *disp_ctx, void *tgt_ctx)
+@@ -249,13 +236,12 @@ static cpu_context_t *restore_and_resume_ns_context(void)
+  * SDEI client.
+  */
+ static void setup_ns_dispatch(sdei_ev_map_t *map, sdei_entry_t *se,
+-		cpu_context_t *ctx, int sec_state_to_resume,
+-		unsigned int intr_raw)
++		cpu_context_t *ctx, struct jmpbuf *dispatch_jmp)
+ {
+-	el3_state_t *el3_ctx = get_el3state_ctx(ctx);
++	sdei_dispatch_context_t *disp_ctx;
+ 
+ 	/* Push the event and context */
+-	save_event_ctx(map, ctx, sec_state_to_resume, intr_raw);
++	disp_ctx = save_event_ctx(map, ctx);
+ 
+ 	/*
+ 	 * Setup handler arguments:
+@@ -267,8 +253,8 @@ static void setup_ns_dispatch(sdei_ev_map_t *map, sdei_entry_t *se,
+ 	 */
+ 	SMC_SET_GP(ctx, CTX_GPREG_X0, map->ev_num);
+ 	SMC_SET_GP(ctx, CTX_GPREG_X1, se->arg);
+-	SMC_SET_GP(ctx, CTX_GPREG_X2, read_ctx_reg(el3_ctx, CTX_ELR_EL3));
+-	SMC_SET_GP(ctx, CTX_GPREG_X3, read_ctx_reg(el3_ctx, CTX_SPSR_EL3));
++	SMC_SET_GP(ctx, CTX_GPREG_X2, disp_ctx->elr_el3);
++	SMC_SET_GP(ctx, CTX_GPREG_X3, disp_ctx->spsr_el3);
+ 
+ 	/*
+ 	 * Prepare for ERET:
+@@ -279,6 +265,20 @@ static void setup_ns_dispatch(sdei_ev_map_t *map, sdei_entry_t *se,
+ 	cm_set_elr_spsr_el3(NON_SECURE, (uintptr_t) se->ep,
+ 			SPSR_64(sdei_client_el(), MODE_SP_ELX,
+ 				DISABLE_ALL_EXCEPTIONS));
++
++#if DYNAMIC_WORKAROUND_CVE_2018_3639
++	cve_2018_3639_t *tgt_cve_2018_3639;
++	tgt_cve_2018_3639 = get_cve_2018_3639_ctx(ctx);
++
++	/* Save CVE-2018-3639 mitigation state */
++	disp_ctx->disable_cve_2018_3639 = read_ctx_reg(tgt_cve_2018_3639,
++		CTX_CVE_2018_3639_DISABLE);
++
++	/* Force SDEI handler to execute with mitigation enabled by default */
++	write_ctx_reg(tgt_cve_2018_3639, CTX_CVE_2018_3639_DISABLE, 0);
++#endif
++
++	disp_ctx->dispatch_jmp = dispatch_jmp;
+ }
+ 
+ /* Handle a triggered SDEI interrupt while events were masked on this PE */
+@@ -348,6 +348,7 @@ int sdei_intr_handler(uint32_t intr_raw, uint32_t flags, void *handle,
+ 	unsigned int sec_state;
+ 	sdei_cpu_state_t *state;
+ 	uint32_t intr;
++	struct jmpbuf dispatch_jmp;
+ 
+ 	/*
+ 	 * To handle an event, the following conditions must be true:
+@@ -481,29 +482,60 @@ int sdei_intr_handler(uint32_t intr_raw, uint32_t flags, void *handle,
+ 		ctx = restore_and_resume_ns_context();
+ 	}
+ 
+-	setup_ns_dispatch(map, se, ctx, sec_state, intr_raw);
++	/* Synchronously dispatch event */
++	setup_ns_dispatch(map, se, ctx, &dispatch_jmp);
++	begin_sdei_synchronous_dispatch(&dispatch_jmp);
++
++	/*
++	 * We reach here when client completes the event.
++	 *
++	 * If the cause of dispatch originally interrupted the Secure world, and
++	 * if Non-secure world wasn't allowed to preempt Secure execution,
++	 * resume Secure.
++	 *
++	 * No need to save the Non-secure context ahead of a world switch: the
++	 * Non-secure context was fully saved before dispatch, and has been
++	 * returned to its pre-dispatch state.
++	 */
++	if ((sec_state == SECURE) && (ehf_is_ns_preemption_allowed() == 0))
++		restore_and_resume_secure_context();
+ 
+ 	/*
+-	 * End of interrupt is done in sdei_event_complete, when the client
+-	 * signals completion.
++	 * The event was dispatched after receiving SDEI interrupt. With
++	 * the event handling completed, EOI the corresponding
++	 * interrupt.
+ 	 */
++	if ((map->ev_num != SDEI_EVENT_0) && is_map_bound(map)) {
++		ERROR("Invalid SDEI mapping: ev=%u\n", map->ev_num);
++		panic();
++	}
++	plat_ic_end_of_interrupt(intr_raw);
++
++	if (is_event_shared(map))
++		sdei_map_unlock(map);
++
+ 	return 0;
+ }
+ 
+-/* Explicitly dispatch the given SDEI event */
+-int sdei_dispatch_event(int ev_num, unsigned int preempted_sec_state)
++/*
++ * Explicitly dispatch the given SDEI event.
++ *
++ * When calling this API, the caller must be prepared for the SDEI dispatcher to
++ * restore and make Non-secure context as active. This call returns only after
++ * the client has completed the dispatch. Then, the Non-secure context will be
++ * active, and the following ERET will return to Non-secure.
++ *
++ * Should the caller require re-entry to Secure, it must restore the Secure
++ * context and program registers for ERET.
++ */
++int sdei_dispatch_event(int ev_num)
+ {
+ 	sdei_entry_t *se;
+ 	sdei_ev_map_t *map;
+-	cpu_context_t *ctx;
++	cpu_context_t *ns_ctx;
+ 	sdei_dispatch_context_t *disp_ctx;
+ 	sdei_cpu_state_t *state;
+-
+-	/* Validate preempted security state */
+-	if ((preempted_sec_state != SECURE) &&
+-			(preempted_sec_state != NON_SECURE)) {
+-		return -1;
+-	}
++	struct jmpbuf dispatch_jmp;
+ 
+ 	/* Can't dispatch if events are masked on this PE */
+ 	state = sdei_get_this_pe_state();
+@@ -549,21 +581,31 @@ int sdei_dispatch_event(int ev_num, unsigned int preempted_sec_state)
+ 	ehf_activate_priority(sdei_event_priority(map));
+ 
+ 	/*
+-	 * We assume the current context is SECURE, and that it's already been
+-	 * saved.
++	 * Prepare for NS dispatch by restoring the Non-secure context and
++	 * marking that as active.
+ 	 */
+-	ctx = restore_and_resume_ns_context();
++	ns_ctx = restore_and_resume_ns_context();
++
++	/* Dispatch event synchronously */
++	setup_ns_dispatch(map, se, ns_ctx, &dispatch_jmp);
++	begin_sdei_synchronous_dispatch(&dispatch_jmp);
+ 
+ 	/*
+-	 * The caller has effectively terminated execution. Record to resume the
+-	 * preempted context later when the event completes or
+-	 * complete-and-resumes.
++	 * We reach here when client completes the event.
++	 *
++	 * Deactivate the priority level that was activated at the time of
++	 * explicit dispatch.
+ 	 */
+-	setup_ns_dispatch(map, se, ctx, preempted_sec_state, 0);
++	ehf_deactivate_priority(sdei_event_priority(map));
+ 
+ 	return 0;
+ }
+ 
++static void end_sdei_explicit_dispatch(struct jmpbuf *buffer)
++{
++	longjmp(buffer);
++}
++
+ int sdei_event_complete(int resume, uint64_t pc)
+ {
+ 	sdei_dispatch_context_t *disp_ctx;
+@@ -636,38 +678,8 @@ int sdei_event_complete(int resume, uint64_t pc)
+ 		}
+ 	}
+ 
+-	/*
+-	 * If the cause of dispatch originally interrupted the Secure world, and
+-	 * if Non-secure world wasn't allowed to preempt Secure execution,
+-	 * resume Secure.
+-	 *
+-	 * No need to save the Non-secure context ahead of a world switch: the
+-	 * Non-secure context was fully saved before dispatch, and has been
+-	 * returned to its pre-dispatch state.
+-	 */
+-	if ((disp_ctx->sec_state == SECURE) &&
+-			(ehf_is_ns_preemption_allowed() == 0)) {
+-		restore_and_resume_secure_context();
+-	}
+-
+-	if ((map->ev_num == SDEI_EVENT_0) || is_map_bound(map)) {
+-		/*
+-		 * The event was dispatched after receiving SDEI interrupt. With
+-		 * the event handling completed, EOI the corresponding
+-		 * interrupt.
+-		 */
+-		plat_ic_end_of_interrupt(disp_ctx->intr_raw);
+-	} else {
+-		/*
+-		 * An unbound event must have been dispatched explicitly.
+-		 * Deactivate the priority level that was activated at the time
+-		 * of explicit dispatch.
+-		 */
+-		ehf_deactivate_priority(sdei_event_priority(map));
+-	}
+-
+-	if (is_event_shared(map))
+-		sdei_map_unlock(map);
++	/* End the outstanding dispatch */
++	end_sdei_explicit_dispatch(disp_ctx->dispatch_jmp);
+ 
+ 	return 0;
+ }
+diff --git a/services/std_svc/sdei/sdei_private.h b/services/std_svc/sdei/sdei_private.h
+index ec4148c6b..ea602878b 100644
+--- a/services/std_svc/sdei/sdei_private.h
++++ b/services/std_svc/sdei/sdei_private.h
+@@ -14,6 +14,7 @@
+ #include <interrupt_mgmt.h>
+ #include <platform.h>
+ #include <sdei.h>
++#include <setjmp.h>
+ #include <spinlock.h>
+ #include <stdbool.h>
+ #include <types.h>
+@@ -240,5 +241,6 @@ unsigned int sdei_pe_mask(void);
+ int sdei_intr_handler(uint32_t intr, uint32_t flags, void *handle,
+ 		void *cookie);
+ bool can_sdei_state_trans(sdei_entry_t *se, sdei_action_t act);
++void begin_sdei_synchronous_dispatch(struct jmpbuf *buffer);
+ 
+ #endif /* __SDEI_PRIVATE_H__ */
+-- 
+2.21.1 (Apple Git-122.3)
+

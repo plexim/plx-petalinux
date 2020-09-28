@@ -1,0 +1,24 @@
+From c1c049990599a7200bcaed03a609f30f2d475638 Mon Sep 17 00:00:00 2001
+From: Oliver Schwartz <schwartz@plexim.com>
+Date: Wed, 13 Mar 2019 16:38:13 +0100
+Subject: [PATCH] Fix spidev compatibility.
+
+---
+ drivers/spi/spidev.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/spi/spidev.c b/drivers/spi/spidev.c
+index cda1071..4f3779d 100644
+--- a/drivers/spi/spidev.c
++++ b/drivers/spi/spidev.c
+@@ -669,6 +669,7 @@ static const struct of_device_id spidev_dt_ids[] = {
+ 	{ .compatible = "lineartechnology,ltc2488" },
+ 	{ .compatible = "ge,achc" },
+ 	{ .compatible = "semtech,sx1301" },
++	{ .compatible = "spidev" },
+ 	{},
+ };
+ MODULE_DEVICE_TABLE(of, spidev_dt_ids);
+-- 
+2.7.4
+

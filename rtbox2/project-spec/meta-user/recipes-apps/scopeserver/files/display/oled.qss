@@ -1,0 +1,100 @@
+QWidget {
+   margin: 0px;
+   border: 0px;
+   padding: 0px;
+
+   background-color: black;
+   color: white;
+
+   font-family: "Terminus";
+   font-size: 12px;
+}
+
+Display {
+   margin: 0px;
+   border: 0px;
+   padding: 0px;
+}
+
+QScrollBar:vertical {
+   width: 6px;
+   background: solid #000000;
+}
+
+QScrollBar::handle:vertical {
+   background: white;
+}
+
+QScrollBar::add-page:vertical {
+   background: none;
+}
+
+QScrollBar::sub-page:vertical {
+   background: none;
+}
+
+QScrollBar::add-line:vertical {
+   height: 0px;
+}
+
+QScrollBar::sub-line:vertical {
+   height: 0px;
+}
+
+SystemLog {
+   margin-left: 3px;
+   margin-right: 3px;
+   margin-top: 6px;
+   margin-bottom: 6px;
+
+   border: 0px;
+   padding: 0px;
+}
+
+
+PageList {
+   margin-left: 4px;
+   margin-right: 4px;
+   margin-top: 8px;
+   margin-bottom: 8px;
+
+   border: 0px;
+   padding: 0px;
+
+   /*
+   selection-color: black;
+   selection-background-color: white;
+   */
+   selection-background-color: #202020;
+   show-decoration-selected: 1;
+}
+
+/*
+PageList::item {
+   border: none;
+   outline: none;
+}
+
+PageList::item:selected {
+   color: black;
+   background-color: white;
+}
+*/
+
+
+SimulationMessages {
+   margin-left: 3px;
+   margin-right: 3px;
+   margin-top: 6px;
+   margin-bottom: 6px;
+
+   border: 0px;
+   padding: 0px;
+}
+
+
+ImportantMessage {
+   margin: 4px;
+   border: 1px solid white;
+   padding: 4px;
+}

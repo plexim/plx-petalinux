@@ -1,0 +1,72 @@
+From 2ccfcb2ea555eb86122e7780010cc50fcee08f54 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Thu, 21 Jun 2018 08:47:42 +0100
+Subject: [PATCH] SDEI: Determine client EL from NS context's SCR_EL3
+
+Currently, the dispatcher reads from SCR_EL3 register directly to
+determine the EL of SDEI client. This is with the assumption that
+SCR_EL3 is not modified throughout. However, with RAS work flows, it's
+possible that SCR_EL3 register contains values corresponding to Secure
+world, and therefore EL determination can go wrong. To mitigate this,
+always read the register from the saved Non-secure context.
+
+Change-Id: Ic85e4021deb18eb58757f676f9a001174998543a
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_intr_mgmt.c | 1 -
+ services/std_svc/sdei/sdei_main.c      | 1 -
+ services/std_svc/sdei/sdei_private.h   | 7 ++++++-
+ 3 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index a7104b4f5..d6324b9c9 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -8,7 +8,6 @@
+ #include <assert.h>
+ #include <bl_common.h>
+ #include <cassert.h>
+-#include <context_mgmt.h>
+ #include <debug.h>
+ #include <ehf.h>
+ #include <interrupt_mgmt.h>
+diff --git a/services/std_svc/sdei/sdei_main.c b/services/std_svc/sdei/sdei_main.c
+index f881ba82b..d6d092dec 100644
+--- a/services/std_svc/sdei/sdei_main.c
++++ b/services/std_svc/sdei/sdei_main.c
+@@ -10,7 +10,6 @@
+ #include <bl_common.h>
+ #include <cassert.h>
+ #include <context.h>
+-#include <context_mgmt.h>
+ #include <debug.h>
+ #include <ehf.h>
+ #include <interrupt_mgmt.h>
+diff --git a/services/std_svc/sdei/sdei_private.h b/services/std_svc/sdei/sdei_private.h
+index 45d537f5d..ec4148c6b 100644
+--- a/services/std_svc/sdei/sdei_private.h
++++ b/services/std_svc/sdei/sdei_private.h
+@@ -8,6 +8,7 @@
+ #define __SDEI_PRIVATE_H__
+ 
+ #include <arch_helpers.h>
++#include <context_mgmt.h>
+ #include <debug.h>
+ #include <errno.h>
+ #include <interrupt_mgmt.h>
+@@ -159,7 +160,11 @@ static inline int is_secure_sgi(unsigned int intr)
+  */
+ static inline unsigned int sdei_client_el(void)
+ {
+-	return read_scr_el3() & SCR_HCE_BIT ? MODE_EL2 : MODE_EL1;
++	cpu_context_t *ns_ctx = cm_get_context(NON_SECURE);
++	el3_state_t *el3_ctx = get_el3state_ctx(ns_ctx);
++
++	return read_ctx_reg(el3_ctx, CTX_SPSR_EL3) & SCR_HCE_BIT ? MODE_EL2 :
++		MODE_EL1;
+ }
+ 
+ static inline unsigned int sdei_event_priority(sdei_ev_map_t *map)
+-- 
+2.21.1 (Apple Git-122.3)
+

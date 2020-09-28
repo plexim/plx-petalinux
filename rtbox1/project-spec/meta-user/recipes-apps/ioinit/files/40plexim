@@ -1,0 +1,10 @@
+#!/bin/sh
+
+LED_BASE=`cd /sys/class/gpio && grep -r 41200000 gpiochip* | sed -e "s/gpiochip\([0-9]*\).*/\1/"`
+
+case "$1" in
+        bound)
+                echo 1 > /sys/class/gpio/gpio$((LED_BASE+2))/value                   
+                ;;                                                       
+esac
+

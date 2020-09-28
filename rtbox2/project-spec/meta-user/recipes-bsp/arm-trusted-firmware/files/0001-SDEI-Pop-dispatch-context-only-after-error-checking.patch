@@ -1,0 +1,77 @@
+From 8e3032f921ae62bebbb2bf4c573864313357ee76 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Mon, 22 Jan 2018 12:04:13 +0000
+Subject: [PATCH] SDEI: Pop dispatch context only after error checking
+
+Currently, when the client attempts to do SDEI_EVENT_COMPLETE or
+SDEI_EVENT_COMPLETE_AND_RESUME, the dispatcher pops off the outstanding
+dispatch context for sanity check. There are however other checks
+following this, which could potentially return failure. If that happens,
+by popping the context, the dispatcher has inadvertently discarded a
+valid context.
+
+This patch fixes this bug by inspecting (not actually popping) the
+outstanding context. The context is popped only after all error checks
+are completed.
+
+Change-Id: Ie199f6442f871a8177a8247a0c646543bad76d21
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_intr_mgmt.c | 20 +++++++++++---------
+ 1 file changed, 11 insertions(+), 9 deletions(-)
+
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index 42bf46d0f..2717ea43b 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2017, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -556,7 +556,7 @@ int sdei_event_complete(int resume, uint64_t pc)
+ 	unsigned int client_el = sdei_client_el();
+ 
+ 	/* Return error if called without an active event */
+-	disp_ctx = pop_dispatch();
++	disp_ctx = get_outstanding_dispatch();
+ 	if (!disp_ctx)
+ 		return SDEI_EDENY;
+ 
+@@ -566,15 +566,8 @@ int sdei_event_complete(int resume, uint64_t pc)
+ 
+ 	map = disp_ctx->map;
+ 	assert(map);
+-
+ 	se = get_event_entry(map);
+ 
+-	SDEI_LOG("EOI:%lx, %d spsr:%lx elr:%lx\n", read_mpidr_el1(),
+-			map->ev_num, read_spsr_el3(), read_elr_el3());
+-
+-	if (is_event_shared(map))
+-		sdei_map_lock(map);
+-
+ 	act = resume ? DO_COMPLETE_RESUME : DO_COMPLETE;
+ 	if (!can_sdei_state_trans(se, act)) {
+ 		if (is_event_shared(map))
+@@ -582,6 +575,15 @@ int sdei_event_complete(int resume, uint64_t pc)
+ 		return SDEI_EDENY;
+ 	}
+ 
++	/* Having done sanity checks, pop dispatch */
++	pop_dispatch();
++
++	SDEI_LOG("EOI:%lx, %d spsr:%lx elr:%lx\n", read_mpidr_el1(),
++			map->ev_num, read_spsr_el3(), read_elr_el3());
++
++	if (is_event_shared(map))
++		sdei_map_lock(map);
++
+ 	/*
+ 	 * Restore Non-secure to how it was originally interrupted. Once done,
+ 	 * it's up-to-date with the saved copy.
+-- 
+2.21.1 (Apple Git-122.3)
+

@@ -1,0 +1,82 @@
+From b370ad06728b4ae207b844b58d9fcb69efa28b63 Mon Sep 17 00:00:00 2001
+From: Siva Durga Prasad Paladugu <siva.durga.paladugu@xilinx.com>
+Date: Mon, 24 Sep 2018 22:51:49 -0700
+Subject: [PATCH] plat: xilinx: zynqmp: Use GIC framework for warm restart
+
+- Flag GICV2_G0_FOR_EL3 needs to be set for group interrupts
+  to be targeted to EL3.
+- Raise SGI interrupts for indiviudual CPU cores as GIC API
+  uses CPU num as parameter , not CPU mask.
+- Flag WARMBOOT_ENABLE_DCACHE_EARLY needs to be set to enable
+  CPU interface mask work properly for all CPU cores which is
+  required when generating SGI.
+- Call plat_ic_end_of_interrupt() from ttc_fiq_handler() to clear
+  GIC interrupt to avoid same interrupt again.
+
+Signed-off-by: Siva Durga Prasad Paladugu <siva.durga.paladugu@xilinx.com>
+Signed-off-by: Rajan Vaja <rajan.vaja@xilinx.com>
+---
+ plat/xilinx/zynqmp/plat_psci.c              |  3 +--
+ plat/xilinx/zynqmp/platform.mk              |  2 ++
+ plat/xilinx/zynqmp/pm_service/pm_svc_main.c | 10 ++++++++--
+ 3 files changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/plat/xilinx/zynqmp/plat_psci.c b/plat/xilinx/zynqmp/plat_psci.c
+index a82f696..9bb3d8b 100644
+--- a/plat/xilinx/zynqmp/plat_psci.c
++++ b/plat/xilinx/zynqmp/plat_psci.c
+@@ -98,9 +98,8 @@ static void zynqmp_pwr_domain_on_finish(const psci_power_state_t *target_state)
+ 	for (size_t i = 0; i <= PLAT_MAX_PWR_LVL; i++)
+ 		VERBOSE("%s: target_state->pwr_domain_state[%lu]=%x\n",
+ 			__func__, i, target_state->pwr_domain_state[i]);
+-
++	plat_arm_gic_pcpu_init();
+ 	gicv2_cpuif_enable();
+-	gicv2_pcpu_distif_init();
+ }
+ 
+ static void zynqmp_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
+diff --git a/plat/xilinx/zynqmp/platform.mk b/plat/xilinx/zynqmp/platform.mk
+index f6186f2..c790d41 100644
+--- a/plat/xilinx/zynqmp/platform.mk
++++ b/plat/xilinx/zynqmp/platform.mk
+@@ -12,6 +12,8 @@ SEPARATE_CODE_AND_RODATA := 1
+ ZYNQMP_WDT_RESTART := 0
+ ZYNQMP_WARM_RESTART := 0
+ override RESET_TO_BL31 := 1
++override GICV2_G0_FOR_EL3 := 1
++override WARMBOOT_ENABLE_DCACHE_EARLY := 1
+ 
+ # Do not enable SVE
+ ENABLE_SVE_FOR_NS	:= 0
+diff --git a/plat/xilinx/zynqmp/pm_service/pm_svc_main.c b/plat/xilinx/zynqmp/pm_service/pm_svc_main.c
+index 1544262..8df552c 100644
+--- a/plat/xilinx/zynqmp/pm_service/pm_svc_main.c
++++ b/plat/xilinx/zynqmp/pm_service/pm_svc_main.c
+@@ -73,8 +73,12 @@ static void trigger_wdt_restart(void)
+ 
+ 	INFO("Active Cores: %d\n", active_cores);
+ 
+-	/* trigger SGI to active cores */
+-	plat_ic_trigger_sgi(ARM_IRQ_SEC_SGI_7, target_cpu_list);
++	for (i = PLATFORM_CORE_COUNT - 1; i >= 0; i--) {
++		if (target_cpu_list & (1 << i)) {
++			/* trigger SGI to active cores */
++			plat_ic_raise_el3_sgi(ARM_IRQ_SEC_SGI_7, i);
++		}
++	}
+ }
+ 
+ /**
+@@ -102,6 +106,8 @@ static uint64_t ttc_fiq_handler(uint32_t id, uint32_t flags, void *handle,
+ {
+ 	INFO("BL31: Got TTC FIQ\n");
+ 
++	plat_ic_end_of_interrupt(id);
++
+ 	/* Clear TTC interrupt by reading interrupt register */
+ 	mmio_read_32(TTC3_INTR_REGISTER_1);
+ 
+-- 
+1.8.3.1
+

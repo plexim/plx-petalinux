@@ -1,0 +1,18 @@
+#Note: Mention Each package in individual line
+#      cascaded representation with line breaks are not valid in this file.
+IMAGE_INSTALL_append = " peekpoke"
+IMAGE_INSTALL_append = " gpio-demo"
+IMAGE_INSTALL_append = " lighttpd"
+IMAGE_INSTALL_append = " libsocketcan"
+IMAGE_INSTALL_append = " spawn-fcgi"
+IMAGE_INSTALL_append = " lighttpd-module-fastcgi"
+IMAGE_INSTALL_append = " perl-fcgi"
+IMAGE_INSTALL_append = " perl-cgi"
+IMAGE_INSTALL_append = " perl-cgi-fast"
+IMAGE_INSTALL_append = " hil-webserver"
+IMAGE_INSTALL_append = " ioinit"
+IMAGE_INSTALL_append = " hil-config"
+IMAGE_INSTALL_append = " scopeserver"
+IMAGE_INSTALL_append = " rpmsg-rtbox-driver"
+IMAGE_INSTALL_append = " eeprom-config"
+IMAGE_INSTALL_append = " hil-selftest"

@@ -1,0 +1,7 @@
+#!/bin/sh
+for i in `seq 0 3`; do
+   echo 1 >  /sys/devices//system/cpu/cpu$i/cpuidle/state1/disable
+done
+jailhouse enable /usr/share/jailhouse/cells/rtbox-root.cell 
+jailhouse cell create /usr/share/jailhouse/cells/rtbox-inmate.cell
+

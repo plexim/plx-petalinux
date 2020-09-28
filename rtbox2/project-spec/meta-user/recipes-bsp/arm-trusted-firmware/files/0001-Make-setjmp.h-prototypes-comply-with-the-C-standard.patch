@@ -1,0 +1,224 @@
+From e05663051671bdec38056a2da5ddebd390b4abca Mon Sep 17 00:00:00 2001
+From: Antonio Nino Diaz <antonio.ninodiaz@arm.com>
+Date: Fri, 8 Feb 2019 13:10:45 +0000
+Subject: [PATCH] Make setjmp.h prototypes comply with the C standard
+
+Instead of having a custom implementation of setjmp() and longjmp() it
+is better to follow the C standard.
+
+The comments in setjmp.h are no longer needed as there are no deviations
+from the expected one, so they have been removed.
+
+All SDEI code that relied on them has been fixed to use the new function
+prototypes and structs.
+
+Change-Id: I6cd2e21cb5a5bcf81ba12283f2e4c067bd5172ca
+Signed-off-by: Antonio Nino Diaz <antonio.ninodiaz@arm.com>
+---
+ include/arch/aarch64/setjmp.h          | 38 ++++----------------------
+ lib/aarch64/setjmp.S                   | 14 ++++------
+ services/std_svc/sdei/sdei_dispatch.S  |  4 +--
+ services/std_svc/sdei/sdei_intr_mgmt.c | 14 +++++-----
+ services/std_svc/sdei/sdei_private.h   |  2 +-
+ 5 files changed, 21 insertions(+), 51 deletions(-)
+
+diff --git a/include/lib/aarch64/setjmp.h b/include/lib/aarch64/setjmp.h
+index bbfe1df43..f7991fddb 100644
+--- a/include/lib/aarch64/setjmp.h
++++ b/include/lib/aarch64/setjmp.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2018-2019, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -14,46 +14,20 @@
+ #define JMP_CTX_X27	0x40
+ #define JMP_CTX_X29	0x50
+ #define JMP_CTX_SP	0x60
+-#define JMP_CTX_END	0x70
++#define JMP_CTX_END	0x70 /* Aligned to 16 bytes */
+ 
+ #define JMP_SIZE	(JMP_CTX_END >> 3)
+ 
+ #ifndef __ASSEMBLY__
+ 
++#include <cdefs.h>
+ #include <stdint.h>
+ 
+ /* Jump buffer hosting x18 - x30 and sp_el0 registers */
+-struct jmpbuf {
+-	uint64_t buf[JMP_SIZE];
+-} __aligned(16);
++typedef uint64_t jmp_buf[JMP_SIZE] __aligned(16);
+ 
+-
+-/*
+- * Set a jump point, and populate the jump buffer with context information so
+- * that longjmp() can jump later. The caller must adhere to the following
+- * conditions:
+- *
+- *  - After calling this function, the stack must not be shrunk. The contents of
+- *    the stack must not be changed either.
+- *
+- *  - If the caller were to 'return', the buffer must be considered invalid, and
+- *    must not be used with longjmp().
+- *
+- * The caller will observe this function returning at two distinct
+- * circumstances, each with different return values:
+- *
+- *  - Zero, when the buffer is setup;
+- *
+- *  - Non-zero, when a call to longjmp() is made (presumably by one of the
+- *    callee functions) with the same jump buffer.
+- */
+-int setjmp(struct jmpbuf *buf);
+-
+-/*
+- * Reset execution to a jump point, and restore context information according to
+- * the jump buffer populated by setjmp().
+- */
+-void longjmp(struct jmpbuf *buf);
++int setjmp(jmp_buf env);
++__dead2 void longjmp(jmp_buf env, int val);
+ 
+ #endif /* __ASSEMBLY__ */
+ #endif /* SETJMP_H */
+diff --git a/lib/aarch64/setjmp.S b/lib/aarch64/setjmp.S
+index 9060cb756..9d9eb49ba 100644
+--- a/lib/aarch64/setjmp.S
++++ b/lib/aarch64/setjmp.S
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2018-2019, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -12,10 +12,7 @@
+ 	.globl	longjmp
+ 
+ /*
+- * int setjmp(struct jmpbuf *buf);
+- *
+- * Sets a jump point in the buffer specified in x0. Returns 0 to the caller when
+- * when setting up the jump, and 1 when returning from the jump.
++ * int setjmp(jmp_buf env);
+  */
+ func setjmp
+ 	mov	x7, sp
+@@ -34,9 +31,7 @@ endfunc setjmp
+ 
+ 
+ /*
+- * void longjmp(struct jmpbuf *buf);
+- *
+- * Return to a jump point setup by setjmp()
++ * void longjmp(jmp_buf env, int val);
+  */
+ func longjmp
+ 	ldp	x7, xzr, [x0, #JMP_CTX_SP]
+@@ -60,6 +55,7 @@ func longjmp
+ 
+ 	mov	sp, x7
+ 
+-	mov	x0, #1
++	ands	x0, x1, x1 /* Move val to x0 and set flags */
++	cinc	x0, x0, eq /* If val is 0, return 1 */
+ 	ret
+ endfunc longjmp
+diff --git a/services/std_svc/sdei/sdei_dispatch.S b/services/std_svc/sdei/sdei_dispatch.S
+index a7a4a40f7..8449e4b5a 100644
+--- a/services/std_svc/sdei/sdei_dispatch.S
++++ b/services/std_svc/sdei/sdei_dispatch.S
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2018-2019, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -9,7 +9,7 @@
+ 	.globl	begin_sdei_synchronous_dispatch
+ 
+ /*
+- * void begin_sdei_synchronous_dispatch(struct jmpbuf *buffer);
++ * void begin_sdei_synchronous_dispatch(jmp_buf *buffer);
+  *
+  * Begin SDEI dispatch synchronously by setting up a jump point, and exiting
+  * EL3. This jump point is jumped to by the dispatcher after the event is
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index b8799cd49..fa1d3d283 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2017-2019, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -31,7 +31,7 @@
+ typedef struct sdei_dispatch_context {
+ 	sdei_ev_map_t *map;
+ 	uint64_t x[SDEI_SAVED_GPREGS];
+-	struct jmpbuf *dispatch_jmp;
++	jmp_buf *dispatch_jmp;
+ 
+ 	/* Exception state registers */
+ 	uint64_t elr_el3;
+@@ -236,7 +236,7 @@ static cpu_context_t *restore_and_resume_ns_context(void)
+  * SDEI client.
+  */
+ static void setup_ns_dispatch(sdei_ev_map_t *map, sdei_entry_t *se,
+-		cpu_context_t *ctx, struct jmpbuf *dispatch_jmp)
++		cpu_context_t *ctx, jmp_buf *dispatch_jmp)
+ {
+ 	sdei_dispatch_context_t *disp_ctx;
+ 
+@@ -347,7 +347,7 @@ int sdei_intr_handler(uint32_t intr_raw, uint32_t flags, void *handle,
+ 	unsigned int sec_state;
+ 	sdei_cpu_state_t *state;
+ 	uint32_t intr;
+-	struct jmpbuf dispatch_jmp;
++	jmp_buf dispatch_jmp;
+ 
+ 	/*
+	 * To handle an event, the following conditions must be true:
+@@ -529,7 +529,7 @@ int sdei_dispatch_event(int ev_num)
+ 	cpu_context_t *ns_ctx;
+ 	sdei_dispatch_context_t *disp_ctx;
+ 	sdei_cpu_state_t *state;
+-	struct jmpbuf dispatch_jmp;
++	jmp_buf dispatch_jmp;
+ 
+ 	/* Can't dispatch if events are masked on this PE */
+ 	state = sdei_get_this_pe_state();
+@@ -595,9 +595,9 @@ int sdei_dispatch_event(int ev_num)
+ 	return 0;
+ }
+ 
+-static void end_sdei_synchronous_dispatch(struct jmpbuf *buffer)
++static void end_sdei_synchronous_dispatch(jmp_buf *buffer)
+ {
+-	longjmp(buffer);
++	longjmp(*buffer, 1);
+ }
+ 
+ int sdei_event_complete(bool resume, uint64_t pc)
+diff --git a/services/std_svc/sdei/sdei_private.h b/services/std_svc/sdei/sdei_private.h
+index 148643129..8cc66e76d 100644
+--- a/services/std_svc/sdei/sdei_private.h
++++ b/services/std_svc/sdei/sdei_private.h
+@@ -243,6 +243,6 @@ int64_t sdei_pe_mask(void);
+ int sdei_intr_handler(uint32_t intr_raw, uint32_t flags, void *handle,
+ 		void *cookie);
+ bool can_sdei_state_trans(sdei_entry_t *se, sdei_action_t act);
+-void begin_sdei_synchronous_dispatch(struct jmpbuf *buffer);
++void begin_sdei_synchronous_dispatch(jmp_buf *buffer);
+ 
+ #endif /* SDEI_PRIVATE_H */
+-- 
+2.21.1 (Apple Git-122.3)
+

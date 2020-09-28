@@ -1,0 +1,190 @@
+From e7b9473e1591d4ab375a95ebbb9256adfe9d4670 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Fri, 16 Feb 2018 11:54:24 +0000
+Subject: [PATCH] BL31: Introduce jump primitives
+
+This patch introduces setjmp() and ongjmp() primitives to enable
+standard setjmp/longjmp style execution. Both APIs parameters take a
+pointer to struct jmpbuf type, which hosts CPU registers saved/restored
+during jump.
+
+As per the standard usage:
+
+  - setjmp() return 0 when a jump is setup; and a non-zero value when
+    returning from jump.
+
+  - The caller of setjmp() must not return, or otherwise update stack
+    pointer since.
+
+Change-Id: I4af1d32e490cfa547979631b762b4cba188d0551
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ bl31/bl31.mk                 |  5 +--
+ include/lib/aarch64/setjmp.h | 59 ++++++++++++++++++++++++++++++++
+ lib/aarch64/setjmp.S         | 65 ++++++++++++++++++++++++++++++++++++
+ 3 files changed, 127 insertions(+), 2 deletions(-)
+ create mode 100644 include/lib/aarch64/setjmp.h
+ create mode 100644 lib/aarch64/setjmp.S
+
+diff --git a/bl31/bl31.mk b/bl31/bl31.mk
+index a6c0a9a07..51a831245 100644
+--- a/bl31/bl31.mk
++++ b/bl31/bl31.mk
+@@ -18,15 +18,16 @@ include lib/psci/psci_lib.mk
+ BL31_SOURCES		+=	bl31/bl31_main.c				\
+ 				bl31/interrupt_mgmt.c				\
+ 				bl31/aarch64/bl31_entrypoint.S			\
+-				bl31/aarch64/runtime_exceptions.S		\
+ 				bl31/aarch64/crash_reporting.S			\
++				bl31/aarch64/runtime_exceptions.S		\
+ 				bl31/bl31_context_mgmt.c			\
+ 				common/runtime_svc.c				\
++				lib/aarch64/setjmp.S				\
+ 				plat/common/aarch64/platform_mp_stack.S		\
+ 				services/arm_arch_svc/arm_arch_svc_setup.c	\
+ 				services/std_svc/std_svc_setup.c		\
+ 				${PSCI_LIB_SOURCES}				\
+-				${SPM_SOURCES}					\
++				${SPM_SOURCES}
+ 
+ 
+ ifeq (${ENABLE_PMF}, 1)
+diff --git a/include/lib/aarch64/setjmp.h b/include/lib/aarch64/setjmp.h
+new file mode 100644
+index 000000000..c65810d82
+--- /dev/null
++++ b/include/lib/aarch64/setjmp.h
+@@ -0,0 +1,59 @@
++/*
++ * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++#ifndef __JMP_H__
++#define __JMP_H__
++
++#define JMP_CTX_X19	0x0
++#define JMP_CTX_X21	0x10
++#define JMP_CTX_X23	0x20
++#define JMP_CTX_X25	0x30
++#define JMP_CTX_X27	0x40
++#define JMP_CTX_X29	0x50
++#define JMP_CTX_SP	0x60
++#define JMP_CTX_END	0x70
++
++#define JMP_SIZE	(JMP_CTX_END >> 3)
++
++#ifndef __ASSEMBLY__
++
++#include <stdint.h>
++
++/* Jump buffer hosting x18 - x30 and sp_el0 registers */
++struct jmpbuf {
++	uint64_t buf[JMP_SIZE];
++} __aligned(16);
++
++
++/*
++ * Set a jump point, and populate the jump buffer with context information so
++ * that longjmp() can jump later. The caller must adhere to the following
++ * conditions:
++ *
++ *  - After calling this function, the stack must not be shrunk. The contents of
++ *    the stack must not be changed either.
++ *
++ *  - If the caller were to 'return', the buffer must be considered invalid, and
++ *    must not be used with longjmp().
++ *
++ * The caller will observe this function returning at two distinct
++ * circumstances, each with different return values:
++ *
++ *  - Zero, when the buffer is setup;
++ *
++ *  - Non-zero, when a call to longjmp() is made (presumably by one of the
++ *    callee functions) with the same jump buffer.
++ */
++int setjmp(struct jmpbuf *buf);
++
++/*
++ * Reset execution to a jump point, and restore context information according to
++ * the jump buffer populated by setjmp().
++ */
++void longjmp(struct jmpbuf *buf);
++
++#endif /* __ASSEMBLY__ */
++#endif /* __JMP_H__ */
+diff --git a/lib/aarch64/setjmp.S b/lib/aarch64/setjmp.S
+new file mode 100644
+index 000000000..9060cb756
+--- /dev/null
++++ b/lib/aarch64/setjmp.S
+@@ -0,0 +1,65 @@
++/*
++ * Copyright (c) 2018, ARM Limited and Contributors. All rights reserved.
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++#include <asm_macros.S>
++#include <assert_macros.S>
++#include <setjmp.h>
++
++	.globl	setjmp
++	.globl	longjmp
++
++/*
++ * int setjmp(struct jmpbuf *buf);
++ *
++ * Sets a jump point in the buffer specified in x0. Returns 0 to the caller when
++ * when setting up the jump, and 1 when returning from the jump.
++ */
++func setjmp
++	mov	x7, sp
++
++	stp	x19, x20, [x0, #JMP_CTX_X19]
++	stp	x21, x22, [x0, #JMP_CTX_X21]
++	stp	x23, x24, [x0, #JMP_CTX_X23]
++	stp	x25, x26, [x0, #JMP_CTX_X25]
++	stp	x27, x28, [x0, #JMP_CTX_X27]
++	stp	x29, x30, [x0, #JMP_CTX_X29]
++	stp	x7, xzr, [x0, #JMP_CTX_SP]
++
++	mov	x0, #0
++	ret
++endfunc setjmp
++
++
++/*
++ * void longjmp(struct jmpbuf *buf);
++ *
++ * Return to a jump point setup by setjmp()
++ */
++func longjmp
++	ldp	x7, xzr, [x0, #JMP_CTX_SP]
++
++#if ENABLE_ASSERTIONS
++	/*
++	 * Since we're unwinding the stack, assert that the stack being reset to
++	 * is shallower.
++	 */
++	mov	x19, sp
++	cmp	x7, x19
++	ASM_ASSERT(ge)
++#endif
++
++	ldp	x19, x20, [x0, #JMP_CTX_X19]
++	ldp	x21, x22, [x0, #JMP_CTX_X21]
++	ldp	x23, x24, [x0, #JMP_CTX_X23]
++	ldp	x25, x26, [x0, #JMP_CTX_X25]
++	ldp	x27, x28, [x0, #JMP_CTX_X27]
++	ldp	x29, x30, [x0, #JMP_CTX_X29]
++
++	mov	sp, x7
++
++	mov	x0, #1
++	ret
++endfunc longjmp
+-- 
+2.21.1 (Apple Git-122.3)
+

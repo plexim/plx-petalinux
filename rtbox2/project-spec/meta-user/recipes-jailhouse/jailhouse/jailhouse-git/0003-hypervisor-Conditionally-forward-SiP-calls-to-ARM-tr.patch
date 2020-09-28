@@ -1,0 +1,151 @@
+From 85cbcb75933641e1a9e3b20d1529afe96d2faf00 Mon Sep 17 00:00:00 2001
+From: Oliver Schwartz <Oliver.Schwartz@gmx.de>
+Date: Fri, 11 Oct 2019 11:20:34 +0200
+Subject: [PATCH 3/3] hypervisor: Conditionally forward SiP calls to ARM
+ trusted firmware
+
+Check if the ID of the SiP call matches one of the configured allowed SiP
+IDs. If so, forward the SiP call to ARM trusted firmware. Otherwise return
+ARM_SMCCC_NOT_SUPPORTED.
+
+Signed-off-by: Oliver Schwartz <Oliver.Schwartz@gmx.de>
+---
+ hypervisor/arch/arm-common/include/asm/smccc.h |  2 ++
+ hypervisor/arch/arm-common/smccc.c             | 23 ++++++++++++++++++--
+ hypervisor/arch/arm/include/asm/smc.h          | 30 ++++++++++++++++++++++++++
+ hypervisor/arch/arm64/include/asm/smc.h        | 30 ++++++++++++++++++++++++++
+ 4 files changed, 83 insertions(+), 2 deletions(-)
+
+diff --git a/hypervisor/arch/arm-common/include/asm/smccc.h b/hypervisor/arch/arm-common/include/asm/smccc.h
+index 069beec..3549041 100644
+--- a/hypervisor/arch/arm-common/include/asm/smccc.h
++++ b/hypervisor/arch/arm-common/include/asm/smccc.h
+@@ -35,6 +35,8 @@
+ 
+ #define SMCCC_IS_CONV_64(function_id)	!!(function_id & (1 << 30))
+ 
++#define ARM_SMCCC_CALLID_MASK		0x0000ffff
++
+ #ifndef __ASSEMBLY__
+ 
+ struct trap_context;
+diff --git a/hypervisor/arch/arm-common/smccc.c b/hypervisor/arch/arm-common/smccc.c
+index 7734b99..6f401b4 100644
+--- a/hypervisor/arch/arm-common/smccc.c
++++ b/hypervisor/arch/arm-common/smccc.c
+@@ -90,6 +90,11 @@ enum trap_return handle_smc(struct trap_context *ctx)
+ 	unsigned long *regs = ctx->regs;
+ 	enum trap_return ret = TRAP_HANDLED;
+ 	u32 *stats = this_cpu_public()->stats;
++	u32 callid = regs[0] & ARM_SMCCC_CALLID_MASK;
++	struct jailhouse_cell_desc* config = this_cell()->config;
++	const u32* allowed_sip_ids = jailhouse_cell_allowed_sip_ids(config);
++	int i = 0;
++	bool sip_id_found = false;
+ 
+ 	switch (SMCCC_GET_OWNER(regs[0])) {
+ 	case ARM_SMCCC_OWNER_ARCH:
+@@ -98,8 +103,22 @@ enum trap_return handle_smc(struct trap_context *ctx)
+ 		break;
+ 
+ 	case ARM_SMCCC_OWNER_SIP:
+-		stats[JAILHOUSE_CPU_STAT_VMEXITS_SMCCC]++;
+-		regs[0] = ARM_SMCCC_NOT_SUPPORTED;
++		sip_id_found = false;
++		for (i = 0; i < config->num_allowed_sip_ids; i++) {
++			if (callid == allowed_sip_ids[i]) {
++				stats[JAILHOUSE_CPU_STAT_VMEXITS_SMCCC]++;
++				regs[0] = smc_arg7(regs[0], regs[1], regs[2],
++						   regs[3], regs[4], regs[5],
++						   regs[6], regs);
++				sip_id_found = true;
++				break;
++			}
++		}
++		if (!sip_id_found) {
++			printk("Unsupported SIP call 0x%x\n", callid);
++			stats[JAILHOUSE_CPU_STAT_VMEXITS_SMCCC]++;
++			regs[0] = ARM_SMCCC_NOT_SUPPORTED;
++		}
+ 		break;
+ 
+ 	case ARM_SMCCC_OWNER_STANDARD:
+diff --git a/hypervisor/arch/arm/include/asm/smc.h b/hypervisor/arch/arm/include/asm/smc.h
+index 5cde3d8..6a3fd7e 100644
+--- a/hypervisor/arch/arm/include/asm/smc.h
++++ b/hypervisor/arch/arm/include/asm/smc.h
+@@ -37,3 +37,33 @@ static inline int smc_arg1(unsigned long id, unsigned long par1)
+ 
+ 	return __id;
+ }
++
++static inline int smc_arg7(unsigned long id, unsigned long par1,
++			   unsigned long par2, unsigned long par3, 
++			   unsigned long par4, unsigned long par5, 
++			   unsigned long par6, unsigned long* ret)
++{
++	register unsigned long r0 asm("r0") = id;
++	register unsigned long r1 asm("r1") = par1;
++	register unsigned long r2 asm("r2") = par2;
++	register unsigned long r3 asm("r3") = par3;
++	register unsigned long r4 asm("r4") = par4;
++	register unsigned long r5 asm("r5") = par5;
++	register unsigned long r6 asm("r6") = par6;
++
++	asm volatile ("smc #0\n\t"
++		: "+r" (r0), "+r" (r1), "+r" (r2), "+r" (r3),
++		  "+r" (r4), "+r" (r5), "+r" (r6)
++		: 
++		: "memory", "r7", "r8", "r9", "r10", "r11",
++		  "r12", "r13", "r14", "r15", "r16", "r17");
++
++	if (ret) 
++	{
++		ret[0] = r0;
++		ret[1] = r1;
++		ret[2] = r2;
++		ret[3] = r3;
++	}
++	return r0;
++}
+diff --git a/hypervisor/arch/arm64/include/asm/smc.h b/hypervisor/arch/arm64/include/asm/smc.h
+index 7cc9891..cadbcd5 100644
+--- a/hypervisor/arch/arm64/include/asm/smc.h
++++ b/hypervisor/arch/arm64/include/asm/smc.h
+@@ -34,3 +34,33 @@ static inline int smc_arg1(unsigned long id, unsigned long par1)
+ 
+ 	return __id;
+ }
++
++static inline int smc_arg7(unsigned long id, unsigned long par1,
++			   unsigned long par2, unsigned long par3, 
++			   unsigned long par4, unsigned long par5, 
++			   unsigned long par6, unsigned long* ret)
++{
++	register unsigned long x0 asm("x0") = id;
++	register unsigned long x1 asm("x1") = par1;
++	register unsigned long x2 asm("x2") = par2;
++	register unsigned long x3 asm("x3") = par3;
++	register unsigned long x4 asm("x4") = par4;
++	register unsigned long x5 asm("x5") = par5;
++	register unsigned long x6 asm("x6") = par6;
++
++	asm volatile ("smc #0\n\t"
++		: "+r" (x0), "+r" (x1), "+r" (x2), "+r" (x3),
++		  "+r" (x4), "+r" (x5), "+r" (x6)
++		: 
++		: "memory", "x7", "x8", "x9", "x10", "x11",
++		  "x12", "x13", "x14", "x15", "x16", "x17");
++
++	if (ret) 
++	{
++		ret[0] = x0;
++		ret[1] = x1;
++		ret[2] = x2;
++		ret[3] = x3;
++	}
++	return x0;
++}
+-- 
+2.7.4
+

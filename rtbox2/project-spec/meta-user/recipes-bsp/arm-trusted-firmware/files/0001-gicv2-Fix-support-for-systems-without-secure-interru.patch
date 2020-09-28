@@ -1,0 +1,51 @@
+From 9d6d800d13fe18acf6a759c00ae981eb437eff1f Mon Sep 17 00:00:00 2001
+From: Samuel Holland <samuel@sholland.org>
+Date: Thu, 9 Nov 2017 12:07:53 -0600
+Subject: [PATCH] gicv2: Fix support for systems without secure interrupts
+
+Accessing the interrupt_props array only happens inside a loop over
+interrupt_props_num, so the GICv2 driver can cope with no secure
+interrupts. As in fact we have already some asserts in place that
+respect that, lets change the final place where we insist on a non-NULL
+pointer to relax that.
+This enables GICv2 platforms which have no need for a secure interrupt.
+
+This only covers the non-deprecated code paths.
+
+Also we remove a now redundant assert().
+
+Change-Id: Id100ea978643d8558335ad28649d55743fe9bd4c
+Signed-off-by: Samuel Holland <samuel@sholland.org>
+Signed-off-by: Andre Przywara <andre.przywara@arm.com>
+---
+ drivers/arm/gic/v2/gicv2_main.c | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/arm/gic/v2/gicv2_main.c b/drivers/arm/gic/v2/gicv2_main.c
+index e25e501..bbe73fb 100644
+--- a/drivers/arm/gic/v2/gicv2_main.c
++++ b/drivers/arm/gic/v2/gicv2_main.c
+@@ -178,9 +178,6 @@ void gicv2_driver_init(const gicv2_driver_data_t *plat_driver_data)
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+ 
+-		/* The platform should provide a list of secure interrupts */
+-		assert(plat_driver_data->g0_interrupt_array);
+-
+ 		/*
+ 		 * If there are no interrupts of a particular type, then the
+ 		 * number of interrupts of that type should be 0 and vice-versa.
+@@ -195,8 +192,8 @@ void gicv2_driver_init(const gicv2_driver_data_t *plat_driver_data)
+ 		WARN("Please migrate to using an interrupt_prop_t array\n");
+ 	}
+ #else
+-	assert(plat_driver_data->interrupt_props != NULL);
+-	assert(plat_driver_data->interrupt_props_num > 0);
++	assert(plat_driver_data->interrupt_props_num > 0 ?
++			plat_driver_data->interrupt_props != NULL : 1);
+ #endif
+ 
+ 	/* Ensure that this is a GICv2 system */
+-- 
+1.8.3.1
+

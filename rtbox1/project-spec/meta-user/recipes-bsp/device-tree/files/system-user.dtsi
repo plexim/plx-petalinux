@@ -1,0 +1,195 @@
+/include/ "system-conf.dtsi"
+/ {
+        aliases {
+                ethernet0 = &gem0;
+                i2c0 = &i2c0;
+                serial0 = &uart1;
+                spi0 = &qspi;
+        };
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		rproc_0_reserved: rproc@0 {
+			no-map;
+          		reg =  <0x0 0x20000000>;
+        	};
+	};
+        amba {
+		elf_ddr_0: ddr@0 {
+			compatible = "mmio-sram";
+          		reg = <0x0 0x1c000000>;
+        	};
+        };
+	rtbox: remoteproc-rtbox@0 {
+		compatible = "xlnx,zynq_remoteproc";
+		firmware = "firmware";
+		vring0 = <8>;
+		vring1 = <9>;
+		srams = <&elf_ddr_0>;
+	};
+};
+
+&sdhci0 {
+        clock-frequency = <50000000>;
+	xlnx,has-cd = <0x1>;
+	xlnx,has-power = <0x0>;
+	xlnx,has-wp = <0x1>;
+};
+
+&uart1 {
+        u-boot,dm-pre-reloc;
+        status = "okay";
+};
+
+&i2c0 {
+	compatible = "xlnx,ps7-i2c-1.00.a", "cdns,i2c-r1p10";
+	status = "okay";
+	clock-frequency = <100000>;
+	rtc@6f {
+		compatible = "isl12022";
+		reg = <0x6F>;
+	};
+        max6650@48 {
+        	compatible = "max6650";
+		reg = <0x48>;
+        };
+	ina3221@40 {
+		compatible = "ina3221";
+		reg = <0x40>;
+	};
+        atsha204a@64 {
+                compatible = "atmel,atsha204a";
+                reg = <0x64>;
+        };
+	i2c-switch@70 {
+		compatible = "nxp,pca9546";
+		reg = <0x70>;
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+
+			eeprom@50 {
+				compatible = "at,24c02";
+				reg = <0x50>;
+			};
+			eeprom@51 {
+				compatible = "at,24c02";
+				reg = <0x51>;
+			};
+		};
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+
+			eeprom@50 {
+				compatible = "at,24c02";
+				reg = <0x50>;
+			};
+			eeprom@51 {
+				compatible = "at,24c02";
+				reg = <0x51>;
+			};
+		};
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+
+			eeprom@50 {
+				compatible = "at,24c02";
+				reg = <0x50>;
+			};
+			eeprom@51 {
+				compatible = "at,24c02";
+				reg = <0x51>;
+			};
+		};
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+
+			eeprom@50 {
+				compatible = "at,24c02";
+				reg = <0x50>;
+			};
+			eeprom@51 {
+				compatible = "at,24c02";
+				reg = <0x51>;
+			};
+		};
+        };
+	gpio@20 {
+		compatible = "ti,tca6416";
+ 		pinctrl-names = "default";
+		reg = <0x20>;
+	};
+	gpio@21 {
+		compatible = "ti,tca6416";
+ 		pinctrl-names = "default";
+		reg = <0x21>;
+	};
+	eeprom@52 {
+		compatible = "at,24c32";
+		reg = <0x52>;
+	};
+        gpio@75 {
+		compatible = "nxp,pca9539";
+		reg = <0x75>;
+        };
+        gpio@74 {
+		compatible = "nxp,pca9539";
+		reg = <0x74>;
+        };
+
+};
+
+&Version_axi_gpio_1  {
+	compatible = "invalid";
+};
+
+&DataMover_axi_gpio_0 {
+	compatible = "invalid";
+};
+
+&Aurora_axi_gpio_1 {
+	compatible = "invalid";
+};
+
+&Aurora_axi_gpio_2 {
+	compatible = "invalid";
+};
+
+&smcc {
+	status = "okay";
+	arm,addr25 = <0x0>;
+	arm,nor-chip-sel0 = <0x0>;
+	arm,nor-chip-sel1 = <0x0>;
+	arm,sram-chip-sel0 = <0x0>;
+	arm,sram-chip-sel1 = <0x0>;
+};
+
+&nand0 {
+	status = "okay";
+	arm,nand-cycle-t0 = <0x4>;
+	arm,nand-cycle-t1 = <0x4>;
+	arm,nand-cycle-t2 = <0x1>;
+	arm,nand-cycle-t3 = <0x2>;
+	arm,nand-cycle-t4 = <0x2>;
+	arm,nand-cycle-t5 = <0x2>;
+	arm,nand-cycle-t6 = <0x4>;
+
+	partition@nand-linux {
+		label = "nand-linux";
+		reg = <0x0 0x20000000>;
+	};
+};
+
+&qspi {
+	status = "disabled";
+};
+
+

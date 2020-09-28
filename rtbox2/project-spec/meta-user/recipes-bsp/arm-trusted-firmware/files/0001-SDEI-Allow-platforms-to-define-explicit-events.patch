@@ -1,0 +1,254 @@
+From af2c9ecdf1b68c6243f6d23e26d0281d182d3b45 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Wed, 17 Jan 2018 12:30:11 +0000
+Subject: [PATCH] SDEI: Allow platforms to define explicit events
+
+The current macros only allow to define dynamic and statically-bound
+SDEI events. However, there ought be a mechanism to define SDEI events
+that are explicitly dispatched; i.e., events that are dispatched as a
+result of a previous secure interrupt or other exception
+
+This patch introduces SDEI_EXPLICIT_EVENT() macro to define an explicit
+event. They must be placed under private mappings. Only the priority
+flags are allowed to be additionally specified.
+
+Documentation updated.
+
+Change-Id: I2e12f5571381195d6234c9dfbd5904608ad41db3
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ docs/sdei.rst                          | 33 ++++++++++++++++++++++----
+ include/services/sdei.h                |  9 ++++++-
+ services/std_svc/sdei/sdei_intr_mgmt.c | 11 ++-------
+ services/std_svc/sdei/sdei_main.c      | 21 +++++++++++++++-
+ services/std_svc/sdei/sdei_private.h   |  7 +++++-
+ 5 files changed, 64 insertions(+), 17 deletions(-)
+
+diff --git a/docs/sdei.rst b/docs/sdei.rst
+index b81e21a9a..ed6a85abe 100644
+--- a/docs/sdei.rst
++++ b/docs/sdei.rst
+@@ -48,8 +48,10 @@ execute the registered handler [10]. The client terminates its execution with
+ original EL2 execution [13]. Note that the SDEI interrupt remains active until
+ the client handler completes, at which point EL3 does EOI [12].
+ 
+-SDEI events can be explicitly dispatched in response to other asynchronous
+-exceptions. See `Explicit dispatch of events`_.
++Other than events bound to interrupts (as depicted in the sequence above, SDEI
++events can be explicitly dispatched in response to other exceptions, for
++example, upon receiving an *SError* or *Synchronous External Abort*. See
++`Explicit dispatch of events`_.
+ 
+ The remainder of this document only discusses the design and implementation of
+ SDEI dispatcher in TF-A, and assumes that the reader is familiar with the SDEI
+@@ -71,7 +73,8 @@ event descriptors. Both macros take 3 arguments:
+ 
+ -  The event number: this must be a positive 32-bit integer.
+ 
+--  The interrupt number the event is bound to:
++-  For an event that has a backing interrupt, the interrupt number the event is
++   bound to:
+ 
+    - If it's not applicable to an event, this shall be left as ``0``.
+ 
+@@ -82,6 +85,17 @@ event descriptors. Both macros take 3 arguments:
+ To define event 0, the macro ``SDEI_DEFINE_EVENT_0()`` should be used. This
+ macro takes only one parameter: an SGI number to signal other PEs.
+ 
++To define an event that's meant to be `explicitly dispatched`__ (i.e., not as a
++result of receiving an SDEI interrupt), the macro ``SDEI_EXPLICIT_EVENT()``
++should be used. It accepts two parameters:
++
++.. __: `Explicit dispatch of events`_
++
++-  The event number (as above);
++
++-  Event priority: ``SDEI_MAPF_CRITICAL`` or ``SDEI_MAPF_NORMAL``, as described
++   below.
++
+ Once the event descriptor arrays are defined, they should be exported to the
+ SDEI dispatcher using the ``REGISTER_SDEI_MAP()`` macro, passing it the pointers
+ to the private and shared event descriptor arrays, respectively. Note that the
+@@ -99,6 +113,8 @@ Regarding event descriptors:
+ 
+    - Must be bound to a Secure SGI on the platform.
+ 
++-  Explicit events should only be used in the private array.
++
+ -  Statically bound shared and private interrupts must be bound to shared and
+    private interrupts on the platform, respectively. See the section on
+    `interrupt configuration`__.
+@@ -132,8 +148,10 @@ Event flags describe the properties of the event. They are bit maps that can be
+ -  ``SDEI_MAPF_BOUND``: Marks the event as statically bound to an interrupt.
+    These events cannot be re-bound at runtime.
+ 
++-  ``SDEI_MAPF_NORMAL``: Marks the event as having *Normal* priority. This is
++   the default priority.
++
+ -  ``SDEI_MAPF_CRITICAL``: Marks the event as having *Critical* priority.
+-   Without this flag, the event is assumed to have *Normal* priority.
+ 
+ Event definition example
+ ------------------------
+@@ -150,6 +168,10 @@ Event definition example
+         /* Dynamic private events */
+         SDEI_PRIVATE_EVENT(100, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC),
+         SDEI_PRIVATE_EVENT(101, SDEI_DYN_IRQ, SDEI_MAPF_DYNAMIC)
++
++        /* Events for explicit dispatch */
++        SDEI_EXPLICIT_EVENT(2000, SDEI_MAPF_NORMAL);
++        SDEI_EXPLICIT_EVENT(2000, SDEI_MAPF_CRITICAL);
+    };
+ 
+    /* Shared event mappings */
+@@ -258,7 +280,8 @@ event to be dispatched:
+ 
+ -  Event 0 can't be dispatched.
+ 
+--  The event must neither be a dynamic event nor be bound to an interrupt.
++-  The event must be declared using the ``SDEI_EXPLICIT_EVENT()`` macro
++   described above.
+ 
+ -  The event must be private to the PE.
+ 
+diff --git a/include/services/sdei.h b/include/services/sdei.h
+index ce9a008c5..ee3531cb4 100644
+--- a/include/services/sdei.h
++++ b/include/services/sdei.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2017, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -52,6 +52,7 @@
+ #define _SDEI_MAPF_SIGNALABLE_SHIFT	3
+ #define _SDEI_MAPF_PRIVATE_SHIFT	4
+ #define _SDEI_MAPF_CRITICAL_SHIFT	5
++#define _SDEI_MAPF_EXPLICIT_SHIFT	6
+ 
+ /* SDEI event 0 */
+ #define SDEI_EVENT_0	0
+@@ -81,9 +82,12 @@
+  */
+ #define SDEI_MAPF_DYNAMIC	BIT(_SDEI_MAPF_DYNAMIC_SHIFT)
+ #define SDEI_MAPF_BOUND		BIT(_SDEI_MAPF_BOUND_SHIFT)
++#define SDEI_MAPF_EXPLICIT	BIT(_SDEI_MAPF_EXPLICIT_SHIFT)
+ 
+ #define SDEI_MAPF_SIGNALABLE	BIT(_SDEI_MAPF_SIGNALABLE_SHIFT)
+ #define SDEI_MAPF_PRIVATE	BIT(_SDEI_MAPF_PRIVATE_SHIFT)
++
++#define SDEI_MAPF_NORMAL	0
+ #define SDEI_MAPF_CRITICAL	BIT(_SDEI_MAPF_CRITICAL_SHIFT)
+ 
+ /* Indices of private and shared mappings */
+@@ -114,6 +118,9 @@
+ #define SDEI_DEFINE_EVENT_0(_intr) \
+ 	SDEI_PRIVATE_EVENT(SDEI_EVENT_0, _intr, SDEI_MAPF_SIGNALABLE)
+ 
++#define SDEI_EXPLICIT_EVENT(_event, _pri) \
++	SDEI_EVENT_MAP(_event, 0, _pri | SDEI_MAPF_EXPLICIT | SDEI_MAPF_PRIVATE)
++
+ /*
+  * Declare shared and private entries for each core. Also declare a global
+  * structure containing private and share entries.
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index c0bd9de6b..a7104b4f5 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -520,15 +520,8 @@ int sdei_dispatch_event(int ev_num, unsigned int preempted_sec_state)
+ 	if (!map)
+ 		return -1;
+ 
+-	/*
+-	 * Statically-bound or dynamic maps are dispatched only as a result of
+-	 * interrupt, and not upon explicit request.
+-	 */
+-	if (is_map_dynamic(map) || is_map_bound(map))
+-		return -1;
+-
+-	/* The event must be private */
+-	if (is_event_shared(map))
++	/* Only explicit events can be dispatched */
++	if (!is_map_explicit(map))
+ 		return -1;
+ 
+ 	/* Examine state of dispatch stack */
+diff --git a/services/std_svc/sdei/sdei_main.c b/services/std_svc/sdei/sdei_main.c
+index 9589a252e..f881ba82b 100644
+--- a/services/std_svc/sdei/sdei_main.c
++++ b/services/std_svc/sdei/sdei_main.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2017, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -111,6 +111,9 @@ void sdei_class_init(sdei_class_t class)
+ 
+ 		/* No shared mapping should have signalable property */
+ 		assert(!is_event_signalable(map));
++
++		/* Shared mappings can't be explicit */
++		assert(!is_map_explicit(map));
+ #endif
+ 
+ 		/* Skip initializing the wrong priority */
+@@ -162,6 +165,16 @@ void sdei_class_init(sdei_class_t class)
+ 
+ 		/* Make sure it's a private event */
+ 		assert(is_event_private(map));
++
++		/*
++		 * Other than priority, explicit events can only have explicit
++		 * and private flags set.
++		 */
++		if (is_map_explicit(map)) {
++			assert((map->map_flags | SDEI_MAPF_CRITICAL) ==
++					(SDEI_MAPF_EXPLICIT | SDEI_MAPF_PRIVATE
++					| SDEI_MAPF_CRITICAL));
++		}
+ #endif
+ 
+ 		/* Skip initializing the wrong priority */
+@@ -174,6 +187,12 @@ void sdei_class_init(sdei_class_t class)
+ 				assert(map->intr == SDEI_DYN_IRQ);
+ 				assert(is_event_normal(map));
+ 				num_dyn_priv_slots++;
++			} else if (is_map_explicit(map)) {
++				/*
++				 * Explicit mappings don't have a backing
++				 * SDEI interrupt, but verify that anyway.
++				 */
++				assert(map->intr == SDEI_DYN_IRQ);
+ 			} else {
+ 				/*
+ 				 * Private mappings must be bound to private
+diff --git a/services/std_svc/sdei/sdei_private.h b/services/std_svc/sdei/sdei_private.h
+index 44db4193b..45d537f5d 100644
+--- a/services/std_svc/sdei/sdei_private.h
++++ b/services/std_svc/sdei/sdei_private.h
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (c) 2017, ARM Limited and Contributors. All rights reserved.
++ * Copyright (c) 2017-2018, ARM Limited and Contributors. All rights reserved.
+  *
+  * SPDX-License-Identifier: BSD-3-Clause
+  */
+@@ -137,6 +137,11 @@ static inline void set_map_bound(sdei_ev_map_t *map)
+ 	map->map_flags |= BIT(_SDEI_MAPF_BOUND_SHIFT);
+ }
+ 
++static inline int is_map_explicit(sdei_ev_map_t *map)
++{
++	return ((map->map_flags & BIT(_SDEI_MAPF_EXPLICIT_SHIFT)) != 0);
++}
++
+ static inline void clr_map_bound(sdei_ev_map_t *map)
+ {
+ 	map->map_flags &= ~(BIT(_SDEI_MAPF_BOUND_SHIFT));
+-- 
+2.21.1 (Apple Git-122.3)
+

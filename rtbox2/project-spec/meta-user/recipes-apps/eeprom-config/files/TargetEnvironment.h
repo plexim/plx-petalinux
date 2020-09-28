@@ -1,0 +1,3 @@
+#define SYSTEM LINUX
+#define TARGET_MODULE MERCURY_XU1
+

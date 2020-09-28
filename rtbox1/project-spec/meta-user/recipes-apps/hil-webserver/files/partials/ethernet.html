@@ -1,0 +1,38 @@
+<div class="modal-header">
+  <h2>Ethernet Statistics</h2>
+</div>
+<div class="modal-body">
+  <div class="ethernet-port connector-group">
+    <div class="bay">
+      <div class="inner"></div>
+    </div>
+  </div>
+  <table class="table table-bordered table-striped table-condensed">
+    <tbody>
+      <tr>
+        <td>IP</td><td>{{ip}}</td>
+      </tr>
+      <tr>
+        <td>Link</td><td>{{speed}} MBit/s, {{duplex}} duplex</td>
+      </tr>
+      <tr>
+        <td>Sent</td><td>{{txp}} packets</td>
+      </tr>
+      <tr>
+        <td>Received</td><td>{{rxp}} packets</td>
+      </tr>
+      <tr>
+        <td>Transmit errors</td><td>{{tx_errors}}</td>
+      </tr>
+      <tr>
+        <td>Receive errors</td><td>{{rx_errors}}</td>
+      </tr>
+      <tr>
+        <td>Collisions</td><td>{{collisions}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<div class="modal-footer">
+	<button class="btn btn-primary" type="button" ng-click="$close()">Close</button>
+</div>

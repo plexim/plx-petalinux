@@ -1,0 +1,52 @@
+From c4491aa9a6a13f40307fa8223bb2811dc33b3b72 Mon Sep 17 00:00:00 2001
+From: Varun Wadekar <vwadekar@nvidia.com>
+Date: Tue, 30 Oct 2018 17:05:59 -0700
+Subject: [PATCH] sdei: include "context.h" to fix compilation errors
+
+This patch includes context.h from sdei_private.h to fix the
+following compilation errors:
+
+<snip>
+In file included from services/std_svc/sdei/sdei_event.c:9:0:
+services/std_svc/sdei/sdei_private.h: In function 'sdei_client_el':
+services/std_svc/sdei/sdei_private.h:164:2: error: unknown type name 'cpu_context_t'
+  cpu_context_t *ns_ctx = cm_get_context(NON_SECURE);
+  ^
+services/std_svc/sdei/sdei_private.h:165:2: error: unknown type name 'el3_state_t'
+  el3_state_t *el3_ctx = get_el3state_ctx(ns_ctx);
+  ^
+services/std_svc/sdei/sdei_private.h:165:2: error: implicit declaration of function 'get_el3state_ctx' [-Werror=implicit-function-declaration]
+services/std_svc/sdei/sdei_private.h:165:25: error: initialization makes pointer from integer without a cast [-Werror]
+  el3_state_t *el3_ctx = get_el3state_ctx(ns_ctx);
+                         ^
+services/std_svc/sdei/sdei_private.h:167:2: error: implicit declaration of function 'read_ctx_reg' [-Werror=implicit-function-declaration]
+  return ((read_ctx_reg(el3_ctx, CTX_SCR_EL3) & SCR_HCE_BIT) != 0U) ?
+  ^
+services/std_svc/sdei/sdei_private.h:167:33: error: 'CTX_SCR_EL3' undeclared (first use in this function)
+  return ((read_ctx_reg(el3_ctx, CTX_SCR_EL3) & SCR_HCE_BIT) != 0U) ?
+                                 ^
+services/std_svc/sdei/sdei_private.h:167:33: note: each undeclared identifier is reported only once for each function it appears in
+cc1: all warnings being treated as errors
+<snip>
+
+Change-Id: Id0cad56accf81b19cb0d301784f3f086dd052722
+Signed-off-by: Varun Wadekar <vwadekar@nvidia.com>
+---
+ services/std_svc/sdei/sdei_private.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/services/std_svc/sdei/sdei_private.h b/services/std_svc/sdei/sdei_private.h
+index f5197c616..821266740 100644
+--- a/services/std_svc/sdei/sdei_private.h
++++ b/services/std_svc/sdei/sdei_private.h
+@@ -8,6 +8,7 @@
+ #define SDEI_PRIVATE_H
+ 
+ #include <arch_helpers.h>
++#include <context.h>
+ #include <context_mgmt.h>
+ #include <debug.h>
+ #include <errno.h>
+-- 
+2.21.1 (Apple Git-122.3)
+

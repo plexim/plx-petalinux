@@ -1,0 +1,61 @@
+From 611eb9cfa72628d752a6f0cdf616eb48412506c2 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Fri, 10 Aug 2018 11:05:31 +0100
+Subject: [PATCH] SDEI: Fix locking issues
+
+The event lock for a shared event was being unlocked twice, and the
+locking sequence for event complete was misplaced. This patch fixes both
+issues.
+
+Change-Id: Ie2fb15c6ec240af132d7d438946ca160bd5c63dc
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_intr_mgmt.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index dd4ef307a..e834a2b90 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -507,9 +507,6 @@ int sdei_intr_handler(uint32_t intr_raw, uint32_t flags, void *handle,
+ 	}
+ 	plat_ic_end_of_interrupt(intr_raw);
+ 
+-	if (is_event_shared(map))
+-		sdei_map_unlock(map);
+-
+ 	return 0;
+ }
+ 
+@@ -624,6 +621,9 @@ int sdei_event_complete(bool resume, uint64_t pc)
+ 	assert(map != NULL);
+ 	se = get_event_entry(map);
+ 
++	if (is_event_shared(map))
++		sdei_map_lock(map);
++
+ 	act = resume ? DO_COMPLETE_RESUME : DO_COMPLETE;
+ 	if (!can_sdei_state_trans(se, act)) {
+ 		if (is_event_shared(map))
+@@ -631,15 +631,15 @@ int sdei_event_complete(bool resume, uint64_t pc)
+ 		return SDEI_EDENY;
+ 	}
+ 
++	if (is_event_shared(map))
++		sdei_map_unlock(map);
++
+ 	/* Having done sanity checks, pop dispatch */
+ 	pop_dispatch();
+ 
+ 	SDEI_LOG("EOI:%lx, %d spsr:%lx elr:%lx\n", read_mpidr_el1(),
+ 			map->ev_num, read_spsr_el3(), read_elr_el3());
+ 
+-	if (is_event_shared(map))
+-		sdei_map_lock(map);
+-
+ 	/*
+ 	 * Restore Non-secure to how it was originally interrupted. Once done,
+ 	 * it's up-to-date with the saved copy.
+-- 
+2.21.1 (Apple Git-122.3)
+

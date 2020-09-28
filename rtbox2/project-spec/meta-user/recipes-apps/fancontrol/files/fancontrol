@@ -1,0 +1,15 @@
+#!/bin/sh
+
+while /bin/true; do
+   FPGA_TEMP=`cat /sys/bus/iio/devices/iio:device0/in_temp0_ps_temp_raw`
+   SPEED=`awk "BEGIN{
+      t=(${FPGA_TEMP} - 36058) * 7.771514892 / 1000; \
+      s=-4600 + t * 4000/30;
+      if (s < 900) s=900;      
+      if (s > 6000) s=6000;
+      print int(s);
+   }"`
+   echo ${SPEED} > /sys/class/hwmon/hwmon0/fan1_target
+   sleep 5;
+done
+

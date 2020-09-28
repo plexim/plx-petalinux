@@ -1,0 +1,25 @@
+#
+# This file is the ioinit recipe.
+#
+
+SUMMARY = "Simple ioinit application"
+SECTION = "PETALINUX/apps"
+LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
+
+SRC_URI = "file://ioinit.sh \
+	   file://Makefile \
+		  "
+
+S = "${WORKDIR}"
+
+do_compile() {
+	     oe_runmake
+}
+
+do_install() {
+     install -d ${D}/etc/init.d
+     install -d ${D}/etc/rcS.d
+     install -m 0755 ioinit.sh ${D}/etc/init.d
+     ln -s /etc/init.d/ioinit.sh /${D}/etc/rcS.d/S07ioinit.sh	
+}

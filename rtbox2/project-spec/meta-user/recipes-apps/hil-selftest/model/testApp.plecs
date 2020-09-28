@@ -1,0 +1,1608 @@
+Plecs {
+  Name          "testApp"
+  Version       "4.4"
+  CircuitModel  "DiscStateSpace"
+  StartTime     "0.0"
+  StopTime      "1.0"
+  Timeout       ""
+  Solver        "FixedStepDiscrete"
+  MaxStep       "1e-5"
+  InitStep      "-1"
+  FixedStep     "1e-5"
+  Refine        "1"
+  ZCStepSize    "1e-9"
+  RelTol        "1e-3"
+  AbsTol        "-1"
+  TurnOnThreshold "0"
+  SyncFixedStepTasks "2"
+  UseSingleCommonBaseRate "2"
+  LossVariableLimitExceededMsg "3"
+  NegativeSwitchLossMsg "3"
+  DivisionByZeroMsg "3"
+  StiffnessDetectionMsg "2"
+  MaxConsecutiveZCs "1000"
+  AlgebraicLoopWithStateMachineMsg "2"
+  AssertionAction "1"
+  InitializationCommands ""
+  InitialState  "1"
+  SystemState   ""
+  TaskingMode   "1"
+  TaskConfigurations "AAAACQAAAAAA"
+  CodeGenParameterInlining "2"
+  CodeGenFloatingPointFormat "2"
+  CodeGenAbsTimeUsageMsg "3"
+  CodeGenBaseName ""
+  CodeGenOutputDir ""
+  CodeGenExtraOpts ""
+  CodeGenTarget "PLECS RT Box 3"
+  CodeGenTargetSettings "AAAAfwAAAAAlUU1hcDxRU3RyaW5nLFFNYXA8UVN0cmluZyxRU3Rya"
+"W5nPiA+AAAAAAMAAAAcAFAATABFAEMAUwAgAFIAVAAgAEIAbwB4ACAAMwAAABgAAAAeAHMAeQBuAG"
+"MAaAByAG8AbgBpAHoAZQBUAGkAbQBlAAAAAgAwAAAAGABzAHQAYQByAHQAdQBwAFMARgBQAF8ASAA"
+"AAAIAMAAAABgAcwB0AGEAcgB0AHUAcABTAEYAUABfAEcAAAACADAAAAAYAHMAdABhAHIAdAB1AHAA"
+"UwBGAFAAXwBGAAAAAgAwAAAAGABzAHQAYQByAHQAdQBwAFMARgBQAF8ARQAAAAIAMAAAABgAcwB0A"
+"GEAcgB0AHUAcABTAEYAUABfAEQAAAACADAAAAAYAHMAdABhAHIAdAB1AHAAUwBGAFAAXwBDAAAAAg"
+"AwAAAAGABzAHQAYQByAHQAdQBwAFMARgBQAF8AQgAAAAIAMAAAABgAcwB0AGEAcgB0AHUAcABTAEY"
+"AUABfAEEAAAACADAAAAAaAHMAYQBtAHAAbABpAG4AZwBEAGUAbABhAHkAAAACADAAAAAYAG0AYQB4"
+"AF8AbwB2AGUAcgByAHUAbgBzAAAAAgA1AAAAEgBtAGEAcwB0AGUAcgBTAEYAUAAAAAIAMQAAACQAZ"
+"ABpAGcAaQB0AGEAbABPAHUAdABwAHUAdABMAGUAdgBlAGwAAAACADEAAAAeAGMAYQBuADIAVABlAH"
+"IAbQBpAG4AYQB0AGkAbwBuAAAAAgAyAAAAFABjAGEAbgAyAEUAbgBhAGIAbABlAAAAAgAxAAAAEAB"
+"jAGEAbgAyAEIAYQB1AGQAAAAMADUAMAAwADAAMAAwAAAAHgBjAGEAbgAxAFQAZQByAG0AaQBuAGEA"
+"dABpAG8AbgAAAAIAMgAAABQAYwBhAG4AMQBFAG4AYQBiAGwAZQAAAAIAMQAAABAAYwBhAG4AMQBCA"
+"GEAdQBkAAAADAA1ADAAMAAwADAAMAAAABwAYQBuAGEAbABvAGcAUwBhAG0AcABsAGkAbgBnAAAAAg"
+"AxAAAAIgBhAG4AYQBsAG8AZwBPAHUAdABwAHUAdABSAGEAbgBnAGUAAAACADQAAAAgAGEAbgBhAGw"
+"AbwBnAEkAbgBwAHUAdABSAGEAbgBnAGUAAAACADEAAAAaAFQAQQBSAEcARQBUAF8ARABFAFYASQBD"
+"AEUAAAAAAAAAGgBFAFgAVABFAFIATgBBAEwAXwBNAE8ARABFAAAAAgAxAAAAHABQAEwARQBDAFMAI"
+"ABSAFQAIABCAG8AeAAgADIAAAAUAAAAHgBzAHkAbgBjAGgAcgBvAG4AaQB6AGUAVABpAG0AZQAAAA"
+"IAMAAAABgAcwB0AGEAcgB0AHUAcABTAEYAUABfAEQAAAACADAAAAAYAHMAdABhAHIAdAB1AHAAUwB"
+"GAFAAXwBDAAAAAgAwAAAAGABzAHQAYQByAHQAdQBwAFMARgBQAF8AQgAAAAIAMAAAABgAcwB0AGEA"
+"cgB0AHUAcABTAEYAUABfAEEAAAACADAAAAAaAHMAYQBtAHAAbABpAG4AZwBEAGUAbABhAHkAAAACA"
+"DAAAAAYAG0AYQB4AF8AbwB2AGUAcgByAHUAbgBzAAAAAgA1AAAAEgBtAGEAcwB0AGUAcgBTAEYAUA"
+"AAAAIAMQAAACQAZABpAGcAaQB0AGEAbABPAHUAdABwAHUAdABMAGUAdgBlAGwAAAACADEAAAAeAGM"
+"AYQBuADIAVABlAHIAbQBpAG4AYQB0AGkAbwBuAAAAAgAyAAAAFABjAGEAbgAyAEUAbgBhAGIAbABl"
+"AAAAAgAxAAAAEABjAGEAbgAyAEIAYQB1AGQAAAAMADUAMAAwADAAMAAwAAAAHgBjAGEAbgAxAFQAZ"
+"QByAG0AaQBuAGEAdABpAG8AbgAAAAIAMgAAABQAYwBhAG4AMQBFAG4AYQBiAGwAZQAAAAIAMQAAAB"
+"AAYwBhAG4AMQBCAGEAdQBkAAAADAA1ADAAMAAwADAAMAAAABwAYQBuAGEAbABvAGcAUwBhAG0AcAB"
+"sAGkAbgBnAAAAAgAxAAAAIgBhAG4AYQBsAG8AZwBPAHUAdABwAHUAdABSAGEAbgBnAGUAAAACADQA"
+"AAAgAGEAbgBhAGwAbwBnAEkAbgBwAHUAdABSAGEAbgBnAGUAAAACADEAAAAaAFQAQQBSAEcARQBUA"
+"F8ARABFAFYASQBDAEUAAAASADEAMAAuADAALgAwAC4ANwA4AAAAGgBFAFgAVABFAFIATgBBAEwAXw"
+"BNAE8ARABFAAAAAgAxAAAAHABQAEwARQBDAFMAIABSAFQAIABCAG8AeAAgADEAAAAWAAAAHgBzAHk"
+"AbgBjAGgAcgBvAG4AaQB6AGUAVABpAG0AZQAAAAIAMAAAABgAcwB0AGEAcgB0AHUAcABTAEYAUABf"
+"AEQAAAACADAAAAAYAHMAdABhAHIAdAB1AHAAUwBGAFAAXwBDAAAAAgAwAAAAGABzAHQAYQByAHQAd"
+"QBwAFMARgBQAF8AQgAAAAIAMAAAABgAcwB0AGEAcgB0AHUAcABTAEYAUABfAEEAAAACADAAAAAaAH"
+"MAYQBtAHAAbABpAG4AZwBEAGUAbABhAHkAAAACADAAAAAYAG0AYQB4AF8AbwB2AGUAcgByAHUAbgB"
+"zAAAAAgA1AAAAEgBtAGEAcwB0AGUAcgBTAEYAUAAAAAIAMQAAACQAZABpAGcAaQB0AGEAbABPAHUA"
+"dABwAHUAdABMAGUAdgBlAGwAAAACADEAAAAQAGMAYQBuADIAVAB4AFIAeAAAAAIAMQAAAB4AYwBhA"
+"G4AMgBUAGUAcgBtAGkAbgBhAHQAaQBvAG4AAAACADIAAAAUAGMAYQBuADIARQBuAGEAYgBsAGUAAA"
+"ACADAAAAAQAGMAYQBuADIAQgBhAHUAZAAAAAwANQAwADAAMAAwADAAAAAQAGMAYQBuADEAVAB4AFI"
+"AeAAAAAIAMQAAAB4AYwBhAG4AMQBUAGUAcgBtAGkAbgBhAHQAaQBvAG4AAAACADIAAAAUAGMAYQBu"
+"ADEARQBuAGEAYgBsAGUAAAACADAAAAAQAGMAYQBuADEAQgBhAHUAZAAAAAwANQAwADAAMAAwADAAA"
+"AAcAGEAbgBhAGwAbwBnAFMAYQBtAHAAbABpAG4AZwAAAAIAMQAAACIAYQBuAGEAbABvAGcATwB1AH"
+"QAcAB1AHQAUgBhAG4AZwBlAAAAAgA0AAAAIABhAG4AYQBsAG8AZwBJAG4AcAB1AHQAUgBhAG4AZwB"
+"lAAAAAgAxAAAAGgBUAEEAUgBHAEUAVABfAEQARQBWAEkAQwBFAAAAAAAAABoARQBYAFQARQBSAE4A"
+"QQBMAF8ATQBPAEQARQAAAAIAMA=="
+  ExtendedMatrixPrecision "1"
+  MatrixSignificanceCheck "2"
+  EnableStateSpaceSplitting "2"
+  DisplayStateSpaceSplitting "1"
+  DiscretizationMethod "2"
+  ExternalModeSettings ""
+  AlgebraicLoopMethod "1"
+  AlgebraicLoopTolerance "1e-6"
+  ScriptsDialogGeometry ""
+  ScriptsDialogSplitterPos "0"
+  Terminal {
+    Type          Output
+    Index         "1"
+  }
+  Terminal {
+    Type          Input
+    Index         "1"
+  }
+  Terminal {
+    Type          Output
+    Index         "2"
+  }
+  Terminal {
+    Type          Input
+    Index         "2"
+  }
+  Terminal {
+    Type          Input
+    Index         "3"
+  }
+  Terminal {
+    Type          Input
+    Index         "4"
+  }
+  Terminal {
+    Type          Input
+    Index         "5"
+  }
+  Terminal {
+    Type          Input
+    Index         "6"
+  }
+  Terminal {
+    Type          Input
+    Index         "7"
+  }
+  Terminal {
+    Type          Output
+    Index         "3"
+  }
+  Terminal {
+    Type          Input
+    Index         "8"
+  }
+  Terminal {
+    Type          Input
+    Index         "9"
+  }
+  Terminal {
+    Type          Input
+    Index         "10"
+  }
+  Terminal {
+    Type          Output
+    Index         "4"
+  }
+  Terminal {
+    Type          Output
+    Index         "5"
+  }
+  Terminal {
+    Type          Output
+    Index         "6"
+  }
+  Terminal {
+    Type          Input
+    Index         "11"
+  }
+  Terminal {
+    Type          Input
+    Index         "12"
+  }
+  Terminal {
+    Type          Output
+    Index         "7"
+  }
+  Terminal {
+    Type          Output
+    Index         "8"
+  }
+  Terminal {
+    Type          Input
+    Index         "13"
+  }
+  Terminal {
+    Type          Output
+    Index         "9"
+  }
+  Terminal {
+    Type          Output
+    Index         "10"
+  }
+  Terminal {
+    Type          Output
+    Index         "11"
+  }
+  Terminal {
+    Type          Input
+    Index         "14"
+  }
+  Terminal {
+    Type          Output
+    Index         "12"
+  }
+  Terminal {
+    Type          Input
+    Index         "15"
+  }
+  Terminal {
+    Type          Output
+    Index         "13"
+  }
+  Terminal {
+    Type          Input
+    Index         "16"
+  }
+  Terminal {
+    Type          Input
+    Index         "17"
+  }
+  Terminal {
+    Type          Input
+    Index         "18"
+  }
+  Terminal {
+    Type          Output
+    Index         "14"
+  }
+  Terminal {
+    Type          Output
+    Index         "15"
+  }
+  Terminal {
+    Type          Output
+    Index         "16"
+  }
+  Schematic {
+    Location      [1882, 492; 2560, 1107]
+    ZoomFactor    1
+    SliderPosition [0, 0]
+    ShowBrowser   off
+    BrowserWidth  100
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Analog Out1"
+      Name          "Analog Out1"
+      Show          on
+      Position      [210, 50]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "channel"
+        Value         "[0:31]"
+        Show          on
+      }
+      Parameter {
+        Variable      "scale"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "offset"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "minOutput"
+        Value         ""
+        Show          off
+      }
+      Parameter {
+        Variable      "maxOutput"
+        Value         ""
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "1"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Analog In1"
+      Name          "Analog In1"
+      Show          on
+      Position      [55, 45]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "channel"
+        Value         "[0:31]"
+        Show          on
+      }
+      Parameter {
+        Variable      "scale"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "offset"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "1"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Digital Out1"
+      Name          "Digital Out1"
+      Show          on
+      Position      [210, 145]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "channel"
+        Value         "[0:31]"
+        Show          on
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "2"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          TargetCode
+      Name          "TestApp"
+      Show          on
+      Position      [115, 245]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      TargetPortIndices ""
+      SampleTime    "0"
+      CodeFcnLang   "2"
+      CodeFcn       "local Declarations = StringList:new();\n\nDeclarations:ap"
+"pend(\"u16 getPca6416_DAC_BRD1();\\n\");\nDeclarations:append(\"u16 getPca641"
+"6_DAC_BRD2();\\n\");\nDeclarations:append(\"/* Override doStep() with (almost"
+") empty code. */\\n\");\nDeclarations:append(\"void doStep()\\n\");\nDeclarat"
+"ions:append(\"{\\n\");\nDeclarations:append(\"   plxClearIrq();\\n\");\nDecla"
+"rations:append(\"   plxSetBufferAdresses();\\n\");\nDeclarations:append(\"   "
+"if (plxGetUdpUpdateFlag(0))\\n\");\nDeclarations:append(\"   {\\n\");\nDeclar"
+"ations:append(\"      setPca6416_DAC_BRD1((getPca6416_DAC_BRD1() & 0xff00) + "
+"udpRxBuffer0[0]);\\n\");\nDeclarations:append(\"      setPca6416_DAC_BRD2((ge"
+"tPca6416_DAC_BRD2() & 0xff00) + udpRxBuffer0[1]);\\n\");\nDeclarations:append"
+"(\"      printk(\\\"DAC: 0x%x\\\\n\\\", getPca6416_DAC_BRD2());\\n\");\nDecla"
+"rations:append(\"   }\\n\");\nDeclarations:append(\"   if (plxGetUdpUpdateFla"
+"g(1))\\n\");\nDeclarations:append(\"   {\\n\");\nDeclarations:append(\"      "
+"plxSetPullups(udpRxBuffer1[0], udpRxBuffer1[1], udpRxBuffer1[2]);\\n\");\nDec"
+"larations:append(\"   }\\n\");\nDeclarations:append(\"}\\n\");\n\nreturn {\n "
+" Declarations = Declarations,\n}\n"
+      MaskHelp      "qthelp://com.plexim.rtbox.1.0/doc/do_rtbox.html"
+      MaskDisplayLang "0"
+      MaskIconFrame on
+      MaskIconOpaque off
+      MaskIconRotates on
+      Schematic {
+        Location      [1481, 760; 2532, 995]
+        ZoomFactor    1
+        SliderPosition [0, 0]
+        ShowBrowser   off
+        BrowserWidth  100
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/UDP Receive"
+      Name          "ReceiveConfig"
+      Show          on
+      Position      [220, 245]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "1000"
+        Show          off
+      }
+      Parameter {
+        Variable      "width"
+        Value         "2"
+        Show          off
+      }
+      Parameter {
+        Variable      "dataType"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "2 3"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, -5]
+        Direction     right
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 5]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Subsystem
+      Name          "Enabled\nSubsystem1"
+      Show          on
+      Position      [330, 240]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -15; 25, 15]
+      LabelPosition [0, 18]
+      LabelAlign    up
+      TreatAsAtomicUnit on
+      SampleTime    "-1"
+      CodeGenDiscretizationMethod "2"
+      CodeGenTarget "Generic"
+      MaskDisplayLang "2"
+      MaskIconFrame on
+      MaskIconOpaque off
+      MaskIconRotates on
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+        Index         "1"
+      }
+      Terminal {
+        Type          Input
+        Position      [0, -15]
+        Direction     up
+        Index         "2"
+      }
+      Schematic {
+        Location      [415, 55; 699, 222]
+        ZoomFactor    1
+        SliderPosition [0, 0]
+        ShowBrowser   off
+        BrowserWidth  100
+        Component {
+          Type          Input
+          Name          "In1"
+          Show          on
+          Position      [50, 115]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Index"
+            Value         "1"
+            Show          on
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "10"
+            Show          off
+          }
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Enable
+          Name          "Enable"
+          Show          on
+          Position      [140, 40]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Index"
+            Value         "2"
+            Show          on
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "10"
+            Show          off
+          }
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+          Parameter {
+            Variable      "ShowOutput"
+            Value         "1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Scope
+          Name          "Scope"
+          Show          on
+          Position      [210, 115]
+          Direction     up
+          Flipped       off
+          Location      [0, 0; 0, 0]
+          State         ""
+          SavedViews    ""
+          HeaderState   ""
+          PlotPalettes  ""
+          Axes          "1"
+          TimeRange     "0.0"
+          ScrollingMode "1"
+          SingleTimeAxis "1"
+          Open          "0"
+          Ts            "-1"
+          SampleLimit   "0"
+          XAxisLabel    ""
+          ShowLegend    "1"
+          Axis {
+            Name          ""
+            AutoScale     1
+            MinValue      0
+            MaxValue      1
+            Signals       {}
+            SignalTypes   [ ]
+            Untangle      0
+            KeepBaseline  off
+            BaselineValue 0
+          }
+          Fourier {
+            SingleXAxis       on
+            AxisLabel         "Frequency"
+            Scaling           0
+            PhaseDisplay      0
+            ShowFourierLegend off
+            Axis {
+              Name          ""
+              AutoScale     1
+              MinValue      0
+              MaxValue      1
+              Signals       {}
+              Untangle      0
+              KeepBaseline  off
+              BaselineValue 0
+            }
+          }
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "In1"
+          SrcTerminal   1
+          DstComponent  "Scope"
+          DstTerminal   1
+        }
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/UDP Receive"
+      Name          "ReceivePullups"
+      Show          on
+      Position      [220, 340]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "1001"
+        Show          off
+      }
+      Parameter {
+        Variable      "width"
+        Value         "3"
+        Show          off
+      }
+      Parameter {
+        Variable      "dataType"
+        Value         "5"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "4 5"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, -5]
+        Direction     right
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 5]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Subsystem
+      Name          "Enabled\nSubsystem"
+      Show          on
+      Position      [325, 335]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -15; 25, 15]
+      LabelPosition [0, 18]
+      LabelAlign    up
+      TreatAsAtomicUnit on
+      SampleTime    "-1"
+      CodeGenDiscretizationMethod "2"
+      CodeGenTarget "Generic"
+      MaskDisplayLang "2"
+      MaskIconFrame on
+      MaskIconOpaque off
+      MaskIconRotates on
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+        Index         "1"
+      }
+      Terminal {
+        Type          Input
+        Position      [0, -15]
+        Direction     up
+        Index         "2"
+      }
+      Schematic {
+        Location      [415, 55; 699, 222]
+        ZoomFactor    1
+        SliderPosition [0, 0]
+        ShowBrowser   off
+        BrowserWidth  100
+        Component {
+          Type          Input
+          Name          "In1"
+          Show          on
+          Position      [50, 115]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Index"
+            Value         "1"
+            Show          on
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "10"
+            Show          off
+          }
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Enable
+          Name          "Enable"
+          Show          on
+          Position      [140, 40]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Index"
+            Value         "2"
+            Show          on
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "10"
+            Show          off
+          }
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+          Parameter {
+            Variable      "ShowOutput"
+            Value         "1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Scope
+          Name          "Scope"
+          Show          on
+          Position      [210, 115]
+          Direction     up
+          Flipped       off
+          Location      [0, 0; 0, 0]
+          State         ""
+          SavedViews    ""
+          HeaderState   ""
+          PlotPalettes  ""
+          Axes          "1"
+          TimeRange     "0.0"
+          ScrollingMode "1"
+          SingleTimeAxis "1"
+          Open          "0"
+          Ts            "-1"
+          SampleLimit   "0"
+          XAxisLabel    ""
+          ShowLegend    "1"
+          Axis {
+            Name          ""
+            AutoScale     1
+            MinValue      0
+            MaxValue      1
+            Signals       {}
+            SignalTypes   [ ]
+            Untangle      0
+            KeepBaseline  off
+            BaselineValue 0
+          }
+          Fourier {
+            SingleXAxis       on
+            AxisLabel         "Frequency"
+            Scaling           0
+            PhaseDisplay      0
+            ShowFourierLegend off
+            Axis {
+              Name          ""
+              AutoScale     1
+              MinValue      0
+              MaxValue      1
+              Signals       {}
+              Untangle      0
+              KeepBaseline  off
+              BaselineValue 0
+            }
+          }
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "In1"
+          SrcTerminal   1
+          DstComponent  "Scope"
+          DstTerminal   1
+        }
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Digital In1"
+      Name          "Digital In1"
+      Show          on
+      Position      [60, 145]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "channel"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "inputType"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "6"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In"
+      Show          on
+      Position      [50, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "1"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "7"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out"
+      Show          on
+      Position      [50, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "1"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "3"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In1"
+      Show          on
+      Position      [130, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "2"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "8"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In2"
+      Show          on
+      Position      [205, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "3"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "9"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In3"
+      Show          on
+      Position      [290, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "4"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "10"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out1"
+      Show          on
+      Position      [130, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "2"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "4"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out2"
+      Show          on
+      Position      [205, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "3"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "5"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out3"
+      Show          on
+      Position      [290, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "4"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "6"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Resolver In"
+      Name          "Resolver In"
+      Show          on
+      Position      [305, 55]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "module"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "measurement"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "resolution"
+        Value         "4"
+        Show          off
+      }
+      Parameter {
+        Variable      "exc_frequency_sel"
+        Value         "3"
+        Show          off
+      }
+      Parameter {
+        Variable      "exc_voltage"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "11"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, -10]
+        Direction     right
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 10]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Resolver In"
+      Name          "Resolver In1"
+      Show          on
+      Position      [400, 55]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "module"
+        Value         "2"
+        Show          off
+      }
+      Parameter {
+        Variable      "measurement"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "resolution"
+        Value         "4"
+        Show          off
+      }
+      Parameter {
+        Variable      "exc_frequency_sel"
+        Value         "3"
+        Show          off
+      }
+      Parameter {
+        Variable      "exc_voltage"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "12"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, -10]
+        Direction     right
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 10]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Resolver Out"
+      Name          "Resolver Out1"
+      Show          on
+      Position      [305, 140]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "module"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "gain"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "offset"
+        Value         "2.5"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "7 8 13 9"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/Resolver Out"
+      Name          "Resolver Out2"
+      Show          on
+      Position      [395, 140]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "module"
+        Value         "2"
+        Show          off
+      }
+      Parameter {
+        Variable      "gain"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "offset"
+        Value         "2.5"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "10 11 14 12"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In4"
+      Show          on
+      Position      [365, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "5"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "15"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out4"
+      Show          on
+      Position      [365, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "5"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "13"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In5"
+      Show          on
+      Position      [445, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "6"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "16"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In6"
+      Show          on
+      Position      [520, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "7"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "17"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP In"
+      Name          "SFP In7"
+      Show          on
+      Position      [605, 415]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "8"
+        Show          on
+      }
+      Parameter {
+        Variable      "width"
+        Value         "1"
+        Show          off
+      }
+      Parameter {
+        Variable      "default"
+        Value         "0"
+        Show          off
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "18"
+        Show          off
+      }
+      Terminal {
+        Type          Output
+        Position      [29, 0]
+        Direction     right
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out5"
+      Show          on
+      Position      [445, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "6"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "14"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out6"
+      Show          on
+      Position      [520, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "7"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "15"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Component {
+      Type          Reference
+      SrcComponent  "PLECSRTBoxLib/SFP Out"
+      Name          "SFP Out7"
+      Show          on
+      Position      [605, 510]
+      Direction     up
+      Flipped       off
+      Frame         [-25, -20; 25, 20]
+      LabelPosition [0, 23]
+      LabelAlign    up
+      Parameter {
+        Variable      "port"
+        Value         "8"
+        Show          on
+      }
+      Parameter {
+        Variable      "tSample"
+        Value         "10e-6"
+        Show          off
+      }
+      Parameter {
+        Variable      "TargetPortIndices"
+        Value         "16"
+        Show          off
+      }
+      Terminal {
+        Type          Input
+        Position      [-25, 0]
+        Direction     left
+      }
+    }
+    Connection {
+      Type          Signal
+      SrcComponent  "ReceiveConfig"
+      SrcTerminal   2
+      Points        [285, 250; 285, 210]
+      DstComponent  "Enabled\nSubsystem1"
+      DstTerminal   2
+    }
+    Connection {
+      Type          Signal
+      SrcComponent  "ReceiveConfig"
+      SrcTerminal   1
+      DstComponent  "Enabled\nSubsystem1"
+      DstTerminal   1
+    }
+    Connection {
+      Type          Signal
+      SrcComponent  "ReceivePullups"
+      SrcTerminal   2
+      Points        [275, 345; 275, 305]
+      DstComponent  "Enabled\nSubsystem"
+      DstTerminal   2
+    }
+    Connection {
+      Type          Signal
+      SrcComponent  "ReceivePullups"
+      SrcTerminal   1
+      DstComponent  "Enabled\nSubsystem"
+      DstTerminal   1
+    }
+  }
+}
+DemoSignature "OPjkvTmR9yPCDJZuQ5vl+DGbb14Dg14lhrkLVKQPuf4="

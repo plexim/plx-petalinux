@@ -1,0 +1,32 @@
+From 297a9a0f7cdbf96b2ab854108ab9281e0e3a6de7 Mon Sep 17 00:00:00 2001
+From: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+Date: Fri, 22 Jun 2018 11:21:35 +0100
+Subject: [PATCH] SDEI: Fix dispatch bug
+
+The Commit cdb6ac94ecb3c4caa784cd4d7580cf6252146196 introduced a bug
+because of which the SDEI dispatcher wrongly panic when an SDEI event
+dispatched earlier as a result of interrupt. This patch fixes the check
+for a bound interrupt.
+
+Change-Id: If55c8f0422ff781731248bbbc9c1b59fa0d3c4b0
+Signed-off-by: Jeenu Viswambharan <jeenu.viswambharan@arm.com>
+---
+ services/std_svc/sdei/sdei_intr_mgmt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/services/std_svc/sdei/sdei_intr_mgmt.c b/services/std_svc/sdei/sdei_intr_mgmt.c
+index 6acb12958..264ab4435 100644
+--- a/services/std_svc/sdei/sdei_intr_mgmt.c
++++ b/services/std_svc/sdei/sdei_intr_mgmt.c
+@@ -505,7 +505,7 @@ int sdei_intr_handler(uint32_t intr_raw, uint32_t flags, void *handle,
+ 	 * the event handling completed, EOI the corresponding
+ 	 * interrupt.
+ 	 */
+-	if ((map->ev_num != SDEI_EVENT_0) && is_map_bound(map)) {
++	if ((map->ev_num != SDEI_EVENT_0) && !is_map_bound(map)) {
+ 		ERROR("Invalid SDEI mapping: ev=%u\n", map->ev_num);
+ 		panic();
+ 	}
+-- 
+2.21.1 (Apple Git-122.3)
+

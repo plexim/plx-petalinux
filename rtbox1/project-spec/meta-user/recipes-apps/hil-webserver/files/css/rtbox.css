@@ -1,0 +1,456 @@
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+
+.btn-space {
+    margin-right: 30px;
+}
+
+input[readonly] {
+  background-color: white !important;
+  cursor: text !important;
+}
+
+.tab-pane {
+  margin: 20px 20px;
+}
+
+.inline-label {
+   display: inline-block;
+   width: 160px;
+}
+
+.d-sub {
+   height: 52px;
+   width: 286px;
+   position: relative;
+   margin-bottom: 20px;
+}
+
+.connector-label {
+   display: inline-block;
+   margin-bottom: 4px;
+}
+
+.connector-status {
+   display: inline-block;
+   float: right;
+   color: black;
+   margin-bottom: 4px;
+}
+
+.connector-highlight {
+   color: #c33;
+}
+
+.trapezoid {
+    position: absolute;
+    top: 18px;
+    border-top: 24px solid black;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
+    width: 286px;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+.trapezoid-inner {
+    left:-3px;
+    top:-25px;
+    position: absolute;
+    margin-bottom: 40px;
+    border-top: 24px solid #f5f5f5;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
+    width: 284px;
+    z-index: 2;
+}
+
+.trapezoid:before {
+    content:' ';
+    left: -4px;
+    top: -41px;
+    position: absolute;
+    background-color: #f5f5f5;
+    border-radius: 14px 14px 7px 7px;
+    width: 286px;
+    height: 21px;
+    border:1px solid black;
+    z-index: 1;
+}
+
+
+.trapezoid:after {
+    content:' ';
+    left: 0px;
+    top: -17px;
+    position:absolute;
+    background-color: #f5f5f5;
+    border-radius: 13px 13px 13px 13px;
+    width: 278px;
+    height: 26px;
+    border: 1px solid black;
+    z-index: 1;
+}
+
+.d-sub:hover .trapezoid-inner {
+    border-top-color: #ccc;
+}
+
+.d-sub:hover .trapezoid:before,
+.d-sub:hover .trapezoid:after {
+    background-color: #ccc;
+}
+
+.modal-dialog .d-sub:hover .trapezoid-inner {
+    border-top-color: #f5f5f5;
+}
+
+.modal-dialog .d-sub:hover .trapezoid:before,
+.modal-dialog .d-sub:hover .trapezoid:after {
+    background-color: #f5f5f5;
+}
+
+
+.pin-row-1 {
+    left: 5px;
+    top: -32px;
+    position: absolute;
+}
+
+.pin-row-2 {
+    left: 12px;
+    top: -14px;
+    position: absolute;
+}
+
+.pin {
+   position: relative;
+   margin: 4px 5px;
+   float: left;
+   width: 4px;
+   height: 4px;
+   padding: 0px 1px;
+   border: 1px solid black;
+   border-radius: 2px;
+}
+
+.socket {
+   position: relative;
+   margin: 4px;
+   float: left;
+   width: 6px;
+   height: 6px;
+   padding: 0px 2px;
+   border: 1px solid black;
+   border-radius: 3px;
+   background-color: #d0d0d0;
+}
+
+.pin-number {
+   position: relative;
+   left: -25px;
+   width: 50px;
+   height: 20px;
+   font-size: 10px;
+   display: inline-block; 
+   text-align: center;
+}
+
+.pin-row-1 .pin-number {
+   top: -18px;
+}
+
+.pin-row-2 .pin-number {
+   top: -1px;
+}
+
+.d-sub-group,
+.led-group {
+   float: left;
+}
+
+.d-sub-group {
+   margin-right: 50px;
+}
+
+.led-group {
+   margin-top: 35px;
+}
+
+.connector-group {
+   float: left;
+   margin-right: 50px;
+}
+
+.led {
+   position: relative;
+   margin: 10px 5px 10px 25px;   
+}
+
+.led:before {
+   content: ' ';
+   position: absolute;
+   left: -25px;
+   width: 18px;
+   height: 18px;
+   background-color: #f0f0f0;
+   border-radius: 50%;
+   box-shadow: inset #777777 0 -1px 9px;
+}
+
+.led.led-red:before {
+  background-color: #F00;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 6px, rgba(255, 0, 0, 0.5) 0 2px 12px;
+}
+
+.led.led-blue:before {
+  background-color: #24E0FF;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #006 0 -1px 6px, #3F8CFF 0 2px 12px;
+}
+
+.led.led-green:before {
+  background-color: #ABFF00;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #304701 0 -1px 6px, #89FF00 0 2px 12px;
+}
+
+
+.sd-card-port {
+   margin-top: 117px;
+   margin-bottom: 40px;
+}
+
+.sd-card-port .bay {
+   margin: auto;
+   width: 133px;
+   height: 13px;
+   border: 1px solid black;
+   border-radius: 7px;
+   background-color: #d0d0d0;
+}
+
+.usb-port {
+   margin-top: 94px;
+   margin-bottom: 40px;
+}
+
+.usb-port .bay {
+   margin: auto;
+   width: 73px;
+   height: 36px;
+   border: 1px solid black;
+   border-radius: 5px;
+}
+
+.usb-port .bay .inner {
+   position: relative;
+   margin: 6px auto;
+   width: 59px;
+   height: 22px;
+   border: 1px solid black;
+   background-color: #d0d0d0;
+   border-radius: 3px;
+}
+
+.usb-port .bay .inner .pin-row {
+   position: relative;
+   margin: 3px auto;
+   width: 51px;
+   height: 8px;
+   border: 1px solid black;
+   background-color: #f0f0f0;
+   border-radius: 3px;
+}
+
+.ethernet-port {
+   margin-top: 74px;
+   margin-bottom: 40px;
+}
+
+.modal-body .ethernet-port {
+   margin-top: 25px;
+   margin-bottom: 35px;
+}
+
+.ethernet-port .bay {
+   margin: auto;
+   width: 69px;
+   height: 56px;
+   border: 1px solid black;
+   border-radius: 2px;
+}
+
+.ethernet-port .bay .inner {
+   position: relative;
+   margin: 15px auto;
+   width: 52px;
+   height: 30px;
+   border: 1px solid black;
+   background-color: #d0d0d0;
+}
+
+.ethernet-port .bay .inner::before {
+   content: ' ';
+   position: absolute;
+   top: -9px;
+   left: 10px;
+   width: 32px;
+   height: 9px;
+   border: 1px solid black;
+   border-bottom: none;
+   background-color: #d0d0d0;
+   z-index: 1;
+}
+
+.ethernet-port .bay .inner::after {
+   content: ' ';
+   position: absolute;
+   top: -14px;
+   left: 16px;
+   width: 20px;
+   height: 6px;
+   border: 1px solid black;
+   border-bottom: none;
+   background-color: #d0d0d0;
+   z-index: 2;
+}
+
+.panel-body .ethernet-port:hover .bay {      
+   background-color: #e0e0e0;                 
+}                                            
+                                             
+.panel-body .ethernet-port:hover .bay .inner,
+.panel-body .ethernet-port:hover .bay .inner::before,
+.panel-body .ethernet-port:hover .bay .inner::after {
+   background-color: #b0b0b0;                         
+}                                                    
+                                                     
+.service-port {
+   margin-top: 74px;
+   margin-bottom: 40px;
+}
+
+.service-port .bay {
+   margin: auto;
+   width: 63px;
+   height: 56px;
+   border: 1px solid black;
+   border-radius: 2px;
+}
+
+.service-port .bay .inner {
+   position: relative;
+   margin: 18px auto;
+   width: 40px;
+   height: 28px;
+   border: 1px solid black;
+   background-color: #d0d0d0;
+}
+
+.service-port .bay .inner::before {
+   content: ' ';
+   position: absolute;
+   top: -10px;
+   left: -1px;
+   width: 40px;
+   border-bottom: 10px solid black;
+   border-right: 10px solid transparent;
+   border-left: 10px solid transparent;
+}
+
+.service-port .bay .inner::after {
+   content: ' ';
+   position: absolute;
+   top: -9px;
+   left: 0px;
+   width: 38px;
+   border-bottom: 9px solid #d0d0d0;
+   border-right: 9px solid transparent;
+   border-left: 9px solid transparent;
+   z-index: 1;
+}
+
+.service-port .bay .inner .pin-row {
+   position: relative;
+   margin: 1px auto;
+   width: 22px;
+   height: 16px;
+   border: 1px solid black;
+   background-color: #f0f0f0;
+   border-radius: 3px;
+}
+
+.interconnect-port .bay {
+   margin: auto;
+   width: 149px;
+   height: 130px;
+   border: 1px solid black;
+   border-radius: 2px;
+}
+
+.interconnect-port .bay .module-row {
+}
+
+.interconnect-port .bay .module-row .module {
+   position: relative;
+   float: left;
+   margin: 3px 0 19px 3px;
+   width: 69px;
+   height: 50px;
+   border: 1px solid black;
+   background-color: #d0d0d0;
+   
+}
+
+.service-port {
+   margin-top: 74px;
+   margin-bottom: 60px;
+}
+
+.centering .connector-label {
+   text-align: center;
+   width: 100%;
+}
+
+.application-log {
+   height: 300px;
+}
+
+.table-pinout tr td:nth-child(2),
+.table-pinout tr td:nth-child(4) {
+   width: 50%;
+}
+
+.table-info tr td:nth-child(1) {
+   width: 160px;
+}
+
+table.table-info tbody tr td {
+   border: none;
+}
+
+table.table-info {
+   margin-bottom: 10px;
+}
+
+.error-text {
+   color: red;
+}
