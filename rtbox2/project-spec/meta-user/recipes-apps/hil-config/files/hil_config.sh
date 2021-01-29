@@ -32,7 +32,13 @@ fi
 
 if [ -e /dev/sda1 ]; then
    mkdir -p /run/media/sda1
-   mount /dev/sda1 /run/media/sda1 -o ro
+   mount /dev/sda1 /run/media/sda1 -o noatime
+   if [ ! -d /run/media/sda1/ToFileTargetBlock ]; then
+      mkdir /run/media/sda1/ToFileTargetBlock
+   fi
+   if [ -d /run/media/sda1/ToFileTargetBlock ]; then
+      mount /run/media/sda1/ToFileTargetBlock /www/pages/dav -o bind
+   fi
 fi
 
 if [ -d /run/media/mmcblk1p1/config ]; then
@@ -52,7 +58,9 @@ RTBOX3=`cat /sys/class/gpio/gpio497/value`
 if [ $RTBOX3 == "1" ] 
 then
    cp /var/rtbox/rtbox3.service /etc/avahi/services
+   mv /www/pages/index.html.rtbox3 /www/pages/index.html
 else
    cp /var/rtbox/rtbox2.service /etc/avahi/services
+   mv /www/pages/index.html.rtbox2 /www/pages/index.html
 fi
 

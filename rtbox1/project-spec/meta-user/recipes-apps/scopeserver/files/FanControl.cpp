@@ -14,16 +14,25 @@
 
 #include "FanControl.h"
 #include <QDebug>
+#include <QtCore/QFileInfoList>
+#include <QtCore/QDir>
 
 FanControl::FanControl(QObject *parent) : QObject(parent),
    mTemperature(.0),
-   mTempFile("/sys/bus/iio/devices/iio:device0/in_temp0_raw"),
-   mFanFile("/sys/class/hwmon/hwmon0/fan1_target")
+   mTempFile("/sys/bus/iio/devices/iio:device0/in_temp0_raw")
 {
-   if (mFanFile.open(QIODevice::ReadWrite) && mTempFile.open(QIODevice::ReadOnly))
-      startTimer(5000);
+   QDir hwmonDir("/sys/bus/i2c/devices/0-0048/hwmon");
+   QFileInfoList monEntries = hwmonDir.entryInfoList(QStringList() << "hwmon*");
+   if (monEntries.isEmpty())
+      qCritical("Cannot find device files for fan control.");
    else
-      qCritical("Cannot open device files for fan control.");
+   {
+      mFanFile.setFileName(monEntries[0].canonicalFilePath()+"/fan1_target");
+      if (mFanFile.open(QIODevice::ReadWrite) && mTempFile.open(QIODevice::ReadOnly))
+         startTimer(5000);
+      else
+         qCritical("Cannot open device files for fan control.");
+   }
 }
 
 FanControl::~FanControl()

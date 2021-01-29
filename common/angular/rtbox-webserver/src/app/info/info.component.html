@@ -1,0 +1,53 @@
+<div class="card m-4">
+  <div class="card-header">IDs and Serial Numbers</div>
+  <div class="card-body">
+    <table class="table table-borderless table-sm">
+      <tbody>
+        <tr>
+          <td>Host name:</td>
+          <td>{{hostname$ | async}}</td>
+        </tr>
+        <ng-container *ngIf="serials$ | async as serials">
+          <tr>
+            <td>Ethernet MAC:</td>
+            <td>{{serials.mac}}</td>
+          </tr>
+          <tr>
+            <td>{{serials.ipAddresses.length | i18nPlural: ipAddrWording}}:</td>
+            <td>{{serials.ipAddresses.join(', ')}}</td>
+          </tr>
+          <tr>
+            <td>Processor S/N:</td>
+            <td>{{serials.cpu}}</td>
+          </tr>
+          <tr>
+            <td>Board S/N:</td>
+            <td>{{serials.board}}</td>
+          </tr>
+          <tr>
+            <td>Board revision:</td>
+            <td>{{serials.boardRevision}}</td>
+          </tr>
+          <tr>
+            <td>FPGA version:</td>
+            <td>{{serials.fpgaVersion}}</td>
+          </tr>
+          <tr>
+            <td>Firmware version:</td>
+            <td>{{serials.firmwareVersion}}</td>
+          </tr>
+          <tr>
+            <td>Firmware build:</td>
+            <td>{{serials.firmwareBuild}}</td>
+          </tr>
+        </ng-container>
+        <ng-container *ngIf="info$ | async as info">
+          <tr>
+            <td>Application library version:</td>
+            <td>{{info.applicationVersion}}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</div>

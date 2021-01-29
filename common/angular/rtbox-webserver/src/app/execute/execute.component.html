@@ -1,0 +1,70 @@
+<div class="card m-4">
+  <div class="card-header">Executable</div>
+  <div class="card-body">
+    <form>
+      <div class="form-row">
+        <div class="col">
+          <label class="custom-file-label" for="fileToUpload">{{fileToUpload?.name || "Choose file..."}}</label>
+          <input type="file" class="custom-file-input" id="fileToUpload" (change)="fileInputChange($event.target.files)"
+          accept=".elf">
+        </div>
+        <div class="col">
+          <button class="btn btn-primary" type="button" (click)="uploadFile($event)" [disabled]="!fileToUpload">Upload</button>
+        </div>
+      </div>
+      <div class="form-row px-4 pt-3">
+        <input type="checkbox" class="form-check-input"
+                               id="autoStart" [checked]="startAfterUpload" (change)="startAfterUpload = !startAfterUpload">
+        <label class="form-check-label" for="autoStart">Start automatically after upload</label>
+      </div>
+      <div class="form-row px-4 py-3">
+        <input type="checkbox" class="form-check-input"
+                               id="delayUntilTrigger"
+                               [checked]="delayUntilFirstTrigger" (change)="delayUntilFirstTrigger = !delayUntilFirstTrigger">
+        <label class="form-check-label" for="delayUntilTrigger">Delay start until first scope trigger </label>
+      </div>
+      <div class="form-row">
+        <button class="btn btn-primary mx-2" type="button" (click)="start($event)">Start</button>
+        <button class="btn btn-primary mx-2" type="button" (click)="stop($event)" [disabled]="!canStop">Stop</button>
+        <button class="btn btn-primary mx-2" type="button" (click)="openModal(confirmReboot)" [disabled]="!canReboot">System Reboot</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<ng-template #confirmReboot>
+  <div class="modal-header">
+    <h4 class="modal-title pull-left">Reboot</h4>
+  </div>
+  <div class="modal-body">
+    <p>
+    Are you sure you want to reboot the system?
+    </p>
+    <button type="button" class="btn btn-primary mt-4 float-left" (click)="modalRef.hide()">Cancel</button>
+    <button type="button" class="btn btn-primary mt-4 float-right" (click)="reboot()">Reboot</button>
+  </div>
+</ng-template>
+
+<ng-template #modalError>
+  <div class="modal-header">
+    <h4 class="modal-title pull-left">Error</h4>
+  </div>
+  <div class="modal-body">
+    <p>
+    {{startSimulationErrorMsg}}
+    </p>
+    <button type="button" class="btn btn-primary mt-4 float-right" (click)="modalRef.hide()">Ok</button>
+  </div>
+</ng-template>
+
+<ng-template #rebootWait>
+  <div class="modal-header">
+    <h4 class="modal-title pull-left">Reboot</h4>
+  </div>
+  <div class="modal-body">
+    <p>
+      The system is rebooting. The page will relaod in {{secondsUntilReload | number:'.0-0'}} seconds.
+    </p>
+    <button type="button" class="btn btn-primary mt-4 float-right" (click)="reloadPage()">Reload now</button>
+  </div>
+</ng-template>

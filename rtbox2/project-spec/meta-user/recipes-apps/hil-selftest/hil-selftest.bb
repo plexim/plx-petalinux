@@ -12,13 +12,20 @@ SRC_URI = "file://test.html \
            file://cgi-bin \
            file://cgi-bin/boxtest.cgi \
            file://cgi-bin/teststatus.cgi \
+	   file://css/rtbox.css \
+	   file://css/bootstrap.min.css \
            file://js/spin.min.js \
            file://js/angular-spinner.min.js \
            file://js/rtboxtest.js \
+	   file://js/jquery.min.js \
+	   file://js/ui-bootstrap-tpls-1.2.4.min.js \
+	   file://js/ui-bootstrap-1.2.4.min.js \
+	   file://js/angular.min.js \
 		  "
+
 DEPENDS = "lighttpd spawn-fcgi"
-RDEPENDS_${PN} = "perl"
-FILES_${PN} += "/www/pages/js /www/pages/cgi-bin /www/cgi /www/pages"
+RDEPENDS_${PN} = "perl peekpoke canutils"
+FILES_${PN} += "/www/pages/js /www/pages/cgi-bin /www/cgi /www/pages /www/pages/css"
 
 S = "${WORKDIR}"
 
@@ -26,7 +33,9 @@ do_install() {
 	install -d ${D}/www/cgi
 	install -d ${D}/www/pages/cgi-bin
 	install -d ${D}/www/pages/js
+	install -d ${D}/www/pages/css
         cp -R ${S}/js/* ${D}/www/pages/js/
+	cp -R ${S}/css ${D}/www/pages
 	cp -R ${S}/cgi-bin/* ${D}/www/pages/cgi-bin
         install -m 0755 ${S}/boxtest.pl ${D}/www/cgi
         install -m 0644 ${S}/test.html ${D}/www/pages/test.html

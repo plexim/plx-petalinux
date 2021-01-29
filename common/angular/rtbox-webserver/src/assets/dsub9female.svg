@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32.772mm" height="17.827mm" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <filter id="filter5817" x="-.018354" y="-.034744" width="1.0367" height="1.0695" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="0.91202756"/>
+  </filter>
+  <filter id="filter1405-3" x="-.0048697" y="-.030198" width="1.0097" height="1.0604" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="0.75861426"/>
+  </filter>
+  <radialGradient id="radialGradient5942" cx="124.58" cy="40.006" r="188.76" gradientTransform="matrix(1.6138 .0066398 -.00095981 .26228 -76.423 22.84)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#fff" offset="0"/>
+   <stop stop-color="#808080" stop-opacity="0" offset="1"/>
+  </radialGradient>
+ </defs>
+ <g>
+  <path d="m57.612 65.189h-24.52c-15 0-22.5 0-25-13l-3.334-20c-7-25 3-30 13-30h88.578c10 0 20 5 13 30l-3.334 20c-2.5 13-10 13-25 13h-24.52z" fill="#686868" filter="url(#filter5817)"/>
+  <path id="dsub9female-shape-a" d="m55.696 63.82h-24.52c-15 0-22.5 0-25-13l-3.334-20c-7-25 3-30 13-30h88.578c10 0 20 5 13 30l-3.334 20c-2.5 13-10 13-25 13h-24.52z" fill="#f5f5f5" stroke="#000"/>
+  <path transform="matrix(.30199 0 0 .95865 2.1403 1.7302)" d="m50.579 2.015c-9.5683-0.055365-55.672-4.5024-48.974 19.422l17.291 27.821c2.3925 12.441 39.053 13.628 53.407 13.652l117.85 0.2019 133.23-0.4038c14.354-0.04351 40.76-2.019 43.152-14.46l16.007-28.427c11.826-19.281-47.051-17.403-47.051-17.403l-145.34 0.4038z" fill="url(#radialGradient5942)" filter="url(#filter1405-3)"/>
+ </g>
+ <g fill="#d6d6d6" stroke="#000" stroke-linejoin="round">
+  <circle cx="25.936" cy="18.579" r="3.8016" opacity=".996"/>
+  <g>
+   <circle cx="43.763" cy="18.579" r="3.8124" opacity=".996"/>
+   <circle cx="61.59" cy="18.579" r="3.8124" opacity=".996"/>
+   <circle cx="33.678" cy="42.579" r="3.8124" opacity=".996"/>
+   <circle cx="51.764" cy="42.579" r="3.8124" opacity=".996"/>
+   <circle cx="69.85" cy="42.579" r="3.8124" opacity=".996"/>
+  </g>
+ </g>
+ <text x="9.8978138" y="13.247255" fill="#000000" font-family="sans-serif" font-size="13.333px" style="line-height:1.25" xml:space="preserve"><tspan x="9.8978138" y="13.247255">5</tspan></text>
+ <text x="13.274462" y="57.190811" fill="#000000" font-family="sans-serif" font-size="13.333px" style="line-height:1.25" xml:space="preserve"><tspan x="13.274462" y="57.190811">9</tspan></text>
+ <g fill="#d6d6d6" stroke="#000" stroke-linejoin="round">
+  <circle cx="79.894" cy="18.579" r="3.8124" opacity=".996"/>
+  <circle cx="97.721" cy="18.579" r="3.8124" opacity=".996"/>
+  <circle cx="88.737" cy="42.579" r="3.8124" opacity=".996"/>
+ </g>
+ <text x="104.0584" y="13.247255" fill="#000000" font-family="sans-serif" font-size="13.333px" style="line-height:1.25" xml:space="preserve"><tspan x="104.0584" y="13.247255">1</tspan></text>
+ <text x="94.15947" y="57.190811" fill="#000000" font-family="sans-serif" font-size="13.333px" style="line-height:1.25" xml:space="preserve"><tspan x="94.15947" y="57.190811">6</tspan></text>
+</svg>

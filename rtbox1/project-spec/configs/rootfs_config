@@ -409,7 +409,7 @@ CONFIG_mtd-utils-ubifs=y
 #
 # canutils 
 #
-CONFIG_canutils=y
+# CONFIG_canutils is not set
 # CONFIG_canutils-dbg is not set
 # CONFIG_canutils-dev is not set
 
@@ -476,7 +476,7 @@ CONFIG_canutils=y
 # CONFIG_openssh-ssh is not set
 # CONFIG_openssh-dev is not set
 # CONFIG_openssh-sftp is not set
-CONFIG_openssh-sftp-server=y
+# CONFIG_openssh-sftp-server is not set
 # CONFIG_openssh-scp is not set
 
 #
@@ -2610,7 +2610,7 @@ CONFIG_packagegroup-core-boot=y
 #
 # packagegroup-core-ssh-dropbear 
 #
-CONFIG_packagegroup-core-ssh-dropbear=y
+# CONFIG_packagegroup-core-ssh-dropbear is not set
 # CONFIG_packagegroup-core-ssh-dropbear-dbg is not set
 # CONFIG_packagegroup-core-ssh-dropbear-dev is not set
 
@@ -3192,7 +3192,7 @@ CONFIG_qtbase=y
 #
 # tcf-agent 
 #
-CONFIG_tcf-agent=y
+# CONFIG_tcf-agent is not set
 # CONFIG_tcf-agent-dbg is not set
 # CONFIG_tcf-agent-dev is not set
 
@@ -4133,6 +4133,7 @@ CONFIG_avahi-daemon=y
 CONFIG_eeprom-config=y
 # CONFIG_gpio-demo is not set
 CONFIG_hil-config=y
+# CONFIG_hil-selftest is not set
 CONFIG_hil-webserver=y
 CONFIG_ioinit=y
 CONFIG_peekpoke=y
@@ -4153,8 +4154,10 @@ CONFIG_rpmsg-rtbox-driver=y
 #
 # user packages 
 #
+CONFIG_libgcc=y
 CONFIG_lighttpd=y
 CONFIG_lighttpd-module-fastcgi=y
+CONFIG_ntp=y
 CONFIG_spawn-fcgi=y
 
 #

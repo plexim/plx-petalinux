@@ -248,7 +248,7 @@ while ($query = CGI::Fast->new)
          last SWITCH;
       }      
 
-      if (/^ipstate/)
+      if (/^ipstate$/)
       {
          my $ipInfo = `/sbin/ip -o -4 addr show dev eth0`;
          my ($ip) = ($ipInfo =~ m/inet (\d+\.\d+\.\d+\.\d+\/\d+)/);
@@ -260,18 +260,66 @@ while ($query = CGI::Fast->new)
 
          last SWITCH;
       }
-
-      if (/^netstate/)
+      if (/^ipstate2$/)
       {
+         my $ipInfo = `/sbin/ip -o -4 addr show dev eth3`;
+         my ($ip) = ($ipInfo =~ m/inet (\d+\.\d+\.\d+\.\d+\/\d+)/);
          my $ret = {
-            'speed' => readLineFile('/sys/class/net/eth0/speed'),
-            'duplex' => readLineFile('/sys/class/net/eth0/duplex'),
+            'ip' => $ip,
+         };
+         print $query->header();
+         print(encode_json($ret));
+
+         last SWITCH;
+      }
+
+      if (/^netstate$/)
+      {
+         my $state = readLineFile('/sys/class/net/eth0/operstate');
+         my $ret;
+         my $speed = 0;
+         my $duplex = "";
+         if ($state eq "up")
+         {
+            $speed = readLineFile('/sys/class/net/eth0/speed');
+            $duplex = readLineFile('/sys/class/net/eth0/duplex');
+         }
+	 $ret = {
+            'state' => $state,
+	    'speed' => $speed,
+            'duplex' => $duplex,
             'rxp' => readLineFile('/sys/class/net/eth0/statistics/rx_packets'),
             'txp' => readLineFile('/sys/class/net/eth0/statistics/tx_packets'),
             'collisions' => readLineFile('/sys/class/net/eth0/statistics/collisions'),
             'tx_errors' => readLineFile('/sys/class/net/eth0/statistics/tx_errors'),
             'rx_errors' => readLineFile('/sys/class/net/eth0/statistics/rx_errors'),
-         };
+	 };
+         print $query->header();
+         print(encode_json($ret));
+
+         last SWITCH;
+      }
+      if (/^netstate2$/)
+      {
+         my $state = readLineFile('/sys/class/net/eth3/operstate');
+         my $ret;
+         my $speed = 0;
+         my $duplex = "";
+         if ($state eq "up")
+         {
+            $speed = readLineFile('/sys/class/net/eth3/speed');
+            $duplex = readLineFile('/sys/class/net/eth3/duplex');
+         }
+	 $ret = {
+            'state' => $state,
+	    'speed' => $speed,
+            'duplex' => $duplex,
+            'rxp' => readLineFile('/sys/class/net/eth3/statistics/rx_packets'),
+            'txp' => readLineFile('/sys/class/net/eth3/statistics/tx_packets'),
+            'collisions' => readLineFile('/sys/class/net/eth3/statistics/collisions'),
+            'tx_errors' => readLineFile('/sys/class/net/eth3/statistics/tx_errors'),
+            'rx_errors' => readLineFile('/sys/class/net/eth3/statistics/rx_errors'),
+	 };
          print $query->header();
          print(encode_json($ret));
 

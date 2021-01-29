@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="36.217mm" height="36.217mm" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <linearGradient id="linearGradient1348">
+   <stop stop-color="#ccc" offset="0"/>
+   <stop stop-color="#5e5e5e" stop-opacity="0" offset="1"/>
+  </linearGradient>
+  <filter id="filter1330" x="-.023742" y="-.024304" width="1.0475" height="1.0486" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="0.755453"/>
+  </filter>
+  <radialGradient id="radialGradient1350" cx="452.18" cy="371.41" r="35.998" gradientTransform="matrix(1.3681 1.1529 -.91302 1.0834 170.65 -558.36)" gradientUnits="userSpaceOnUse" xlink:href="#linearGradient1348"/>
+  <filter id="filter1420" x="-.013951" y="-.014757" width="1.0279" height="1.0295" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="0.41849719"/>
+  </filter>
+  <filter id="filter1538" x="-.038908" y="-.038908" width="1.0778" height="1.0778" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="2.6424872"/>
+  </filter>
+ </defs>
+ <g transform="translate(-420.06 -331.06)">
+  <rect transform="matrix(.77914 0 0 .77914 93.865 74.209)" x="425" y="336" width="163" height="163" rx="2.5669" ry="2.5669" fill="#545454" filter="url(#filter1538)" opacity=".996"/>
+  <rect x="425" y="336" width="125.05" height="124.66" rx="2" ry="2" fill="#ccc" opacity=".996" stroke="#000" stroke-linejoin="round" stroke-width=".974"/>
+  <g stroke-width="1.2835">
+   <g transform="matrix(.77914 0 0 .77914 93.865 74.209)">
+    <rect transform="matrix(1 0 0 .97156 0 9.6415)" x="428.15" y="339.06" width="76.368" height="74.6" rx="2.5669" ry="2.6421" fill="#737373" filter="url(#filter1330)" opacity=".996"/>
+    <rect x="428.15" y="339.06" width="74.246" height="71.064" rx="2.5669" ry="2.5669" fill="#f5f5f5" opacity=".996" stroke="#000" stroke-linejoin="round" stroke-width="1.2501"/>
+    <rect x="429.15" y="340.56" width="71.996" height="68.064" rx="2.5669" ry="2.5669" fill="url(#radialGradient1350)" filter="url(#filter1420)" opacity=".996"/>
+    <g stroke-width="1.2835">
+     <g>
+      <rect x="456.84" y="407.7" width="16.692" height="6.3336" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="436.28" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="487.41" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+     </g>
+     <g fill="#f5f5f5">
+      <rect x="437.96" y="410.06" width="2.8284" height="1.6352" opacity=".996"/>
+      <rect x="457.59" y="408.52" width="15.203" height="2.5191" opacity=".996"/>
+      <rect x="489.23" y="410.32" width="2.8284" height="1.37" opacity=".996"/>
+     </g>
+    </g>
+   </g>
+   <g transform="matrix(.77914 0 0 .77914 156.2 74.209)">
+    <rect transform="matrix(1 0 0 .97156 0 9.6415)" x="428.15" y="339.06" width="76.368" height="74.6" rx="2.5669" ry="2.6421" fill="#737373" filter="url(#filter1330)" opacity=".996"/>
+    <rect x="428.15" y="339.06" width="74.246" height="71.064" rx="2.5669" ry="2.5669" fill="#f5f5f5" opacity=".996" stroke="#000" stroke-linejoin="round" stroke-width="1.2501"/>
+    <rect x="429.15" y="340.56" width="71.996" height="68.064" rx="2.5669" ry="2.5669" fill="url(#radialGradient1350)" filter="url(#filter1420)" opacity=".996"/>
+    <g stroke-width="1.2835">
+     <g>
+      <rect x="456.84" y="407.7" width="16.692" height="6.3336" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="436.28" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="487.41" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+     </g>
+     <g fill="#f5f5f5">
+      <rect x="437.96" y="410.06" width="2.8284" height="1.6352" opacity=".996"/>
+      <rect x="457.59" y="408.52" width="15.203" height="2.5191" opacity=".996"/>
+      <rect x="489.23" y="410.32" width="2.8284" height="1.37" opacity=".996"/>
+     </g>
+    </g>
+   </g>
+   <g transform="matrix(.77914 0 0 -.77914 93.865 723.1)">
+    <rect transform="matrix(1 0 0 .97156 0 9.6415)" x="428.15" y="339.06" width="76.368" height="74.6" rx="2.5669" ry="2.6421" fill="#737373" filter="url(#filter1330)" opacity=".996"/>
+    <rect x="428.15" y="339.06" width="74.246" height="71.064" rx="2.5669" ry="2.5669" fill="#f5f5f5" opacity=".996" stroke="#000" stroke-linejoin="round" stroke-width="1.2501"/>
+    <rect x="429.15" y="340.56" width="71.996" height="68.064" rx="2.5669" ry="2.5669" fill="url(#radialGradient1350)" filter="url(#filter1420)" opacity=".996"/>
+    <g stroke-width="1.2835">
+     <g>
+      <rect x="456.84" y="407.7" width="16.692" height="6.3336" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="436.28" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="487.41" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+     </g>
+     <g fill="#f5f5f5">
+      <rect x="437.96" y="410.06" width="2.8284" height="1.6352" opacity=".996"/>
+      <rect x="457.59" y="408.52" width="15.203" height="2.5191" opacity=".996"/>
+      <rect x="489.23" y="410.32" width="2.8284" height="1.37" opacity=".996"/>
+     </g>
+    </g>
+   </g>
+   <g transform="matrix(.77914 0 0 -.77914 156.2 723.1)">
+    <rect transform="matrix(1 0 0 .97156 0 9.6415)" x="428.15" y="339.06" width="76.368" height="74.6" rx="2.5669" ry="2.6421" fill="#737373" filter="url(#filter1330)" opacity=".996"/>
+    <rect x="428.15" y="339.06" width="74.246" height="71.064" rx="2.5669" ry="2.5669" fill="#f5f5f5" opacity=".996" stroke="#000" stroke-linejoin="round" stroke-width="1.2501"/>
+    <rect x="429.15" y="340.56" width="71.996" height="68.064" rx="2.5669" ry="2.5669" fill="url(#radialGradient1350)" filter="url(#filter1420)" opacity=".996"/>
+    <g stroke-width="1.2835">
+     <g>
+      <rect x="456.84" y="407.7" width="16.692" height="6.3336" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="436.28" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+      <rect x="487.41" y="409.77" width="6.6924" height="2.9749" rx="1.2835" ry="1.2835" opacity=".996"/>
+     </g>
+     <g fill="#f5f5f5">
+      <rect x="437.96" y="410.06" width="2.8284" height="1.6352" opacity=".996"/>
+      <rect x="457.59" y="408.52" width="15.203" height="2.5191" opacity=".996"/>
+      <rect x="489.23" y="410.32" width="2.8284" height="1.37" opacity=".996"/>
+     </g>
+    </g>
+   </g>
+  </g>
+ </g>
+</svg>

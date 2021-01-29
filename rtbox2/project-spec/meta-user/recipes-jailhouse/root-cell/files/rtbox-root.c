@@ -83,9 +83,9 @@ struct {
 				JAILHOUSE_MEM_EXECUTE,
 		},
 		/* RAM for inmates */ {
-			.phys_start = 0x802500000,
-			.virt_start = 0x802500000,
-			.size =        0x7db00000,
+			.phys_start = 0x802d00000,
+			.virt_start = 0x802d00000,
+			.size =        0x2d300000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_EXECUTE,
 		},
@@ -98,7 +98,8 @@ struct {
 		/* IVSHMEM shared memory region for 00:00.0 */ {
 			.phys_start = 0x800401000,
 			.virt_start = 0x800401000,
-			.size =       0x0020ff000, // 0x2000000 Scope buffer
+			.size =       0x0028ff000, // 0x2000000 Scope buffer
+                                                   // 0x0800000 ToFile buffer
                                                    // 0x0041000 MsgQueue
                                                    // 0x0080000 RXTX Buffer 
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE,

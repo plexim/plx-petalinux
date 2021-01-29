@@ -21,12 +21,14 @@
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
 #include <list>
+#include <vector>
 
 class SimulationRPC;
 class QSocketNotifier;
 class CanHandler;
 class UdpTxHandler;
 class UdpRxHandler;
+class ToFileHandler;
 struct MsgQueue;
 
 class RPCReceiver : public QObject
@@ -39,11 +41,13 @@ public:
    bool waitForMessage(char* aSendMsg, int aMsgSize, int aMessageId, QByteArray& aData, unsigned long aTimeout);
    void log(const QString& aMsg);
    void reportError(const QString& aMsg);
-   bool mapBuffers(int aScopeBufferSize, int aRxTxBufferSize);
+   bool mapBuffers(int aScopeBufferSize, int aToFileBufferSize, int aRxTxBufferSize);
    inline void* getScopeBuffer() { return mScopeBuffer; }
    inline volatile void* getRxBuffer() { return mRxBuffer; }
    inline void* getTxBuffer() { return mTxBuffer; }
+   inline void* getToFileBuffer() { return mToFileBuffer; }
    inline uint32_t* getCpuPerformanceCounters()  { return mCpuPerformanceCounters; }
+   void reportErrorMessage(const QString& aMsg);
 
 signals:
    void initComplete();
@@ -55,10 +59,12 @@ signals:
    void sigError(QString);
    void sendRequest(QByteArray);
    void logMessage(int, QByteArray);
+   void simulationError();
 
 public slots:
    void send(QByteArray);
    void shutdown();
+   void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, int aWriteDevice);
 
 protected slots:
    void receiveData();
@@ -80,6 +86,7 @@ private:
    volatile void* mRxBuffer;
    void* mTxBuffer;
    void* mScopeBuffer;
+   void* mToFileBuffer;
    QFile mSimulationConnection;
    QSocketNotifier* mNotifier;
    QMutex mMutex;
@@ -90,6 +97,7 @@ private:
    UdpTxHandler* mUdpTxHandler;
    std::list<UdpRxHandler*> mUdpRxHandlers;
    uint32_t* mCpuPerformanceCounters;
+   std::vector<ToFileHandler*> mToFileHandlers;
 };
 
 #endif // RPCRECEIVER

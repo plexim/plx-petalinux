@@ -27,6 +27,8 @@
 		vring0 = <8>;
 		vring1 = <9>;
 		srams = <&elf_ddr_0>;
+		interrupt-parent = <&intc>;
+		interrupts = <0 29 1>; // irq_f2p interrupt routing!
 	};
 };
 
@@ -46,10 +48,6 @@
 	compatible = "xlnx,ps7-i2c-1.00.a", "cdns,i2c-r1p10";
 	status = "okay";
 	clock-frequency = <100000>;
-	rtc@6f {
-		compatible = "isl12022";
-		reg = <0x6F>;
-	};
         max6650@48 {
         	compatible = "max6650";
 		reg = <0x48>;

@@ -171,26 +171,8 @@ while ($query = CGI::Fast->new)
             'ready' => ($ledVal & 0x00040000) > 0,
             'power' => ($ledVal & 0x00080000) > 0,
          };
-         my $analogIn;
-         my $analogOut;
-         my $digitalIn = 13;
-         my $digitalOut;
-         if ($ledVal & 0x00400000) {  # VAD_EN
-            $analogIn = ($ledVal & 0x00800000) ? 5 : 4;
-            $analogOut = peek(0xffff4000);
-         };
-         if (not ($ledVal & 0x00200000)) { # DOUT_OE_N
-            $digitalOut = ($ledVal & 0x00800000) ? 11 : 12;
-         };
-         my $voltageRanges = {
-            'analogIn' => $analogIn,
-            'analogOut' => $analogOut,
-            'digitalIn' => $digitalIn,
-            'digitalOut' => $digitalOut,
-         };
          my $ret = {
             'leds' => $leds,
-            'voltageRanges' => $voltageRanges,
          };
          print $query->header();
          print(encode_json($ret));
@@ -246,9 +228,15 @@ while ($query = CGI::Fast->new)
             `poke 0xffff4004 $ver`;
             if ($ver > 0x00010001)
             {
-               `echo 871 > /sys/class/gpio/export`;
-               `echo out > /sys/class/gpio/gpio871/direction`;
-               `echo 1 > /sys/class/gpio/gpio871/value`;
+               opendir(my $dh, "/sys/bus/platform/devices/41250000.gpio/gpio");
+               my @entries = grep { /^gpiochip/ } readdir($dh);
+               closedir($dh);
+               my @baseaddr = ($entries[0] =~ m/gpiochip(\d+)/);
+               my $addr = $baseaddr[0]+1;
+
+               `echo $addr > /sys/class/gpio/export`;
+               `echo out > /sys/class/gpio/gpio$addr/direction`;
+               `echo 1 > /sys/class/gpio/gpio$addr/value`;
             }
          }
          if (!-e '/www/cgi/boxtest.pl')

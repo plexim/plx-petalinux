@@ -114,8 +114,13 @@ void SimulationInfo::updateStaticSimulationProperties()
     struct SimulationRPC::VersionType libraryVersion;
     QByteArray checksum;
     QByteArray modelName;
+    int analogOutVoltageRange;
+    int analogInVoltageRange;
+    int digitalOutVoltage;
 
-    bool success = mSimulation->querySimulation(mSampleTime, numScopeSignals,numTuneableParameters, libraryVersion,checksum, modelName);
+    bool success = mSimulation->querySimulation(mSampleTime, numScopeSignals,numTuneableParameters, 
+                                                libraryVersion,checksum, modelName, analogOutVoltageRange,
+                                                analogInVoltageRange, digitalOutVoltage);
     if (success)
     {
         mModelText->setText(modelName);
@@ -131,24 +136,18 @@ void SimulationInfo::updateStaticSimulationProperties()
 
 void SimulationInfo::updateDynamicSimulationProperties()
 {
-//    static int count = 0;
-//    qDebug() << Q_FUNC_INFO << count++;
-
-    int cycles[3];
-
-    const QPointer<PerformanceCounter>& counter = mSimulation->getPerformanceCounter();
+    const auto& counter = mSimulation->getPerformanceCounter();
     if (counter && counter->isValid())
     {
         for (auto i: {0, 1, 2})
         {
-            cycles[i] = counter->getRunningMax(i);
-            if (cycles[i] < 10)
-                cycles[i] = 0;
+            auto cycles = counter->getRunningMax(i);
+            auto period = counter->getPeriodTicks(i);
 
-            double load = (double)cycles[i] / counter->getPeriodTicks(i);
-            mCpuLoadWidgets[i]->setLoad(load);
-
-//        qDebug() << cycles[i] << load;
+            if (period > 0)
+                mCpuLoadWidgets[i]->setLoad(static_cast<double>(cycles)/period);
+            else
+                mCpuLoadWidgets[i]->setLoad(0);
         }
     }
 }

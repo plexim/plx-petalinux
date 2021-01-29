@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="38.618mm" height="11.269mm" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <filter id="filter8238" x="-.026184" y="-.10279" width="1.0524" height="1.2056" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="1.5131673"/>
+  </filter>
+  <radialGradient id="radialGradient8252" cx="220.85" cy="260.78" r="68.128" gradientTransform="matrix(1.05 .0032791 -.0010747 .29111 -159.82 -56.594)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#878787" stop-opacity="0" offset="0"/>
+   <stop stop-color="#d6d6d6" offset="1"/>
+  </radialGradient>
+  <filter id="filter8278" x="-.012129" y="-.054634" width="1.0243" height="1.1093" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="0.6690179"/>
+  </filter>
+ </defs>
+ <path d="m3.6316 3.6316h138.7v35.329h-124.35l-14.242-15.141z" fill="#575757" fill-opacity=".8871" filter="url(#filter8238)"/>
+ <path d="m3.6016 3.6016h136.26v32.889h-122.16l-13.991-14.095z" fill="#f5f5f5" stroke="#000" stroke-linejoin="round" stroke-width="1.3156"/>
+ <path d="m5.6016 5.3516h132.38v29.389h-118.69l-13.593-12.595z" fill="url(#radialGradient8252)" filter="url(#filter8278)"/>
+ <g stroke-linejoin="round" stroke-width="1.5396">
+  <rect x="45.059" y="3.7337" width="10.631" height="2.5026" rx=".13156" ry=".13156"/>
+  <rect x="45.059" y="34.039" width="10.631" height="2.5026" rx=".13156" ry=".13156"/>
+  <rect x="97.917" y="34.039" width="10.631" height="2.5026" rx=".13156" ry=".13156"/>
+  <rect x="97.917" y="3.7337" width="10.631" height="2.5026" rx=".13156" ry=".13156"/>
+ </g>
+ <g transform="matrix(4.9722 0 0 4.9722 -35.789 -54.27)" fill="none" stroke="#000" stroke-linejoin="round" stroke-width=".26458px">
+  <path d="m22.619 14.127h-10.064v2.6458h1.1368l-0.0029-1.5119h8.9297"/>
+  <path d="m22.61 14.127h10.064v2.6458h-1.1368l0.0029-1.5119h-8.9297"/>
+ </g>
+ <g transform="matrix(4.9722 0 0 4.9722 -35.789 -54.27)" fill="#fffdff" stroke="#000" stroke-linejoin="round" stroke-width=".076706">
+  <rect x="14.6" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="16.489" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="18.377" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="20.266" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="22.154" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="24.042" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="25.931" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="27.819" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+  <rect x="29.707" y="13.937" width="1.0084" height=".40121" rx=".018823" ry=".018823"/>
+ </g>
+ <g fill="#fffdff" stroke="#000" stroke-linejoin="round" stroke-width=".3814">
+  <rect x="42.211" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+  <rect x="51.6" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+  <rect x="60.989" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+  <rect x="70.379" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+  <rect x="79.768" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+  <rect x="89.157" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+  <rect x="98.547" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+  <rect x="107.94" y="20.508" width="5.0138" height="1.9949" rx=".093591" ry=".093591"/>
+ </g>
+</svg>

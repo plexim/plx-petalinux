@@ -1,0 +1,5 @@
+
+td {
+  // We need fixed column size to avoid a left-right-jumping middle border when input data changes:
+  width: 50%;
+}

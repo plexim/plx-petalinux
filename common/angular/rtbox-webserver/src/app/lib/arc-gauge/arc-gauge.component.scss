@@ -1,0 +1,16 @@
+
+@import '../colors';
+
+.position-anchor {
+   position: relative;
+   overflow-y: hidden;
+ }
+
+.center-vertically {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

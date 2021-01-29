@@ -1,0 +1,131 @@
+div.card-body {
+  overflow-x: auto;
+}
+
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.topLabel>td {
+  padding-bottom: 5px;
+}
+
+.bottomLabel>td {
+  padding-top: 5px;
+}
+
+tr.spacingOnTop>td {
+  padding-top: 30px;
+}
+
+td.svg {
+  background-repeat: no-repeat;
+  background-position: center bottom;
+}
+
+td.display {
+  background-image: url(../../assets/display.svg);
+  div {
+    width: 38.6mm;
+    height: 11.3mm;
+  }
+}
+
+td.dsub9 div {
+  width: 140px;
+  height: 76.11px;
+}
+
+td.dsub9male {
+  background-image: url(../../assets/dsub9male.svg);
+}
+
+td.dsub9male:hover {
+  background-image: url(../../assets/dsub9male-hover.svg);
+}
+
+td.sdcard {
+  background-size: 90%;
+  background-image: url(../../assets/sdcard.svg);
+  div {
+    width: 49mm;
+    height: 6mm;
+  }
+}
+
+td.usba {
+  div {
+    width: 35.752mm;
+    height: 12.351mm;
+  }
+  background-size: 90%;
+  background-image: url(../../assets/usba.svg);
+}
+
+td.ethernetClickable {
+  div {
+    width: 23.3mm;
+    height: 18.35mm;
+  }
+  background-size: contain;
+  background-image: url(../../assets/ethernet.svg);
+}
+
+td.ethernetClickable:hover {
+  @extends ethernetClickable;
+  background-image: url(../../assets/ethernet-hover.svg);
+}
+
+td.ethernetUsbClickable {
+  div {
+    width: 25.75mm;
+    height: 30.41mm;
+  }
+  background-size: contain;
+  background-image: url(../../assets/ethernet-usba.svg);
+}
+
+td.ethernetUsbClickable:hover {
+  @extends ethernetUsbClickable;
+  background-image: url(../../assets/ethernet-usba-hover.svg);
+}
+
+td.ethernetMirrored {
+  div {
+    width: 27.403mm;
+    height: 43.62mm;
+  }
+  background-image: url(../../assets/ethernet-mirrored.svg);
+}
+
+td.ethernetMirroredClickable {
+  @extend .ethernetMirrored;
+}
+
+td.ethernetMirroredClickable:hover {
+  @extend .ethernetMirroredClickable;
+  background-image: url(../../assets/ethernet-mirrored-hover.svg);
+}
+
+td.fsp8 {
+  div {
+    width: 71.989mm;
+    height: 38.505mm;
+  }
+  background-image: url(../../assets/fsp8.svg);
+}
+
+td.fsp4 {
+  div {
+    width: 36.217mm;
+    height: 36.217mm;
+  }
+  background-image: url(../../assets/fsp4.svg);
+}
+
+#detailSymbol {
+  width: 100px;
+}
+
+

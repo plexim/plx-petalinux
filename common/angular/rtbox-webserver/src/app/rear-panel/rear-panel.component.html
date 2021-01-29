@@ -1,0 +1,93 @@
+<div class="card m-4">
+  <div class="card-header">Communication and Mass Storage</div>
+  <div class="card-body text-center">
+    <table *ngIf="rtboxType === 0">
+      <tr class="topLabel">
+        <td></td>
+        <td>Ethernet</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td class="svg sdcard"><div></div></td>
+        <td (click)="showDetails('eth')" class="svg ethernetUsbClickable"><div></div></td>
+        <td (click)="showDetails('can')" class="svg dsub9 dsub9male"><div></div></td>
+      </tr>
+      <tr class="bottomLabel">
+        <td>SD Card</td>
+        <td>USB</td>
+        <td>CAN</td>
+      </tr>
+    </table>
+    <table *ngIf="rtboxType === 1">
+      <tr class="topLabel">
+        <td>SD Card</td>
+        <td>USB</td>
+        <td>Ethernet</td>
+        <td>CAN</td>
+        <td>Interconnect</td>
+      </tr>
+      <tr>
+        <td class="svg sdcard"><div></div></td>
+        <td class="svg usba"><div></div></td>
+        <td (click)="showDetails('eth')" class="svg ethernetClickable"><div></div></td>
+        <td (click)="showDetails('can')" class="svg dsub9 dsub9male"><div></div></td>
+        <td class="svg fsp4"><div></div></td>
+      </tr>
+    </table>
+    <table *ngIf="rtboxType > 1">
+      <tr class="topLabel">
+        <td colspan="4"></td>
+        <td class="topLabel">Display</td>
+      </tr>
+      <tr>
+        <td colspan="4"></td>
+        <td class="svg display"><div></div></td>
+      </tr>
+      <tr class="topLabel spacingOnTop">
+        <td colspan="4"></td>
+        <td>CAN</td>
+        <td>RS-232/422/485</td>
+      </tr>
+      <tr>
+        <td colspan="4"></td>
+        <td (click)="showDetails('can')" class="svg dsub9 dsub9male"><div></div></td>
+        <td (click)="showDetails('rs')" class="svg dsub9 dsub9male"><div></div></td>
+      </tr>
+      <tr class="topLabel spacingOnTop">
+        <td>Ethernet</td>
+        <td>SD Card</td>
+        <td>USB</td>
+        <td>Ind. Ethernet</td>
+        <td colspan="2">Interconnect</td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('eth')" class="svg ethernetMirroredClickable"><div></div></td>
+        <td class="svg sdcard"><div></div></td>
+        <td class="svg usba"><div></div></td>
+        <td class="svg ethernetMirrored"><div></div></td>
+        <td class="svg fsp8" colspan="2"><div></div></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<ng-template #ethDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="Ethernet Statistics">
+    <object class="mb-4" id="detailSymbol" data="../../assets/ethernet.svg" type="image/svg+xml"></object>
+    <rtb-ethernet-statistics></rtb-ethernet-statistics>
+  </rtb-modal-detail-table>
+</ng-template>
+
+<ng-template #canDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="CAN Connector">
+    <object class="my-4" data="../../assets/dsub9male.svg" type="image/svg+xml"></object>
+    <rtb-can-detail-table></rtb-can-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>
+
+<ng-template #rsDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="RS-232/422/485 Connector">
+    <object class="my-4" data="../../assets/dsub9male.svg" type="image/svg+xml"></object>
+    <rtb-rs-detail-table></rtb-rs-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>

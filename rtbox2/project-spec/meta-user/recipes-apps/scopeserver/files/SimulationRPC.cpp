@@ -15,7 +15,6 @@
 #include <QtCore/QFile>
 #include <QtCore/QDir>
 #include <QtCore/QDateTime>
-#include <QtCore/QTime>
 #include <QtCore/QProcess>
 #include <QtCore/QThread>
 #include <QtCore/QVariant>
@@ -31,6 +30,7 @@
 #include <unistd.h>
 #include <cmath>
 #include <sys/mman.h>
+#include <sys/time.h>
 #include "PerformanceCounter.h"
 
 #include <QtCore/QDebug>
@@ -55,7 +55,9 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
    mModelTimeStamp(0),
    mReceiver(nullptr),
    mInitComplete(false),
-   mWaitForFirstTrigger(false)
+   mWaitForFirstTrigger(false),
+   mSimulationStatus(SimulationStatus::STOPPED),
+   mLastScopeArmTime(std::chrono::steady_clock::now())
 {
    unsigned thisVersion = static_cast<unsigned>(floor(sqrt(ReleaseInfo::SCOPESERVER_VERSION)*1000+.5));
    mFirmwareVersion.mVersionMajor = thisVersion/1000000;
@@ -114,9 +116,12 @@ bool SimulationRPC::openConnection()
       connect(p, &RPCReceiver::sigError, this, &SimulationRPC::reportError);
       connect(p, &RPCReceiver::logMessage, this, &SimulationRPC::logMessageForWeb);
       connect(p, &RPCReceiver::logMessage, this, &SimulationRPC::logMessage);
+      connect(p, &RPCReceiver::simulationError, this, &SimulationRPC::simulationError);
       connect(this, &SimulationRPC::sendRequest, p, &RPCReceiver::send);
       connect(this, &SimulationRPC::shutdownRequest, p, &RPCReceiver::shutdown);
+      connect(this, &SimulationRPC::initToFileHandler, p, &RPCReceiver::initializeToFileHandler);
       mMessageBuffer.clear();
+
       QEventLoop eventLoop;
       connect(thread, &QThread::started, &eventLoop, &QEventLoop::quit);
       thread->start(QThread::HighPriority);
@@ -200,6 +205,7 @@ bool SimulationRPC::doQuerySimulation()
       mLastReceivedModelName = buffer.mid(offset, modelNameLength);
       // log(QString("Received Query Model Response, checksum ") + mLastReceivedModelChecksum);
       if (!mReceiver->mapBuffers(mLastReceivedModelResponse.mScopeBufferSize,
+                                 mLastReceivedModelResponse.mToFileBufferSize,
                                  mLastReceivedModelResponse.mRxTxBufferSize))
       {
          mServer.reportError(tr("Cannot map scope buffers."));
@@ -217,7 +223,9 @@ bool SimulationRPC::doQuerySimulation()
 bool SimulationRPC::querySimulation(double& aSampleTime, int& aNumScopeSignals, 
                                     int& aNumTuneableParameters, 
                                     struct VersionType& aLibraryVersion, 
-                                    QByteArray& aChecksum, QByteArray& aModelName)
+                                    QByteArray& aChecksum, QByteArray& aModelName,
+                                    int& aAnalogOutputVoltageRange, int& aAnalogInputVoltageRange,
+                                    int& aDigitalOutputVoltage)
 {
    if (mLastReceivedModelResponse.mSampleTime == 0.0) // no response received yet
       return false;
@@ -227,17 +235,20 @@ bool SimulationRPC::querySimulation(double& aSampleTime, int& aNumScopeSignals,
    aLibraryVersion = mLastReceivedLibraryVersion;
    aChecksum = mLastReceivedModelChecksum;
    aModelName = mLastReceivedModelName;
+   aAnalogOutputVoltageRange = mLastReceivedModelResponse.mDacSpan;
+   aAnalogInputVoltageRange = mLastReceivedModelResponse.mAnalogInputVoltageRange;
+   aDigitalOutputVoltage = mLastReceivedModelResponse.mDigitalOutVoltage;
    return true;
 }
 
 
 bool SimulationRPC::armScope(const struct SimulationRPC::ArmMessage& aMsg)
 {
-   static QTime lastArmTime = QTime::currentTime().addSecs(-1);
-   QTime currentTime = QTime::currentTime();
-   if (lastArmTime.msecsTo(currentTime) < 20)
+   static constexpr std::chrono::milliseconds threshold(20);
+   const auto currentTime = std::chrono::steady_clock::now();
+   if (currentTime - mLastScopeArmTime < threshold)
       return false;
-   lastArmTime = currentTime;
+   mLastScopeArmTime = currentTime;
    // mNotifier->setEnabled(true);
    emit sendRequest(QByteArray((char*)&aMsg, aMsg.mMsgLength));
    return true;
@@ -296,6 +307,7 @@ void SimulationRPC::reportError(QString aMsg)
    struct MsgHdr* hdr = (struct MsgHdr*)buf.data();
    hdr->mMsgLength = buf.size();
    emit sendRequest(buf);
+   mSimulationStatus = SimulationStatus::ERROR;
 }
 
 void SimulationRPC::shutdownSimulation()
@@ -315,6 +327,7 @@ void SimulationRPC::shutdownSimulation()
    loop.exec();
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "shutdown" << "1");
    mModelTimeStamp = 0;
+   mSimulationStatus = SimulationStatus::STOPPED;
 }
 
 
@@ -335,12 +348,16 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    mProgrammableValueConstMap.clear();
    mInitComplete = false;
    mWaitForFirstTrigger = aWaitForFirstTrigger;
+   mSimulationStatus = SimulationStatus::STOPPED;
+   mMessageBuffer.clear();
+
    if (!openConnection())
    {
       return QString("Cannot initialize communication.");
    }
    QEventLoop loop;
    connect(this, &SimulationRPC::initCompleteDone, &loop, &QEventLoop::quit);
+   connect(mReceiver, &RPCReceiver::simulationError, &loop, &QEventLoop::quit);
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/lib/firmware/firmware");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "start" << "1");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "shutdown" << "1");
@@ -349,7 +366,7 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    mModelTimeStamp = QDateTime::currentDateTime().toTime_t();
 
    QTimer::singleShot(2000, &loop, &QEventLoop::quit);
-   if (!mInitComplete)
+   if (!mInitComplete && mSimulationStatus != SimulationStatus::ERROR)
    {
       // Wait gracefully for 2 seconds until model startup is completed
       loop.exec();
@@ -370,16 +387,25 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
       mPerformanceCounter->init(mReceiver->getCpuPerformanceCounters(), mLastReceivedModelResponse.mCorePeriodTicks);
       syncDataBlockInfos();
 
-      const int msg[3] = { MSG_START_SIMULATION, 0, mWaitForFirstTrigger};
-      QByteArray buf((char*)msg, sizeof(msg));
-      struct MsgHdr* hdr = (struct MsgHdr*)buf.data();
-      hdr->mMsgLength = buf.size();
+      QByteArray buf;
+      buf.resize(sizeof(struct SimulationStartMsg));
+      struct SimulationStartMsg* msg = (struct SimulationStartMsg*)buf.data();
+      msg->mMsg = MSG_START_SIMULATION;
+      msg->mMsgLength = buf.size();
+      msg->mStartOnFirstTrigger = mWaitForFirstTrigger;
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      msg->mStartSec = tv.tv_sec;
+      msg->mStartUSec = tv.tv_usec;
       emit sendRequest(buf);
    }
+   else if (mSimulationStatus == SimulationStatus::ERROR)
+      return QString("Simulation startup failed.");
    else
       return QString("Communication with realtime simulation failed.");
 
    emit simulationStarted();
+   mSimulationStatus = SimulationStatus::RUNNING;
 
    return QString();
 }
@@ -493,6 +519,7 @@ bool SimulationRPC::verifyAPIVersion(bool aVerbose)
    QByteArray buffer;
    if (mReceiver->waitForMessage((char*)&msg, sizeof(msg), RSP_QUERY_API_VERSION, buffer, 3000))
    {
+      log(QString("Got API Response in time."));
       if (buffer.size() < (int)sizeof(remoteApiVersion) + (int)sizeof(mLastReceivedLibraryVersion))
       {
          log(QString("Cannot read API version."));
@@ -544,6 +571,7 @@ bool SimulationRPC::syncDataBlockInfos()
       }
       int numDataCaptures = *((int*)buffer.data());
       int numProgrammableValueConst = *((int*)(buffer.data() + sizeof(int)));
+      int numToFileBlocks = *((int*)(buffer.data() + 2 * sizeof(int)));
       for (int i=0; i<numDataCaptures; i++)
       {
          struct DataCaptureInfoRequest
@@ -622,13 +650,53 @@ bool SimulationRPC::syncDataBlockInfos()
             ProgrammableValueConstInfo entry =
             {
                .mInstance = rsp.mInstance,
-               .mWidth = rsp.mWidth,
+               .mWidth = rsp.mWidth
             };
             volatile char* componentPath = (volatile char*)mReceiver->getRxBuffer();
             //componentPath[rsp.mComponentPathLength-1] = 0;
             const QString componentPathStr((const char*)componentPath);
             log(QString("Registering Programmable Value %1").arg(componentPathStr));
             mProgrammableValueConstMap[componentPathStr] = entry;
+         }
+      }
+      for (int i=0; i<numToFileBlocks; i++)
+      {
+         struct ToFileInfoRequest
+         {
+            int mMsg;
+            int mLength;
+            int mInstance;
+         };
+
+         const struct ToFileInfoRequest infoReq = {
+            .mMsg = MSG_GET_TO_FILE_INFO,
+            .mLength = sizeof(struct ToFileInfoRequest),
+            .mInstance = i
+         };
+         if (mReceiver->waitForMessage((char*)&infoReq, sizeof(infoReq), RSP_GET_TO_FILE_INFO, buffer, 1000))
+         {
+            struct ToFileInfoResponse
+            {
+               int mInstance;
+               int mFileType;
+               int mWriteDevice;
+               int mNumSamples;
+               int mWidth;
+               int mBufferOffset;
+               int mFileNameLength;
+            };
+
+            struct ToFileInfoResponse rsp;
+            if (buffer.size() < (int)sizeof(struct ToFileInfoResponse))
+            {
+               log(QString("Cannot read To File block info."));
+               return false;
+            }
+            rsp = *((struct ToFileInfoResponse*)buffer.data());
+            volatile char* fileName = (volatile char*)mReceiver->getToFileBuffer();
+            const QString fileNameStr((const char*)fileName);
+            log(QString("Registering ToFile block with file name: %1").arg(fileNameStr));
+            emit initToFileHandler(fileNameStr, mLastReceivedModelName, rsp.mWidth, rsp.mNumSamples, rsp.mBufferOffset, rsp.mFileType, rsp.mWriteDevice);
          }
       }
    }
@@ -849,4 +917,10 @@ void SimulationRPC::initComplete()
    mInitComplete = true;
    emit initCompleteDone();
 }
+
+void SimulationRPC::simulationError()
+{
+   mSimulationStatus = SimulationStatus::ERROR;
+}
+
 

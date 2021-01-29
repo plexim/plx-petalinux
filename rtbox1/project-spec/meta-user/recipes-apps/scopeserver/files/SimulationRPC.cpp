@@ -15,7 +15,6 @@
 #include <QtCore/QFile>
 #include <QtCore/QDir>
 #include <QtCore/QDateTime>
-#include <QtCore/QTime>
 #include <QtCore/QProcess>
 #include <QtCore/QThread>
 #include <QtCore/QVariant>
@@ -28,10 +27,11 @@
 #include "xml-rpc/RTBoxError.h"
 #include "RPCReceiver.h"
 #include "FanControl.h"
+#include "xparameters.h"
 #include <unistd.h>
 #include <cmath>
 #include <sys/mman.h>
-
+#include <sys/time.h>
 #include <QtCore/QDebug>
 
 #define MY_API_VERSION 4
@@ -57,7 +57,10 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
    mTxBuffer(nullptr),
    mPageSize(sysconf(_SC_PAGESIZE)),
    mModelTimeStamp(0),
-   mReceiver(nullptr)
+   mReceiver(nullptr),
+   mWaitForFirstTrigger(false),
+   mSimulationStatus(SimulationStatus::STOPPED),
+   mLastScopeArmTime(std::chrono::steady_clock::now())
 {
    unsigned thisVersion = static_cast<unsigned>(floor(sqrt(ReleaseInfo::SCOPESERVER_VERSION)*1000+.5));
    mFirmwareVersion.mVersionMajor = thisVersion/1000000;
@@ -77,6 +80,8 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
    {
       mFanControl = new FanControl(this);
    }
+   const QDir i2cMultiplexer("/sys/bus/i2c/devices/i2c-1");
+   mRTBoxCE = !i2cMultiplexer.exists();
 }
 
 
@@ -86,7 +91,17 @@ SimulationRPC::~SimulationRPC()
    if (mSharedMemory)
    {
       mSharedMemoryFile.unmap((uchar*)mSharedMemory);
-      mSharedMemory = NULL;
+      mSharedMemory = nullptr;
+   }
+   if (mRxBuffer)
+   {
+      mSharedMemoryFile.unmap((uchar*)mRxBuffer);
+      mRxBuffer = nullptr;
+   }
+   if (mTxBuffer)
+   {
+      mTxBufferFile.unmap((uchar*)mTxBuffer);
+      mTxBuffer = nullptr;
    }
 }
 
@@ -115,6 +130,7 @@ bool SimulationRPC::openConnection(bool aVerbose)
       connect(p, &RPCReceiver::tuneParameterResponse, this, &SimulationRPC::tuneParameterResponse);
       connect(p, &RPCReceiver::sigLog, this, &SimulationRPC::log);
       connect(p, &RPCReceiver::sigError, this, &SimulationRPC::reportError);
+      connect(p, &RPCReceiver::simulationError, this, &SimulationRPC::simulationError);
       connect(this, &SimulationRPC::sendRequest, p, &RPCReceiver::send);
       connect(this, &SimulationRPC::shutdownRequest, p, &RPCReceiver::shutdown);
       QEventLoop eventLoop;
@@ -161,14 +177,14 @@ bool SimulationRPC::doQuerySimulation()
    QByteArray buffer;
    if (mReceiver->waitForMessage((char*)&msg, sizeof(msg), RSP_QUERY_MODEL, buffer, 1000))
    {
-      if (buffer.size() < (int)sizeof(struct QueryParamResponse))
+      if (buffer.size() < (int)sizeof(struct QueryModelResponse))
       {
          mServer.reportError(tr("No answer from simulation core."));
          closeConnection();
          return false;
       }
-      struct QueryParamResponse* resp = (struct QueryParamResponse*)buffer.data();
-      int offset = sizeof(struct QueryParamResponse);
+      struct QueryModelResponse* resp = (struct QueryModelResponse*)buffer.data();
+      int offset = sizeof(struct QueryModelResponse);
       mLastReceivedModelResponse = *resp;
       mLastReceivedModelChecksum = buffer.mid(offset, mLastReceivedModelResponse.mChecksumLength);
       offset += mLastReceivedModelResponse.mChecksumLength;
@@ -196,27 +212,38 @@ bool SimulationRPC::doQuerySimulation()
    if (mSharedMemory)
    {
       mSharedMemoryFile.unmap((uchar*)mSharedMemory);
-      mSharedMemory = NULL;
+      mSharedMemory = nullptr;
    }
+   if (mRxBuffer)
+   {
+      mSharedMemoryFile.unmap((uchar*)mRxBuffer);
+      mRxBuffer = nullptr;
+   }
+
    mSharedMemoryFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
    
    mSharedMemory = mSharedMemoryFile.map(
       mLastReceivedModelResponse.mScopeBufferAddress, 
-      mLastReceivedModelResponse.mScopeBufferSize + mLastReceivedModelResponse.mRxTxBufferSize/2,
+      mLastReceivedModelResponse.mScopeBufferSize,
       QFileDevice::NoOptions
    );
+   mRxBuffer = mSharedMemoryFile.map(
+      mLastReceivedModelResponse.mRxBufferAddress, 
+      mLastReceivedModelResponse.mRxTxBufferSize/2,
+      QFileDevice::NoOptions
+   );
+
    mSharedMemoryFile.close();
-   if (mSharedMemory == NULL) 
+   if (mSharedMemory == nullptr) 
    {
       log("Can't map memory for scope buffer.");
       return false;
    }
-   mRxBuffer = mSharedMemory + (mLastReceivedModelResponse.mRxBufferAddress - mLastReceivedModelResponse.mScopeBufferAddress);
 
    if (mTxBuffer)
    {
       mTxBufferFile.unmap((uchar*)mTxBuffer);
-      mTxBuffer = NULL;
+      mTxBuffer = nullptr;
    }
    mTxBufferFile.open(QIODevice::ReadWrite | QIODevice::Unbuffered);
 
@@ -226,7 +253,7 @@ bool SimulationRPC::doQuerySimulation()
       QFileDevice::NoOptions
    );
    mTxBufferFile.close();
-   if (mTxBuffer == NULL)
+   if (mTxBuffer == nullptr)
    {
       log("Can't map memory for tx buffer.");
       return false;
@@ -238,7 +265,9 @@ bool SimulationRPC::doQuerySimulation()
 bool SimulationRPC::querySimulation(double& aSampleTime, int& aNumScopeSignals, 
                                     int& aNumTuneableParameters, 
                                     struct VersionType& aLibraryVersion, 
-                                    QByteArray& aChecksum, QByteArray& aModelName)
+                                    QByteArray& aChecksum, QByteArray& aModelName,
+                                    int &aAnalogOutputVoltageRange, int &aAnalogInputVoltageRange,
+                                    int &aDigitalOutputVoltage)
 {
    if (mLastReceivedModelResponse.mSampleTime == 0.0) // no response received yet
       return false;
@@ -248,17 +277,21 @@ bool SimulationRPC::querySimulation(double& aSampleTime, int& aNumScopeSignals,
    aLibraryVersion = mLastReceivedLibraryVersion;
    aChecksum = mLastReceivedModelChecksum;
    aModelName = mLastReceivedModelName;
+   aAnalogOutputVoltageRange = mLastReceivedModelResponse.mDacSpan;
+   aAnalogInputVoltageRange = mLastReceivedModelResponse.mAnalogInputVoltageRange;
+   aDigitalOutputVoltage = mLastReceivedModelResponse.mDigitalOutVoltage;
+
    return true;
 }
 
 
 bool SimulationRPC::armScope(const struct SimulationRPC::ArmMessage& aMsg)
 {
-   static QTime lastArmTime = QTime::currentTime().addSecs(-1);
-   QTime currentTime = QTime::currentTime();
-   if (lastArmTime.msecsTo(currentTime) < 20)
+   static constexpr std::chrono::milliseconds threshold(20);
+   const auto currentTime = std::chrono::steady_clock::now();
+   if (currentTime - mLastScopeArmTime < threshold)
       return false;
-   lastArmTime = currentTime;
+   mLastScopeArmTime = currentTime;
    // mNotifier->setEnabled(true);
    emit sendRequest(QByteArray((char*)&aMsg, aMsg.mMsgLength));
    return true;
@@ -316,16 +349,15 @@ void SimulationRPC::reportError(QString aMsg)
    struct MsgHdr* hdr = (struct MsgHdr*)buf.data();
    hdr->mMsgLength = buf.size();
    emit sendRequest(buf);
+   mSimulationStatus = SimulationStatus::ERROR;
 }
-
-#define XPAR_TRIGGERMANAGER_0_S00_AXI_BASEADDR 0x43C10000
 
 void SimulationRPC::shutdownSimulation()
 {
    if (checkRunning())
    {
       // stop timer unconditionally
-      poke(XPAR_TRIGGERMANAGER_0_S00_AXI_BASEADDR, 0);
+      poke(XPAR_TRIGGERMANAGER_0_0, 0);
    }
    mServer.closeConnection();
    emit shutdownRequest();
@@ -348,6 +380,7 @@ void SimulationRPC::shutdownSimulation()
       //QProcess::execute("/sbin/modprobe", QStringList() << "-r" << "zynq_remoteproc");
       mModelTimeStamp = 0;
    }
+   mSimulationStatus = SimulationStatus::STOPPED;
 }
 
 
@@ -358,23 +391,21 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    if (!QFile::exists("/lib/firmware/firmware"))
       return QString("No simulation executable loaded.");
    mLastReceivedModelName = QByteArray();
+   mWaitForFirstTrigger = aWaitForFirstTrigger;
    memset(&mLastReceivedModelResponse, 0, sizeof(mLastReceivedModelResponse));
    memset(&mLastReceivedLibraryVersion, 0, sizeof(mLastReceivedLibraryVersion));
    QByteArray inputConfig(32, 0);
    initDigitalInputs(inputConfig);
    mDataCaptureMap.clear();
    mProgrammableValueConstMap.clear();
-   if (aWaitForFirstTrigger)
-      poke(0xffff4008, 1);
-   else
-      poke(0xffff4008, 0);
+   mSimulationStatus = SimulationStatus::STOPPED;
    //QProcess::execute("/sbin/modprobe", QStringList() << "zynq_remoteproc");
    //QProcess::execute("/sbin/modprobe", QStringList() << "virtio_rpmsg_bus");
    QProcess::execute("/sbin/modprobe", QStringList() << "rpmsg_user_dev_driver");
    setRunning(true);
    mModelTimeStamp = QDateTime::currentDateTime().toTime_t();
    int timeout = 10;
-   while (!(checkRunning() && QFile::exists("/dev/rpmsg0")) && timeout > 0)
+   while (!(checkRunning() && QFile::exists("/dev/rpmsg0")) && timeout > 0 && mSimulationStatus != SimulationStatus::ERROR)
    {
       QThread::currentThread()->usleep(200*1000);
       timeout--;
@@ -393,8 +424,11 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
                    .arg(mFirmwareVersion.mVersionMinor));
       }
    }
+   else if (mSimulationStatus == SimulationStatus::ERROR)
+      return QString("Simulation startup failed.");
    else
       return QString("Communication with realtime simulation failed.");
+   mSimulationStatus = SimulationStatus::RUNNING;
    return QString();
 }
 
@@ -515,11 +549,11 @@ void SimulationRPC::resetPerformanceCounter()
 
 bool SimulationRPC::readPerformanceCounter(QueryPerformanceCounterResponse& aResponse)
 {
-   if (!mReceiver)
+   if (!mReceiver || mSimulationStatus != SimulationStatus::RUNNING)
       return false;
    static const int msg = MSG_QUERY_PERFORMANCE_COUNTER; 
    QByteArray buffer;
-   if (mReceiver->waitForMessage((char*)&msg, sizeof(msg), RSP_PERFORMANCE_COUNTER, buffer, 1000))
+   if (mReceiver->waitForMessage((char*)&msg, sizeof(msg), RSP_PERFORMANCE_COUNTER, buffer, 200))
    {
       if (buffer.size() < (int)sizeof(struct QueryPerformanceCounterResponse))
       {
@@ -893,9 +927,21 @@ void SimulationRPC::syncModelInfos()
    if (!syncDigitalInputConfig())
       reportError("Cannot configure digital inputs.");
 
-   static const struct MsgHdr hdr = {
-      .mMsg = MSG_START_SIMULATION,
-      .mMsgLength = sizeof(hdr)
-   };
-   emit sendRequest(QByteArray::fromRawData((const char*)&hdr, sizeof(hdr)));
+   QByteArray buf;
+   buf.resize(sizeof(struct SimulationStartMsg));
+   struct SimulationStartMsg* msg = (struct SimulationStartMsg*)buf.data();
+   msg->mMsg = MSG_START_SIMULATION;
+   msg->mMsgLength = buf.size();
+   msg->mStartOnFirstTrigger = mWaitForFirstTrigger;
+   struct timeval tv;
+   gettimeofday(&tv, NULL);
+   msg->mStartSec = tv.tv_sec;
+   msg->mStartUSec = tv.tv_usec;
+   emit sendRequest(buf);
 }
+
+void SimulationRPC::simulationError()
+{
+   mSimulationStatus = SimulationStatus::ERROR;
+}
+

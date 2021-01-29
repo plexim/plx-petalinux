@@ -149,11 +149,15 @@ QVariant RtBoxXmlRpcServer::querySimulation()
    QByteArray modelName;
    QVariantList periodTicks;
    SimulationRPC::VersionType libraryVersion;
+   int analogOutVoltageRange;
+   int analogInVoltageRange;
+   int digitalOutVoltage;
 
    const QPointer<PerformanceCounter>& counter = mSimulation.getPerformanceCounter();
    if (mSimulation.querySimulation(sampleTime, numScopeSignals, 
                                    numTuneableParameters, libraryVersion, 
-                                   checksum, modelName) &&
+                                   checksum, modelName, analogOutVoltageRange,
+                                   analogInVoltageRange, digitalOutVoltage) &&
        counter)
 
    {
@@ -168,6 +172,9 @@ QVariant RtBoxXmlRpcServer::querySimulation()
       }
       retValues["periodTicks"] = periodTicks;
       retValues["modelTimeStamp"] = mSimulation.getModelTimeStamp();
+      retValues["analogOutVoltageRange"] = analogOutVoltageRange;
+      retValues["analogInVoltageRange"] = analogInVoltageRange;
+      retValues["digitalOutVoltage"] = digitalOutVoltage;
    }
    else
    {
@@ -180,7 +187,25 @@ QVariant RtBoxXmlRpcServer::querySimulation()
       }
       retValues["periodTicks"] = periodTicks;
       retValues.insert("modelTimeStamp", 0);
+      retValues.insert("analogOutVoltageRange", 0);
+      retValues.insert("analogInVoltageRange", 0);
+      retValues.insert("digitalOutVoltage", 0);
    }
+   QString status;
+   switch(mSimulation.getStatus())
+   {
+   case SimulationRPC::SimulationStatus::RUNNING:
+      status = "running";
+      break;
+   case SimulationRPC::SimulationStatus::ERROR:
+      status = "error";
+      break;
+   case SimulationRPC::SimulationStatus::STOPPED:
+   default:
+      status = "stopped";
+      break;
+   }
+   retValues["status"] = status;
    return retValues;
 }
 
@@ -206,11 +231,11 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
       voltages.append(QVariant(measurement.toInt()/1000.0));
    }
    QVariantList currents;
-   for (int i=4; i<7; i++)
+   for (int i=1; i<4; i++)
    {
       QByteArray measurement;
-      readLineFile(QString("/sys/class/hwmon/hwmon1/in%1_input").arg(i), measurement);
-      currents.append(QVariant(measurement.toInt()/10000.0));
+      readLineFile(QString("/sys/class/hwmon/hwmon1/curr%1_input").arg(i), measurement);
+      currents.append(QVariant(measurement.toInt()/1000.0));
    }   
    const QByteArray& msgBuffer = mSimulation.getMessageBuffer();
    QString log = msgBuffer.mid(logPosition);

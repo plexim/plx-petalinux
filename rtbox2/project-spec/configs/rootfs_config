@@ -461,7 +461,7 @@ CONFIG_mtd-utils=y
 #
 # canutils 
 #
-CONFIG_canutils=y
+# CONFIG_canutils is not set
 # CONFIG_canutils-dev is not set
 # CONFIG_canutils-dbg is not set
 
@@ -523,7 +523,7 @@ CONFIG_canutils=y
 # CONFIG_openssh is not set
 # CONFIG_openssh-ssh is not set
 # CONFIG_openssh-sftp is not set
-CONFIG_openssh-sftp-server=y
+# CONFIG_openssh-sftp-server is not set
 # CONFIG_openssh-keygen is not set
 # CONFIG_openssh-dbg is not set
 # CONFIG_openssh-dev is not set
@@ -2800,7 +2800,7 @@ CONFIG_packagegroup-core-boot=y
 #
 # packagegroup-core-ssh-dropbear 
 #
-CONFIG_packagegroup-core-ssh-dropbear=y
+# CONFIG_packagegroup-core-ssh-dropbear is not set
 # CONFIG_packagegroup-core-ssh-dropbear-dev is not set
 # CONFIG_packagegroup-core-ssh-dropbear-dbg is not set
 
@@ -4425,11 +4425,12 @@ CONFIG_qt5-platform-plugin-oled=y
 # CONFIG_cairomm is not set
 # CONFIG_can-utils is not set
 CONFIG_kernel-module-jailhouse=y
-CONFIG_lighttpd=y
 CONFIG_lighttpd-module-fastcgi=y
+CONFIG_lighttpd-module-webdav=y
 CONFIG_ntp=y
 CONFIG_spawn-fcgi=y
 CONFIG_terminus-font-pcf=y
+CONFIG_lighttpd=y
 
 #
 # PetaLinux RootFS Settings

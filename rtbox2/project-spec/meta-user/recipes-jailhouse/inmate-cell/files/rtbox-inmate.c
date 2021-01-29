@@ -107,17 +107,17 @@ struct {
 		/* IVSHMEM shared memory region for 00:00.0 */ {
 			.phys_start = 0x800401000,
 			.virt_start = 0x800401000,
-			.size =       0x0020ff000, // 0x41000 + 0x02000000 + 0x00080000,
+			.size =       0x0028ff000, // 0x41000 + 0x02000000 + 0x00080000 + 0x00800000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_ROOTSHARED,
 		},
 		/* IVSHMEM output region for 00:00.0 (disabled) */ {
 			0,
 		},
-		/* RAM */ {
-			.phys_start = 0x802600000,
+		/* RAM for inmate */ {
+			.phys_start = 0x802d00000,
 			.virt_start = 0,
-			.size =         0x4a00000,
+			.size =        0x2d300000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_EXECUTE | JAILHOUSE_MEM_LOADABLE,
 		},

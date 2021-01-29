@@ -26,6 +26,9 @@
 #include <QtCore/QMutexLocker>
 #include <QtCore/QDir>
 #include "spinlock.h"
+#include "ToFileHandler.h"
+#include <QElapsedTimer>
+#include <QDebug>
 
 #define member_size(type, member) sizeof(((type *)0)->member)
 
@@ -91,6 +94,7 @@ RPCReceiver::RPCReceiver()
    for (int i=0; i<2; i++)
       mCanHandlers[i] = nullptr;
    connect(this, &RPCReceiver::sendRequest, this, &RPCReceiver::send, Qt::QueuedConnection);
+   ToFileHandler::staticInit();
 }
 
 RPCReceiver::~RPCReceiver()
@@ -103,6 +107,10 @@ RPCReceiver::~RPCReceiver()
    for (auto it = mUdpRxHandlers.begin(); it != mUdpRxHandlers.end(); ++it)
    {
       (*it)->stop();
+   }
+   for (auto it = mToFileHandlers.begin(); it != mToFileHandlers.end(); ++it)
+   {
+      (*it)->stop(false);
    }
    if (mNotifier)
    {
@@ -307,6 +315,19 @@ bool RPCReceiver::processMessage(int aMessage)
           }
           break;
        }
+       case SimulationRPC::TO_FILE_BUFFER_FULL:
+       {
+          QByteArray buffer;
+          if (readMsgData(buffer))
+          {
+             const struct SimulationRPC::ToFileBufferFullMsg* toFileMsg = (const struct SimulationRPC::ToFileBufferFullMsg*)buffer.data();
+             if(toFileMsg->mInstance < mToFileHandlers.size())
+             {
+                mToFileHandlers[toFileMsg->mInstance]->writeToFileBuffer(toFileMsg->mCurrentReadBuffer);
+             }
+          }
+          break;
+       }
        case SimulationRPC::MSG_LOG:
        {
           QByteArray buffer;
@@ -317,6 +338,9 @@ bool RPCReceiver::processMessage(int aMessage)
           }
           break;
        }
+       case SimulationRPC::MSG_ERROR:
+          emit simulationError();
+          break;
        default:
           log(QString("Unexpected message from simulation core %1").arg(aMessage));
           return false;
@@ -332,6 +356,11 @@ void RPCReceiver::log(const QString &aMsg)
 void RPCReceiver::reportError(const QString &aMsg)
 {
    emit sigError(aMsg);
+}
+
+void RPCReceiver::reportErrorMessage(const QString& aMsg)
+{
+   emit logMessage(1, aMsg.toLocal8Bit());
 }
 
 void RPCReceiver::send(QByteArray aData)
@@ -391,6 +420,13 @@ void RPCReceiver::shutdown()
       (*it)->deleteLater();
    }
    mUdpRxHandlers.clear();
+
+   for (auto it = mToFileHandlers.begin(); it != mToFileHandlers.end(); ++it)
+   {
+      (*it)->stop(false);
+      (*it)->deleteLater();
+   }
+   mToFileHandlers.clear();
    const int shutdownMsg = 0xef56a55a;
    sendMsg((const char*)&shutdownMsg, sizeof(int));
    emit finished();
@@ -406,7 +442,7 @@ bool RPCReceiver::reconnect()
    }
    mSendQueue = (struct MsgQueue*)mSimulationConnection.map(
       2*4096,
-      ((2*sizeof(struct MsgQueue)-1)/4096+1)*4096 + 0x2080000,
+      ((2*sizeof(struct MsgQueue)-1)/4096+1)*4096,// + 0x2880000,
       QFileDevice::NoOptions
    );
 
@@ -418,21 +454,39 @@ bool RPCReceiver::reconnect()
    }
    mReceiveQueue = mSendQueue + 1;
    memset(&mReceiveQueue->mInfo, 0, sizeof(mSendQueue->mInfo));
-   mCpuPerformanceCounters = (uint32_t*)(mReceiveQueue + 1);
    mNotifier = new QSocketNotifier(mSimulationConnection.handle(), QSocketNotifier::Read, this);
    connect(mNotifier, SIGNAL(activated(int)), this, SLOT(receiveData()));
    return true;
 }
 
 
-bool RPCReceiver::mapBuffers(int aScopeBufferSize, int aRxTxBufferSize)
+bool RPCReceiver::mapBuffers(int aScopeBufferSize, int aToFileBufferSize, int aRxTxBufferSize)
 {
-   if (!mReceiveQueue)
+   if (!mSimulationConnection.isOpen())
    {
       return false;
    }
+   if (mSendQueue)
+   {
+      mSimulationConnection.unmap((uchar*)mSendQueue);
+   }
+   mSendQueue = (struct MsgQueue*)mSimulationConnection.map(
+      2*4096,
+      ((2*sizeof(struct MsgQueue)-1)/4096+1)*4096 + aScopeBufferSize + aToFileBufferSize + aRxTxBufferSize,
+      QFileDevice::NoOptions
+   );
+
+   if (!mSendQueue)
+   {
+      mSimulationConnection.close();
+      emit error(tr("Cannot map memory."));
+      return false;
+   }
+   mReceiveQueue = mSendQueue + 1;
+   mCpuPerformanceCounters = (uint32_t*)(mReceiveQueue + 1);
    mScopeBuffer = ((char*)mSendQueue) + ((2*sizeof(struct MsgQueue)+3*sizeof(uint32_t)-1)/4096+1)*4096;
-   mRxBuffer = (volatile char*)mScopeBuffer + aScopeBufferSize;
+   mToFileBuffer = mScopeBuffer + aScopeBufferSize;
+   mRxBuffer = (volatile char*)mToFileBuffer + aToFileBufferSize;
    mTxBuffer = (char*)mRxBuffer + aRxTxBufferSize/2;
    return true;
 }
@@ -454,6 +508,7 @@ void RPCReceiver::close()
    mScopeBuffer = nullptr;
    mRxBuffer = nullptr;
    mTxBuffer = nullptr;
+   mToFileBuffer = nullptr;
    mCpuPerformanceCounters = nullptr;
    mSimulationConnection.close();
 }
@@ -474,4 +529,10 @@ bool RPCReceiver::sendMsg(const void* aData, int aLength)
    return true;
 }
 
+void RPCReceiver::initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, int aWriteDevice)
+{
+   QString modelName = QString(aModelName);
+   ToFileHandler* newToFileHandler = new ToFileHandler(modelName, aFileName, aWidth, aNumSamples, aBufferOffset, aFileType, aWriteDevice, this);
+   mToFileHandlers.push_back(newToFileHandler);
+}
 

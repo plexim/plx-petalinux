@@ -49,8 +49,8 @@ file://SimulationRPC.h \
 file://FanControl.cpp \
 file://FanControl.h \
 file://scopeserver.pro \
-file://xparameters.h;subdir=xml-rpc \
-file://xparameters_ps.h;subdir=xml-rpc \
+file://xparameters.h \
+file://xparameters_ps.h \
 		  "
 
 S = "${WORKDIR}"
@@ -59,6 +59,8 @@ require recipes-qt/qt5/qt5.inc
 
 # Add dependency packages
 DEPENDS += "qtbase libxslt libsocketcan"
+do_fetch[depends] = "fsbl:do_compile"
+
 
 RDEPENDS_${PN} += "${@bb.utils.contains('PACKAGECONFIG_OPENSSL', 'openssl', 'ca-certificates', '', d)}"
 

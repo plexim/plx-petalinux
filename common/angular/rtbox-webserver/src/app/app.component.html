@@ -1,0 +1,41 @@
+<div class="navbar navbar-light bg-light">
+  <div class="container navbar-text">
+    <div>
+      <h1>PLECS RT Box {{rtboxType || 'CE'}}</h1>
+    </div>
+    <div class="navbar-text text-right">
+      {{hostname$ | async}}
+      <span class="error-text">{{serverStatusMsg}}</span>
+      <br>
+      <span
+        (click)="openTabFromStatus()"
+        [class.activeStatus]="statusError || statusRunning"
+        [class.text-danger]="statusError"
+        [class.running]="statusRunning">
+        {{statusText}}
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="container my-4" role="main">
+  <tabset #tabset>
+    <tab heading="Application">
+      <rtb-model-info [info]="simInfo"></rtb-model-info>
+      <rtb-processor-load (simulationInfoBroadcast)="updateSimulationInfo($event)"></rtb-processor-load>
+      <rtb-execute></rtb-execute>
+    </tab>
+    <tab heading="Front panel" #frontPanel (selectTab)="selectFrontPanel($event)">
+      <rtb-front-panel></rtb-front-panel>
+    </tab>
+    <tab heading="Rear panel">
+      <rtb-rear-panel></rtb-rear-panel>
+    </tab>
+    <tab heading="Diagnostics" (selectTab)="refreshDiagnostics = true;" (deselect)="refreshDiagnostics = false;">
+      <rtb-diagnostics [refresh]="refreshDiagnostics"></rtb-diagnostics>
+    </tab>
+    <tab heading="Info">
+      <rtb-info></rtb-info>
+    </tab>
+  </tabset>
+</div>

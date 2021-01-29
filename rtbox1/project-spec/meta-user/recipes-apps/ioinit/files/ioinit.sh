@@ -1,12 +1,13 @@
 #!/bin/sh
 
-echo 3000 > /sys/class/hwmon/hwmon0/fan1_target
-echo 2 > /sys/class/hwmon/hwmon0/pwm1_enable
+FAN_DEV=$(ls /sys/bus/i2c/devices/0-0048/hwmon*)
+echo 3000 > /sys/class/hwmon/${FAN_DEV}/fan1_target
+echo 2 > /sys/class/hwmon/${FAN_DEV}/pwm1_enable
 
 # Current calibration
 if [ -d /sys/bus/i2c/devices/0-0040/hwmon ]; then
-  echo 20000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon1/shunt1_resistor
-  echo 20000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon1/shunt2_resistor
+  echo 20000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon0/shunt1_resistor
+  echo 20000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon0/shunt2_resistor
 fi
 
 # Disable Digital Outs

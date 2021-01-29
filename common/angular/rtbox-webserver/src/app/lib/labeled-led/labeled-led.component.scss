@@ -1,0 +1,31 @@
+
+.led {
+   position: relative;
+   margin: 10px 5px 10px 25px;
+}
+
+.led:before {
+   content: ' ';
+   position: absolute;
+   left: -25px;
+   width: 18px;
+   height: 18px;
+   background-color: #f0f0f0;
+   border-radius: 50%;
+   box-shadow: inset #777777 0 -1px 9px;
+}
+
+.led.led-red:before {
+  background-color: #F00;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 6px, rgba(255, 0, 0, 0.5) 0 2px 12px;
+}
+
+.led.led-blue:before {
+  background-color: #24E0FF;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #006 0 -1px 6px, #3F8CFF 0 2px 12px;
+}
+
+.led.led-green:before {
+  background-color: #ABFF00;
+  box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #304701 0 -1px 6px, #89FF00 0 2px 12px;
+}

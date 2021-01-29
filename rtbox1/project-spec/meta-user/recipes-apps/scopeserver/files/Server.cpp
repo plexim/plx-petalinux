@@ -106,11 +106,21 @@ void ServerAsync::acceptConnection()
    doLogging(QString("** Accepted connection from client at address %1").arg(cliaddr.toString()));
    
    mConnected = true;
-   if (mSimulation->openConnection())
+   if (mSimulation->getStatus() == SimulationRPC::SimulationStatus::ERROR)
    {
+      reportError("Realtime simulation has been stopped due to an error. "
+                  "See the 'Diagnostics' tab in the RT Box web interface for details.");
+      closeConnection();
+   }
+   else if (mSimulation->openConnection())
+   {
+      int analogOutVoltageRange;
+      int analogInVoltageRange;
+      int digitalOutVoltage;
       if (!mSimulation->querySimulation(mSampleTime, mNumScopeSignals, 
                                         mNumTuneableParameters, mExeVersion, 
-                                        mChecksum, mModelName))
+                                        mChecksum, mModelName, analogOutVoltageRange,
+                                        analogInVoltageRange, digitalOutVoltage))
       {
          doLogging("Initial querySimulation failed.");
          closeConnection();

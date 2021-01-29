@@ -1,0 +1,35 @@
+/* You can add global styles to this file, and also import other style files */
+@import '~bootstrap/scss/bootstrap';
+
+body {
+  font-size: 14px;
+}
+
+a {
+  color: #337ab7;
+}
+a:focus, a:hover {
+  color: #23527c;
+}
+.card-header {
+  font-weight: 700;
+}
+.btn {
+  font-size: 14px;
+}
+.btn-sm {
+  font-size: 12px;
+}
+.btn-primary {
+  background-color: #337ab7;
+  border-color: #2e6da4;
+}
+.btn-primary:hover {
+  background-color: #286090;
+  border-color: #204d74;
+}
+.btn-primary.disabled, .btn-primary:disabled {
+  background-color: #337ab7;
+  border-color:#2e6da4
+}
+

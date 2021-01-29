@@ -27,17 +27,24 @@
 class LoadAwareLabel: public QLabel
 {
 public:
-    LoadAwareLabel(): QLabel(), mLoad(0)
+    LoadAwareLabel(): QLabel()
     {
+        setActive(false);
         setLoad(0);
     }
 
     void setLoad(double aLoad)
     {
-        if (aLoad > 0 && mLoad == 0)
-            setStyleSheet("");
-        else if (aLoad == 0)
-            setStyleSheet("* {color: gray}");
+        if (aLoad > 0)
+        {
+            if (!isActive())
+                setActive(true);
+        }
+        else
+        {
+            if (isActive())
+                setActive(false);
+        }
 
         mLoad = aLoad;
         updateLabel();
@@ -48,8 +55,21 @@ public:
 protected:
     virtual void updateLabel() {}
 
+    bool isActive() { return mIsActive; }
+
+    void setActive(bool aActive)
+    {
+        if (aActive)
+            setStyleSheet("");
+        else
+            setStyleSheet("* {color: gray}");
+
+        mIsActive = aActive;
+    }
+
 private:
     double mLoad;
+    bool mIsActive;
 };
 
 

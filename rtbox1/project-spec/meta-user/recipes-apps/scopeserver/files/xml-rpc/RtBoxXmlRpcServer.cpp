@@ -107,13 +107,11 @@ QVariant RtBoxXmlRpcServer::queryCounter()
    {
       retValues["maxCycleTime"] = counter.mMaxCycleTime;
       retValues["runningCycleTime"] = counter.mRunningCycleTime;
-      retValues["runningLatency"] = counter.mRunningLatency;
    }
    else
    {
       retValues.insert("maxCycleTime", "");
       retValues.insert("runningCycleTime", "");
-      retValues.insert("runningLatency", "");
    }
    retValues["modelTimeStamp"] = mSimulation.getModelTimeStamp();
    return retValues;
@@ -140,10 +138,14 @@ QVariant RtBoxXmlRpcServer::querySimulation()
    int numTuneableParameters;
    QByteArray checksum;
    QByteArray modelName;
+   int analogOutVoltageRange;
+   int analogInVoltageRange;
+   int digitalOutVoltage;
    SimulationRPC::VersionType libraryVersion;
    if (mSimulation.querySimulation(sampleTime, numScopeSignals, 
                                    numTuneableParameters, libraryVersion, 
-                                   checksum, modelName))
+                                   checksum, modelName, analogOutVoltageRange,
+                                   analogInVoltageRange, digitalOutVoltage))
 
    {
       retValues["sampleTime"] = sampleTime;
@@ -152,6 +154,9 @@ QVariant RtBoxXmlRpcServer::querySimulation()
                                         QString::number(libraryVersion.mVersionMinor) + "." +
                                         QString::number(libraryVersion.mVersionPatch);
       retValues["modelTimeStamp"] = mSimulation.getModelTimeStamp();
+      retValues["analogOutVoltageRange"] = analogOutVoltageRange;
+      retValues["analogInVoltageRange"] = analogInVoltageRange;
+      retValues["digitalOutVoltage"] = digitalOutVoltage;
    }
    else
    {
@@ -159,7 +164,27 @@ QVariant RtBoxXmlRpcServer::querySimulation()
       retValues.insert("modelName", "");
       retValues.insert("applicationVersion", "");
       retValues.insert("modelTimeStamp", 0);
+      retValues.insert("analogOutVoltageRange", 0);
+      retValues.insert("analogInVoltageRange", 0);
+      retValues.insert("digitalOutVoltage", 0);
    }
+
+   QString status;
+   switch(mSimulation.getStatus())
+   {
+   case SimulationRPC::SimulationStatus::RUNNING:
+      status = "running";
+      break;
+   case SimulationRPC::SimulationStatus::ERROR:
+      status = "error";
+      break;
+   case SimulationRPC::SimulationStatus::STOPPED:
+   default:
+      status = "stopped";
+      break;
+   }
+
+   retValues["status"] = status;
    return retValues;
 }
 
@@ -173,7 +198,7 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
       logPosition = aLogPosition;
       clearLog = 0;
    }
-   QByteArray temp;
+    QByteArray temp;
    readLineFile("/sys/devices/soc0/amba/f8007100.adc/iio:device0/in_temp0_raw", temp);
    QByteArray fanSpeed;
    readLineFile("/sys/class/hwmon/hwmon0/fan1_input", fanSpeed);
@@ -234,6 +259,7 @@ QVariant RtBoxXmlRpcServer::serials()
    retValues["ipAddresses"] = ipAddresses;
    if (mBoardSerial)
       retValues["board"] = mBoardSerial;
+   retValues["rtboxType"] = mSimulation.isRTBoxCE() ? "PLECS RT Box CE" : "PLECS RT Box 1";
    return retValues;
 }
 

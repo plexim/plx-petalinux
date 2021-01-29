@@ -55,6 +55,10 @@ file://UnixSignalHandler.h \
 file://UnixSignalHandler.cpp \
 file://PerformanceCounter.h \
 file://PerformanceCounter.cpp \
+file://ToFileHandler.h \
+file://ToFileHandler.cpp \
+file://FileWriter.h \
+file://FileWriter.cpp \
 file://scopeserver.pro \
 file://display/Display.h \
 file://display/Display.cpp \
@@ -87,8 +91,11 @@ S = "${WORKDIR}"
 
 require recipes-qt/qt5/qt5.inc
 
+do_compile[nostamp] ="1"
+
 # Add dependency packages
 DEPENDS += "qtbase libxslt libsocketcan fsbl"
+do_fetch[depends] = "fsbl:do_compile"
 
 RDEPENDS_${PN} += "${@bb.utils.contains('PACKAGECONFIG_OPENSSL', 'openssl', 'ca-certificates', '', d)}"
 

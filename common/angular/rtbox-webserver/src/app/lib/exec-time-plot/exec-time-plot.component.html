@@ -1,0 +1,85 @@
+<div class="position-anchor" [style.width.px]="width" [style.height.px]="height" >
+  <svg width="100%" height="100%" [attr.viewBox]="'0 0 ' + width + ' ' + height" xmlns="http://www.w3.org/2000/svg">
+
+    <line
+      *ngFor="let y of yTics"
+      [attr.x1]="pl"
+      [attr.y1]="y"
+      [attr.x2]="width - pr"
+      [attr.y2]="y"
+      class="grid"/>
+
+    <text
+      *ngFor="let y of yTics; index as i"
+      [attr.x]="pl - xLabelOffset"
+      [attr.y]="y"
+      class="yLabel">
+      {{minY + i * (maxY - minY) / (nYTics - 1)}}
+    </text>
+
+    <text
+      *ngFor="let x of xTics; index as i"
+      [attr.x]="x"
+      [attr.y]="height - pb + yLabelOffset"
+      class="xLabel">
+      {{minX + i * (maxX - minX) / (nXTics - 1)}}
+    </text>
+
+    <text
+      [attr.transform]="'translate(8, ' + (pt + 0.5 * (height - pt - pb)) + ') rotate(-90)'"
+      class="yAxisLabel">
+      {{yAxisLabel}}
+    </text>
+
+    <line
+      *ngFor="let y of yTics"
+      [attr.x1]="pl - ticLength"
+      [attr.y1]="y"
+      [attr.x2]="pl"
+      [attr.y2]="y"
+      class="tic"/>
+
+    <line
+      *ngFor="let x of xTics"
+      [attr.x1]="x"
+      [attr.y1]="height - pb + ticLength"
+      [attr.x2]="x"
+      [attr.y2]="height - pb"
+      class="tic"/>
+
+    <line
+      [attr.x1]="pl"
+      [attr.y1]="pt"
+      [attr.x2]="pl"
+      [attr.y2]="height - pb"
+      class="axis"/>
+
+    <line
+      [attr.x1]="pl"
+      [attr.y1]="height - pb"
+      [attr.x2]="width - pr"
+      [attr.y2]="height - pb"
+      class="axis"/>
+
+    <g *ngFor="let core of coreIndices()"
+      [attr.visibility]="showCores[core] ? 'visible' : 'hidden'">
+
+      <polyline
+        [attr.points]="polylineCurrent(core)"
+        [ngClass]="'ontop current' + core.toString() + ' current' + core.toString()"/>
+
+      <polygon
+        [attr.points]="polygonCurrent(core)"
+        [ngClass]="'current filled' + core.toString()"/>
+    </g>
+
+    <g *ngFor="let core of coreIndices()"
+      [attr.visibility]="showCores[core] ? 'visible' : 'hidden'">
+
+      <polyline
+        [attr.visibility]="showCores[core] && showMax ? 'visible' : 'hidden'"
+        [attr.points]="polylineMax(core)"
+        [ngClass]="'ontop maximum' + core.toString()"/>
+    </g>
+  </svg>
+</div>

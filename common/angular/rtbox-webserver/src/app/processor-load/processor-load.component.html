@@ -1,0 +1,47 @@
+<div class="card m-4">
+  <div class="card-header">Simulation</div>
+  <div class="row pt-4">
+    <div class="col">
+      <rtb-arc-gauge [values]="clampedLoadValues" [width]="300" [height]="200" [arcWidth]="nProc == 1 ? 20 : 10">
+        <table *ngIf="rtboxType > 1">
+          <tr *ngFor="let loadValue of loadValues; index as i">
+            <td>Core {{i+1}}:&nbsp;</td>
+            <td class="text-right">{{loadValues[i][1] | number:'.0-0'}} %</td>
+          </tr>
+        </table>
+        <p *ngIf="rtboxType <= 1">{{loadValues[0][1] | number:'.0-0'}} %</p>
+      </rtb-arc-gauge>
+    </div>
+    <div class="col">
+      <rtb-processor-load-graph
+        [history]="loadValuesHistory"
+        [histLength]="historyLength - 1"
+        width="450"
+        height="200">
+      </rtb-processor-load-graph>
+    </div>
+  </div>
+  <div class="card-body w-50">
+    <table class="table-borderless table-sm">
+      <tbody *ngIf="rtboxType > 1">
+        <tr>
+          <td>Current cycle times [&mu;s]:</td>
+          <td *ngFor="let t of currentCycleTimes">{{t | number:'.2-2'}}</td>
+        </tr>
+        <tr>
+          <td>Max. cycle times [&mu;s]:</td>
+          <td *ngFor="let t of maxCycleTimes">{{t | number:'.2-2'}}</td>
+      </tbody>
+      <tbody *ngIf="rtboxType <= 1">
+        <tr>
+          <td>Current cycle time:</td><td>{{currentCycleTimes[0] | number:'.2-2'}} &mu;s</td>
+        </tr>
+        <tr>
+          <td>Max. cycle time:</td><td>{{maxCycleTimes[0] | number:'.2-2'}} &mu;s</td>
+        </tr>
+      </tbody>
+    </table>
+    <br>
+    <button type="button" class="btn btn-primary btn-sm" (click)="resetMaxima()">Reset maxima</button>
+  </div>
+</div>

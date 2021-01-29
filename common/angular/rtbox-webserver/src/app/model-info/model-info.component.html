@@ -1,0 +1,17 @@
+<div class="card m-4">
+  <div class="card-header">Model</div>
+  <div class="card-body">
+    <table class="table table-borderless table-sm">
+      <tbody>
+        <tr>
+          <td>Model&nbsp;name:</td>
+          <td width="99%">{{info?.modelName}}</td>
+        </tr>
+        <tr>
+          <td>Sample&nbsp;time:</td>
+          <td *ngIf="info?.sampleTime">{{info.sampleTime/1000 | number:'.0-2'}} &mu;s</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

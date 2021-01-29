@@ -32,3 +32,10 @@ if [ -d /etc/dropbear ]; then
    rmdir /etc/dropbear && ln -s /media/nand/etc/dropbear /etc
 fi
 
+if [ -d /sys/bus/i2c/devices/i2c-1 ]
+then
+   mv /www/pages/index.html.rtbox1 /www/pages/index.html
+else
+   mv /www/pages/index.html.rtboxce /www/pages/index.html
+fi
+

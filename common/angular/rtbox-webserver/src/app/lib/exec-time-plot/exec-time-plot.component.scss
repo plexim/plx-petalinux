@@ -1,0 +1,64 @@
+
+@use 'sass:color';
+@import '../colors';
+
+.position-anchor {
+  position: relative;
+  overflow-y: hidden;
+}
+
+.axis, .tic {
+  stroke: black;
+  stroke-width: 1px;
+}
+
+.grid {
+  stroke: #ccc;
+  stroke-width: 1px;
+  stroke-dasharray: 4;
+}
+
+text {
+  font-size: 8pt;
+}
+
+.yLabel {
+  text-anchor: end;
+  dominant-baseline: central;
+}
+
+.xLabel {
+  text-anchor: middle;
+} 
+.yAxisLabel {
+  text-anchor: middle;
+}
+
+polyline.current {
+  stroke-width: 2.5;
+}
+
+polygon {
+  stroke: none;
+  fill: none;
+}
+
+.filled0 {
+  stroke: none;
+  fill: color.scale($pleximBlue0, $alpha: -50%);
+}
+
+.filled1 {
+  stroke: none;
+  fill: color.scale($pleximBlue1Alpha, $alpha: -50%);
+}
+
+.filled2 {
+  stroke: none;
+  fill: color.scale($pleximBlue2Alpha, $alpha: -50%);
+}
+
+.ontop {
+  fill: none;
+  stroke-width: 2.5;
+}

@@ -1,0 +1,12 @@
+{
+  "/cgi-bin/*": {
+    "target": "http://rtbox-hostname-or-ip",
+    "logLevel": "info",
+    "secure": false
+  },
+  "/rpc2/*": {
+    "target": "http://rtbox-hostname-or-ip:9998",
+    "logLevel": "info",
+    "secure": false
+  }
+}

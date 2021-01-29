@@ -225,6 +225,9 @@ bool RPCReceiver::processMessage(int aMessage, QByteArray& aMsgBuf)
           }
           break;
        }
+       case SimulationRPC::MSG_ERROR:
+          emit simulationError();
+          break;
        default:
           log(QString("Unexpected message from simulation core %1").arg(aMessage));
           readAll();

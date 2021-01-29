@@ -13,7 +13,9 @@ HEADERS += Server.h IOHelper.h SimulationRPC.h LocalServer.h LocalServerConnecti
     RPCReceiver.h \
     UdpTxHandler.h \
     UdpRxHandler.h \
-    FanControl.h
+    FanControl.h \
+    xparameters.h \
+    xparameters_ps.h
 
 HEADERS += xml-rpc/maiaFault.h
 SOURCES += xml-rpc/maiaFault.cpp

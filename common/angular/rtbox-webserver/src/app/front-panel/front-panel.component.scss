@@ -1,0 +1,82 @@
+div.card-body {
+ overflow-x: auto;
+}
+
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+tr {
+  padding-bottom: 15px;
+}
+
+tr.spacingOnTop>td {
+  padding-top: 30px;
+}
+
+td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+td.svg {
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+td.dsub9 > div {
+  width: 140px;
+  height: 76.11px;
+}
+
+td.dsub37 > div {
+  width: 420px;
+  height: 76.11px;
+}
+
+td.dsub37male {
+  background-image: url(../../assets/dsub37male.svg);
+}
+
+td.dsub37male:hover {
+  background-image: url(../../assets/dsub37male-hover.svg);
+}
+
+td.dsub37female {
+  background-image: url(../../assets/dsub37female.svg);
+}
+
+td.dsub37female:hover {
+  background-image: url(../../assets/dsub37female-hover.svg);
+}
+
+td.dsub9male {
+  background-image: url(../../assets/dsub9male.svg);
+}
+
+td.dsub9male:hover {
+  background-image: url(../../assets/dsub9male-hover.svg);
+}
+
+td.dsub9female {
+  background-image: url(../../assets/dsub9female.svg);
+}
+
+td.dsub9female:hover {
+  background-image: url(../../assets/dsub9female-hover.svg);
+}
+
+td.label37 {
+  padding-left: 45px;
+  padding-right: 45px;
+}
+
+td.label9 {
+  padding-left: 25px;
+}
+
+td.ledColumn {
+  padding-left: 30px;
+  padding-top: 20px;
+}

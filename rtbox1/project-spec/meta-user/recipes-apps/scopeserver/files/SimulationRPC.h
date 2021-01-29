@@ -21,6 +21,7 @@
 #include <QtCore/QMap>
 #include <QtCore/QPointer>
 #include <memory>
+#include <chrono>
 
 class ServerAsync;
 class QVariant;
@@ -74,6 +75,12 @@ public:
       MSG_START_SIMULATION,
       MSG_QUERY_DI_CONFIG,
       RSP_QUERY_DI_CONFIG,
+   };
+
+   enum class SimulationStatus {
+      STOPPED,
+      RUNNING,
+      ERROR,
    };
 
    struct VersionType {
@@ -160,7 +167,15 @@ public:
    {
       int mMaxCycleTime;
       int mRunningCycleTime;
-      int mRunningLatency;
+   };
+
+   struct SimulationStartMsg
+   {
+      int mMsg;
+      int mMsgLength;
+      int mStartOnFirstTrigger;
+      uint64_t mStartSec;
+      uint64_t mStartUSec;
    };
 
    SimulationRPC(ServerAsync& aServer);
@@ -168,7 +183,8 @@ public:
    bool armScope(const struct ArmMessage& aMsg);
    bool querySimulation(double& aSampleTime, int& aNumScopeSignals, 
                         int& aNumTuneableParameters, struct VersionType& aLibraryVersion, 
-                        QByteArray& aChecksum, QByteArray& aModelName);
+                        QByteArray& aChecksum, QByteArray& aModelName, int& aAnalogOutVoltageRange,
+                        int& aAnalogInVoltageRange, int& aDigitalOutVoltage);
    bool verifyAPIVersion(int& aVersion);
    bool getScopeBuffer(QVector<float> &aBuffer, int aBufferIndex, int aOffset);
    bool openConnection(bool aVerbose=true);
@@ -187,6 +203,8 @@ public:
    bool sendRawMessage(const QByteArray& aMessage);
    QStringList getDataCaptureBlocks() const;
    QStringList getProgrammableValueBlocks() const;
+   inline SimulationStatus getStatus() const { return mSimulationStatus; }
+   bool isRTBoxCE() const { return mRTBoxCE; }
 
 signals:
    void initComplete();
@@ -202,6 +220,7 @@ protected slots:
    void receiveError(QString aError);
    void scopeArmResponse(QByteArray);
    void tuneParameterResponse(int);
+   void simulationError();
 
 protected:
    bool verifyAPIVersion(bool aVerbose);
@@ -217,7 +236,7 @@ protected:
    void setRunning(bool aRun);
 
 private:
-   struct QueryParamResponse {
+   struct QueryModelResponse {
       double mSampleTime;
       qint32 mNumScopeSignals;
       qint32 mNumTuneableParameters;
@@ -226,6 +245,9 @@ private:
       quint32 mTxBufferAddress;
       quint32 mRxBufferAddress;
       quint32 mRxTxBufferSize;
+      qint32 mDacSpan;
+      qint32 mAnalogInputVoltageRange;
+      qint32 mDigitalOutVoltage;
       qint32 mChecksumLength;
    };
 
@@ -249,7 +271,7 @@ private:
    volatile void* mRxBuffer;
    void* mTxBuffer;
    const quint32 mPageSize;
-   struct QueryParamResponse mLastReceivedModelResponse;
+   struct QueryModelResponse mLastReceivedModelResponse;
    QByteArray mLastReceivedModelChecksum;
    QByteArray mLastReceivedModelName;
    struct VersionType mLastReceivedLibraryVersion;
@@ -259,6 +281,10 @@ private:
    QMap<QString, ProgrammableValueConstInfo> mProgrammableValueConstMap;
    QPointer<RPCReceiver> mReceiver;
    FanControl* mFanControl;
+   bool mWaitForFirstTrigger;
+   SimulationStatus mSimulationStatus;
+   std::chrono::steady_clock::time_point mLastScopeArmTime;
+   bool mRTBoxCE;
 };
 
 #pragma pack(pop)

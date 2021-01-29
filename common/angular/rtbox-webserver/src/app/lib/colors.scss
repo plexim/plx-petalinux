@@ -1,0 +1,36 @@
+
+@use 'sass:color';
+
+$pleximBlue0: #1f77b4;
+$pleximBlue1: rgb(75 146 195);
+$pleximBlue2: rgb(120 173 210);
+
+$pleximBlue1Alpha: color.scale($pleximBlue0, $alpha: -20%);
+$pleximBlue2Alpha: color.scale($pleximBlue0, $alpha: -40%);
+
+
+$orange: #ff7f0e;
+
+.current0 {
+  stroke: $pleximBlue0;
+}
+
+.current1 {
+  stroke: $pleximBlue1;
+}
+
+.current2 {
+  stroke: $pleximBlue2;
+}
+
+.maximum0 {
+  stroke: $orange;
+}
+
+.maximum1 {
+  stroke: rgb(255 152 62);
+}
+
+.maximum2 {
+  stroke: rgb(255 152 62);
+}

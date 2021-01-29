@@ -1,0 +1,88 @@
+import { NgModule } from '@angular/core';
+import { HttpClientModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { AppRoutingModule } from './app-routing.module';
+import { TabsModule } from 'ngx-bootstrap/tabs';
+import { ModalModule } from 'ngx-bootstrap/modal';
+
+import { AppComponent } from './app.component';
+import { ModelInfoComponent } from './model-info/model-info.component';
+import { ProcessorLoadComponent } from './processor-load/processor-load.component';
+import { ArcGaugeComponent } from './lib/arc-gauge/arc-gauge.component';
+import { ExecuteComponent } from './execute/execute.component';
+import { InfoComponent } from './info/info.component';
+
+import { ConnectionStatusInterceptor } from './shared/connection-status-interceptor';
+import { CONNECTION_STATUS } from './shared/connection-status';
+import { RTBOX_TYPE } from './shared/rtbox-type';
+import { XmlrpcService } from './shared/xmlrpc.service';
+import { RtboxXmlrpcService } from './shared/rtbox-xmlrpc.service';
+import { RtboxXmlrpcStubService } from './shared/rtbox-xmlrpc-stub.service';
+import { RtboxCgiService } from './shared/rtbox-cgi.service';
+import { RtboxCgiStubService } from './shared/rtbox-cgi-stub.service';
+import { DiagnosticsComponent } from './diagnostics/diagnostics.component';
+import { FrontPanelComponent } from './front-panel/front-panel.component';
+import { AnalogInDetailTableComponent } from './dsub-details/analog-in-detail-table/analog-in-detail-table.component';
+import { AnalogOutDetailTableComponent } from './dsub-details/analog-out-detail-table/analog-out-detail-table.component';
+import { DigitalOutDetailTableComponent } from './dsub-details/digital-out-detail-table/digital-out-detail-table.component';
+import { DigitalInDetailTableComponent } from './dsub-details/digital-in-detail-table/digital-in-detail-table.component';
+import { RearPanelComponent } from './rear-panel/rear-panel.component';
+import { EthernetStatisticsComponent } from './ethernet-statistics/ethernet-statistics.component';
+import { ExecTimePlotComponent } from './lib/exec-time-plot/exec-time-plot.component';
+import { ProcessorLoadGraphComponent } from './processor-load-graph/processor-load-graph.component';
+import { BehaviorSubject } from 'rxjs';
+import { CanDetailTableComponent } from './dsub-details/can-detail-table/can-detail-table.component';
+import { RsDetailTableComponent } from './dsub-details/rs-detail-table/rs-detail-table.component';
+import { ResolverInDetailTableComponent } from './dsub-details/resolver-in-detail-table/resolver-in-detail-table.component';
+import { ResolverOutDetailTableComponent } from './dsub-details/resolver-out-detail-table/resolver-out-detail-table.component';
+import { ModalDetailTableComponent } from './modal-detail-table/modal-detail-table.component';
+import { LabeledLedComponent } from './lib/labeled-led/labeled-led.component';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    ModelInfoComponent,
+    ProcessorLoadComponent,
+    ArcGaugeComponent,
+    ExecuteComponent,
+    InfoComponent,
+    DiagnosticsComponent,
+    FrontPanelComponent,
+    AnalogInDetailTableComponent,
+    AnalogOutDetailTableComponent,
+    DigitalOutDetailTableComponent,
+    DigitalInDetailTableComponent,
+    RearPanelComponent,
+    EthernetStatisticsComponent,
+    ExecTimePlotComponent,
+    ProcessorLoadGraphComponent,
+    CanDetailTableComponent,
+    RsDetailTableComponent,
+    ResolverInDetailTableComponent,
+    ResolverOutDetailTableComponent,
+    ModalDetailTableComponent,
+    LabeledLedComponent
+  ],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    AppRoutingModule,
+    TabsModule.forRoot(),
+    ModalModule.forRoot(),
+    HttpClientModule
+  ],
+  providers: [
+    XmlrpcService,
+    // For exemplary/random data, specify stub services here:
+    { provide : RtboxXmlrpcService, useClass: RtboxXmlrpcService },
+    { provide : RtboxCgiService, useClass: RtboxCgiService },
+    { provide: HTTP_INTERCEPTORS, useClass: ConnectionStatusInterceptor, multi: true },
+    { provide: CONNECTION_STATUS, useValue: new BehaviorSubject('') },
+    { provide: RTBOX_TYPE, useValue: 0 },
+    { provide: Window, useValue: window }
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }

@@ -6,20 +6,24 @@ SOURCES += main.cpp Server.cpp IOHelper.cpp SimulationRPC.cpp LocalServer.cpp Lo
     RPCReceiver.cpp \
     UdpTxHandler.cpp \
     UdpRxHandler.cpp \
+    ToFileHandler.cpp \
     UnixSignalHandler.cpp \
     spinlock.S \
     FanControl.cpp \
-    PerformanceCounter.cpp
+    PerformanceCounter.cpp \
+    FileWriter.cpp
 
 HEADERS += Server.h IOHelper.h SimulationRPC.h LocalServer.h LocalServerConnection.h ReleaseInfo.h \
     CanHandler.h \
     RPCReceiver.h \
     UdpTxHandler.h \
     UdpRxHandler.h \
+    ToFileHandler.h \
     UnixSignalHandler.h \
     spinlock.h \
     FanControl.h \
-    PerformanceCounter.h
+    PerformanceCounter.h \
+    FileWriter.h
 
 HEADERS += xml-rpc/maiaFault.h
 SOURCES += xml-rpc/maiaFault.cpp

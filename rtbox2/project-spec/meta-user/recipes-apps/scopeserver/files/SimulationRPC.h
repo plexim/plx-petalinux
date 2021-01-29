@@ -21,6 +21,7 @@
 #include <QtCore/QMap>
 #include <QtCore/QPointer>
 #include <memory>
+#include <chrono>
 #include "RPCReceiver.h"
 
 class ServerAsync;
@@ -76,6 +77,15 @@ public:
       MSG_QUERY_DI_CONFIG,
       RSP_QUERY_DI_CONFIG,
       MSG_LOG,
+      TO_FILE_BUFFER_FULL,
+      MSG_GET_TO_FILE_INFO, // 40
+      RSP_GET_TO_FILE_INFO
+   };
+
+   enum class SimulationStatus {
+      STOPPED,
+      RUNNING,
+      ERROR,
    };
 
    struct VersionType {
@@ -168,12 +178,36 @@ public:
       int mRunningCycleTime3;
    };
 
+   struct ToFileBufferFullMsg
+   {
+      uint8_t mInstance;
+      int mCurrentReadBuffer;
+   };
+
+   struct ToFileInfo
+   {
+      int mWidth;
+      int mNumSamples;
+      int mBufferOffset;
+   };
+
+   struct SimulationStartMsg
+   {
+      int mMsg;
+      int mMsgLength;
+      int mStartOnFirstTrigger;
+      uint64_t mStartSec;
+      uint64_t mStartUSec;
+
+   };
+
    SimulationRPC(ServerAsync& aServer);
    ~SimulationRPC();
    bool armScope(const struct ArmMessage& aMsg);
    bool querySimulation(double& aSampleTime, int& aNumScopeSignals, 
                         int& aNumTuneableParameters, struct VersionType& aLibraryVersion, 
-                        QByteArray& aChecksum, QByteArray& aModelName);
+                        QByteArray& aChecksum, QByteArray& aModelName, int& aAnalogOutVoltageRange,
+                        int& aAnalogInVoltageRange, int& aDigitalOutVoltage);
    bool verifyAPIVersion(int& aVersion);
    bool getScopeBuffer(QVector<float> &aBuffer, int aBufferIndex, int aOffset);
    bool openConnection();
@@ -195,6 +229,7 @@ public:
    bool isRtBox3() const { return mRtBox3; }
    const QByteArray& getMessageBuffer() { return mMessageBuffer; }
    inline const QPointer<PerformanceCounter>& getPerformanceCounter() const { return mPerformanceCounter; }
+   inline SimulationStatus getStatus() const { return mSimulationStatus; }
 
 signals:
    void sendRequest(QByteArray);
@@ -204,6 +239,7 @@ signals:
    void simulationStarted();
    void simulationAboutToStop();
    void logMessage(int, QByteArray);
+   void initToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, int aWriteDevice);
 
 public slots:
    void log(QString aMsg);
@@ -215,6 +251,7 @@ protected slots:
    void scopeArmResponse(QByteArray);
    void tuneParameterResponse(int);
    void logMessageForWeb(int, QByteArray);
+   void simulationError();
 
 protected:
    bool verifyAPIVersion(bool aVerbose);
@@ -236,9 +273,13 @@ private:
       uint32_t mCorePeriodTicks[3];
       size_t mScopeBufferAddress;
       size_t mScopeBufferSize;
+      size_t mToFileBufferSize;
       size_t mTxBufferAddress;
       size_t mRxBufferAddress;
       size_t mRxTxBufferSize;
+      qint32 mDacSpan;
+      qint32 mAnalogInputVoltageRange;
+      qint32 mDigitalOutVoltage;
       qint32 mChecksumLength;
    };
 
@@ -272,6 +313,8 @@ private:
    bool mInitComplete;
    QPointer<PerformanceCounter> mPerformanceCounter;
    bool mWaitForFirstTrigger;
+   SimulationStatus mSimulationStatus;
+   std::chrono::steady_clock::time_point mLastScopeArmTime;
 };
 
 #pragma pack(pop)

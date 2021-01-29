@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="70.312mm" height="8.5109mm" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <filter id="filter8912" x="-.013778" y="-.1423" width="1.0276" height="1.2846" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="1.4847231"/>
+  </filter>
+  <radialGradient id="radialGradient8924" cx="458.25" cy="264" r="128.25" gradientTransform="matrix(1.1673 -.0032179 .00032335 .11647 -403.26 -14.533)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#fff" offset="0"/>
+   <stop stop-color="#808080" stop-opacity="0" offset="1"/>
+  </radialGradient>
+ </defs>
+ <g>
+  <rect x="3.5633" y="3.5633" width="258.62" height="25.041" rx="15.124" ry="17.073" fill="#858585" filter="url(#filter8912)" opacity=".996"/>
+  <rect x="3.5633" y="3.5633" width="256.5" height="22" rx="7" ry="7" fill="#f5f5f5" opacity=".996" stroke="#000" stroke-linejoin="round" stroke-width=".974"/>
+  <rect x="6.0382" y="5.6847" width="251.37" height="18.111" rx="7" ry="7" fill="url(#radialGradient8924)" opacity=".996"/>
+ </g>
+</svg>

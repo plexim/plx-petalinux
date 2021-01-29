@@ -1,0 +1,50 @@
+
+<rtb-exec-time-plot
+  [history]="history"
+  [width]="width"
+  [height]="height"
+  [maxX]="histLength"
+  [showCores]="coreVisibility"
+  [showMax]="maxVisibility"
+  yAxisLabel="% of sample time">
+</rtb-exec-time-plot>
+
+<div *ngIf="rtboxType <= 1" class="text-center small">
+  <svg [attr.width]="width" height="15">
+   <g>
+     <circle [attr.cx]="width/2" cy="5" class="maximum legend"/>
+     <text [attr.x]="width/2 + 15 " y="10">Maximum</text>
+   </g>
+   <g transform="translate(120, 0)">
+     <circle cx="0" cy="5" class="current legend"/>
+     <text x="12" y="10">Current</text>
+   </g>
+  </svg>
+</div>
+
+<div *ngIf="rtboxType > 1" class="form-check form-check-inline d-flex justify-content-center">
+  <input id="showCore1"
+         type="checkbox"
+         class="form-check-input"
+         [checked]="coreVisibility[0]"
+         (change)="toggleShowCore(0)">
+  <label for="showCore1" class="form-check-label small pr-3">Core 1</label>
+  <input id="showCore2"
+         type="checkbox"
+         class="form-check-input"
+         [checked]="coreVisibility[1]"
+         (change)="toggleShowCore(1)">
+  <label for="showCore2" class="form-check-label small pr-3">Core 2</label>
+  <input id="showCore3"
+         type="checkbox"
+         class="form-check-input"
+         [checked]="coreVisibility[2]"
+         (change)="toggleShowCore(2)">
+  <label for="showCore3" class="form-check-label small pr-3">Core 3</label>
+  <input id="showMax"
+         type="checkbox"
+         class="form-check-input"
+         [checked]="maxVisibility"
+         (change)="maxVisibility = !maxVisibility">
+  <label for="showMax" class="form-check-label small">Show maxima</label>
+</div>

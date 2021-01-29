@@ -1,0 +1,25 @@
+<table class="table table-bordered table-striped table-sm">
+  <tbody>
+    <tr>
+      <td>IP</td><td>{{ipAddress}}</td>
+    </tr>
+    <tr>
+      <td>Link</td><td>{{data?.speed}} MBit/s, {{data?.duplex}} duplex</td>
+    </tr>
+    <tr>
+      <td>Sent</td><td>{{data?.txp}} packets</td>
+    </tr>
+    <tr>
+      <td>Received</td><td>{{data?.rxp}} packets</td>
+    </tr>
+    <tr>
+      <td>Transmit errors</td><td>{{data?.tx_errors}}</td>
+    </tr>
+    <tr>
+      <td>Receive errors</td><td>{{data?.rx_errors}}</td>
+    </tr>
+    <tr>
+      <td>Collisions</td><td>{{data?.collisions}}</td>
+    </tr>
+  </tbody>
+</table>

@@ -1,0 +1,170 @@
+<div class="card m-4">
+  <div class="card-header">Analog and Digital IO</div>
+  <div *ngIf="rtboxType === 0" class="card-body">
+    <table>
+      <tr>
+        <td class="label37">Analog In <span class="float-right">{{voltages.analogIn}}</span></td>
+        <td class="ledColumn" rowspan="4">
+          <rtb-labeled-led [color]="errorLed"></rtb-labeled-led>
+          <rtb-labeled-led [color]="runningLed"></rtb-labeled-led>
+          <rtb-labeled-led [color]="readyLed"></rtb-labeled-led>
+          <rtb-labeled-led [color]="powerLed"></rtb-labeled-led>
+        </td>
+        <td class="label37">Digital In <span class="float-right">{{voltages.digitalIn}}</span></td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('digitalIn')" class="svg dsub37 dsub37male"><div></div></td>
+      </tr>
+      <tr>
+        <td class="label37">Analog Out <span class="float-right">{{voltages.analogOut}}</span></td>
+        <td class="label37">Digital Out <span class="float-right">{{voltages.digitalOut}}</span></td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('digitalOut')" class="svg dsub37 dsub37female"><div></div></td>
+      </tr>
+    </table>
+  </div>
+  <div *ngIf="rtboxType === 1" class="card-body">
+    <table>
+      <tr>
+        <td class="label37">Analog In <span class="float-right">{{voltages.analogIn}}</span></td>
+        <td class="label37">Digital In <span class="float-right">{{voltages.digitalIn}}</span></td>
+        <td class="ledColumn" rowspan="4">
+          <rtb-labeled-led [color]="errorLed" text="Error"></rtb-labeled-led>
+          <rtb-labeled-led [color]="runningLed" text="Running"></rtb-labeled-led>
+          <rtb-labeled-led [color]="readyLed" text="Ready"></rtb-labeled-led>
+          <rtb-labeled-led [color]="powerLed" text="Power"></rtb-labeled-led>
+        </td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('digitalIn')" class="svg dsub37 dsub37male"><div></div></td>
+      </tr>
+      <tr>
+        <td class="label37">Analog Out <span class="float-right">{{voltages.analogOut}}</span></td>
+        <td class="label37">Digital Out <span class="float-right">{{voltages.digitalOut}}</span></td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('digitalOut')" class="svg dsub37 dsub37female"><div></div></td>
+      </tr>
+    </table>
+  </div>
+  <div *ngIf="rtboxType === 2" class="card-body">
+    <table>
+      <tr>
+        <td class="label37">Analog In <span class="float-right">{{voltages.analogIn}}</span></td>
+        <td class="label37">Digital In <span class="float-right">{{voltages.digitalIn}}</span></td>
+        <td class="label9">Resolver In</td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('digitalIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('resolverIn')" class="svg dsub9 dsub9male"><div></div></td>
+      </tr>
+      <tr>
+        <td class="label37">Analog Out <span class="float-right">{{voltages.analogOut}}</span></td>
+        <td class="label37">Digital Out <span class="float-right">{{voltages.digitalOut}}</span></td>
+        <td class="label9">Resolver Out</td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('digitalOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('resolverOut')" class="svg dsub9 dsub9female"><div></div></td>
+      </tr>
+    </table>
+  </div>
+  <div *ngIf="rtboxType === 3" class="card-body">
+    <table>
+      <tr>
+        <td class="label37">Analog In 16_31 <span class="float-right">{{voltages.analogIn}}</span></td>
+        <td class="label37">Digital In 32_63 <span class="float-right">{{voltages.digitalIn}}</span></td>
+        <td class="label9">Resolver In 2</td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('digitalIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('resolverIn')" class="svg dsub9 dsub9male"><div></div></td>
+      </tr>
+      <tr>
+        <td class="label37">Analog Out 16_31 <span class="float-right">{{voltages.analogOut}}</span></td>
+        <td class="label37">Digital Out 32_63 <span class="float-right">{{voltages.digitalOut}}</span></td>
+        <td class="label9">Resolver Out 2</td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('digitalOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('resolverOut')" class="svg dsub9 dsub9female"><div></div></td>
+      </tr>
+      <tr class="spacingOnTop">
+        <td class="label37">Analog In 0_15 <span class="float-right">{{voltages.analogIn}}</span></td>
+        <td class="label37">Digital In 0_31 <span class="float-right">{{voltages.digitalIn}}</span></td>
+        <td class="label9">Resolver In 1</td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('digitalIn')" class="svg dsub37 dsub37male"><div></div></td>
+        <td (click)="showDetails('resolverIn')" class="svg dsub9 dsub9male"><div></div></td>
+      </tr>
+      <tr>
+        <td class="label37">Analog Out 0_15 <span class="float-right">{{voltages.analogOut}}</span></td>
+        <td class="label37">Digital Out 0_31 <span class="float-right">{{voltages.digitalOut}}</span></td>
+        <td class="label9">Resolver Out 1</td>
+      </tr>
+      <tr>
+        <td (click)="showDetails('analogOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('digitalOut')" class="svg dsub37 dsub37female"><div></div></td>
+        <td (click)="showDetails('resolverOut')" class="svg dsub9 dsub9female"><div></div></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- Note: the following list of detail modals does involve repeated boilerplate. I have tried to circumvent this by
+  parameterizing what to display with DsubType. This resulted in a change detection delay that is inacceptable - the
+  popup opened and was blank <= 1/2 second. The following solution without variable content shows the modal content
+immediately. -->
+
+<ng-template #analogInDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="Analog Input Connector">
+    <object class="my-4" data="../../assets/dsub37male.svg" type="image/svg+xml"></object>
+    <rtb-analog-in-detail-table></rtb-analog-in-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>
+
+<ng-template #analogOutDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="Analog Output Connector">
+    <object class="my-4" data="../../assets/dsub37female.svg" type="image/svg+xml"></object>
+    <rtb-analog-out-detail-table></rtb-analog-out-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>
+
+<ng-template #digitalInDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="Digital Input Connector">
+    <object class="my-4" data="../../assets/dsub37male.svg" type="image/svg+xml"></object>
+    <rtb-digital-in-detail-table></rtb-digital-in-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>
+
+<ng-template #digitalOutDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="Digital Output Connector">
+    <object class="my-4" data="../../assets/dsub37female.svg" type="image/svg+xml"></object>
+    <rtb-digital-out-detail-table></rtb-digital-out-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>
+
+<ng-template #resolverInDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="Resolver Input Connector">
+    <object class="my-4" data="../../assets/dsub9male.svg" type="image/svg+xml"></object>
+    <rtb-resolver-in-detail-table></rtb-resolver-in-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>
+
+<ng-template #resolverOutDetail>
+  <rtb-modal-detail-table [modal]="modalRef" title="Resolver Output Connector">
+    <object class="my-4" data="../../assets/dsub9female.svg" type="image/svg+xml"></object>
+    <rtb-resolver-out-detail-table></rtb-resolver-out-detail-table>
+  </rtb-modal-detail-table>
+</ng-template>

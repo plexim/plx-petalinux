@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="35.752mm" height="12.351mm" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <filter id="filter9054" x="-.030359" y="-.096314" width="1.0607" height="1.1926" color-interpolation-filters="sRGB">
+   <feGaussianBlur stdDeviation="1.6209158"/>
+  </filter>
+  <radialGradient id="radialGradient9066" cx="255.09" cy="347.15" r="59.945" gradientTransform="matrix(1.1119 -.037966 .014994 .43913 -33.746 204.39)" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#fff" offset="0"/>
+   <stop stop-color="#808080" stop-opacity="0" offset="1"/>
+  </radialGradient>
+ </defs>
+ <g transform="translate(-188.53 -325.06)">
+  <rect transform="matrix(.99415 0 0 .96905 1.1261 10.176)" x="192.4" y="328.83" width="128.14" height="40.391" rx="10.059" ry="5.1597" fill="#6e6e6e" filter="url(#filter9054)" opacity=".996"/>
+  <rect x="192.4" y="328.83" width="125.14" height="37.641" rx="10" ry="5" fill="#f5f5f5" opacity=".996" stroke="#000" stroke-linejoin="round" stroke-width=".83316"/>
+  <g fill="#828282" stroke="#000" stroke-linejoin="round" stroke-width=".72683">
+   <rect x="190.97" y="336.99" width="2.722" height="19.869" opacity=".996"/>
+   <rect x="316.66" y="336.99" width="2.722" height="19.869" opacity=".996"/>
+   <rect transform="rotate(90)" x="325.85" y="-307.45" width="2.722" height="102.07" opacity=".996"/>
+   <rect transform="rotate(90)" x="365.8" y="-307.45" width="2.722" height="102.07" opacity=".996"/>
+  </g>
+  <rect x="195.15" y="330.33" width="119.89" height="33.641" rx="10" ry="5" fill="url(#radialGradient9066)" opacity=".996"/>
+  <rect x="204.75" y="337.25" width="102.5" height="7.75" rx="1" ry="1" fill="#5b88c9" opacity=".996"/>
+  <g fill="#707070">
+   <rect x="239.19" y="345.07" width="7.0711" height="1.7678" opacity=".996"/>
+   <rect x="266.95" y="345.07" width="7.0711" height="1.7678" opacity=".996"/>
+   <rect x="294.71" y="345.07" width="7.0711" height="1.7678" opacity=".996"/>
+  </g>
+  <rect x="219.37" y="363.26" width="10.631" height="2.5026" rx=".13156" ry=".13156" stroke-linejoin="round" stroke-width="1.5396"/>
+  <rect x="277.12" y="363.26" width="10.631" height="2.5026" rx=".13156" ry=".13156" stroke-linejoin="round" stroke-width="1.5396"/>
+  <rect x="211.42" y="345.07" width="7.0711" height="1.7678" fill="#707070" opacity=".996"/>
+ </g>
+</svg>

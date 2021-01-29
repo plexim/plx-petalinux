@@ -48,6 +48,7 @@ signals:
    void sigLog(QString);
    void sigError(QString);
    void sendRequest(QByteArray);
+   void simulationError();
 
 public slots:
    void send(QByteArray);
