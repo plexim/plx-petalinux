@@ -22,6 +22,8 @@
 #include <QtNetwork/QHostInfo>
 #include <QtNetwork/QNetworkInterface>
 #include <QtCore/QProcess>
+#include <QtCore/QDir>
+#include <QtCore/QFileInfo>
 #include <cmath>
 
 
@@ -91,6 +93,10 @@ RtBoxXmlRpcServer::RtBoxXmlRpcServer(SimulationRPC& aSimulation, int aPort, QObj
    quint32 fpgaVersion = mSimulation.peek(0x41230000);
    mFpgaVersion = QString("%1.%2.%3")
       .arg(fpgaVersion >> 28).arg((fpgaVersion >> 12) & 0xffff).arg(fpgaVersion & 0xfff);
+   QDir hwmonDir("/sys/bus/i2c/devices/0-0048/hwmon");
+   QFileInfoList monEntries = hwmonDir.entryInfoList(QStringList() << "hwmon*");
+   if (!monEntries.isEmpty())
+      mFanFilename = monEntries[0].canonicalFilePath()+"/fan1_input";
 }
 
 RtBoxXmlRpcServer::~RtBoxXmlRpcServer()
@@ -201,7 +207,7 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
     QByteArray temp;
    readLineFile("/sys/devices/soc0/amba/f8007100.adc/iio:device0/in_temp0_raw", temp);
    QByteArray fanSpeed;
-   readLineFile("/sys/class/hwmon/hwmon0/fan1_input", fanSpeed);
+   readLineFile(mFanFilename, fanSpeed);
    QString log;
    QFile logFile("/sys/kernel/debug/remoteproc/remoteproc0/trace0");
    if (logFile.open(QIODevice::ReadOnly))
@@ -272,11 +278,12 @@ QVariant RtBoxXmlRpcServer::getDataCaptureData(const QString& aDataCapturePath)
 {
    QVariantList data;
    int triggerCount;
-   mSimulation.getDataCaptureData(aDataCapturePath, data, triggerCount);
+   double sampleTime;
+   mSimulation.getDataCaptureData(aDataCapturePath, data, triggerCount, sampleTime);
    QVariantMap res;
    res["data"] = data;
    res["triggerCount"] = triggerCount;
-   res["sampleTime"] = mSimulation.getSampleTime();
+   res["sampleTime"] = sampleTime;
    return res;
 }
 

@@ -220,7 +220,7 @@ public:
    quint32 peek(quint32 aAddress);
    inline quint32 getScopeBufferSize() { return mLastReceivedModelResponse.mScopeBufferSize / 2; }
    int getDataCaptureTriggerCount(const QString& aDataCapturePath);
-   void getDataCaptureData(const QString& aDataCapturePath, QVariantList& aData, int& aTriggerCount);
+   void getDataCaptureData(const QString& aDataCapturePath, QVariantList& aData, int& aTriggerCount, double& aSampleTime);
    inline double getSampleTime() const { return mLastReceivedModelResponse.mSampleTime; }
    void setProgrammableValueData(const QString& aDataCapturePath, const QVariant& aData);
    bool sendRawMessage(const QByteArray& aMessage);
@@ -288,6 +288,7 @@ private:
       int mInstance;
       int mWidth;
       int mNumSamples;
+      double mSampleTime;
    };
 
    struct ProgrammableValueConstInfo

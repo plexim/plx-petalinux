@@ -17,6 +17,6 @@ if (unpack("S", $buffer) == 1)
    read($fh, $buffer, 2);
    my $hwMinor = unpack("S", $buffer);
    my $ver = ($hwMajor << 16) | $hwMinor;
-   `poke 0xffff4004 $ver`;
+   `poke 0xffff4000 $ver`;
 }
 

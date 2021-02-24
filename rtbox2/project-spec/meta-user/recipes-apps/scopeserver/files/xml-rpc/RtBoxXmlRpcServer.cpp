@@ -303,11 +303,12 @@ QVariant RtBoxXmlRpcServer::getDataCaptureData(const QString& aDataCapturePath)
 {
    QVariantList data;
    int triggerCount;
-   mSimulation.getDataCaptureData(aDataCapturePath, data, triggerCount);
+   double sampleTime;
+   mSimulation.getDataCaptureData(aDataCapturePath, data, triggerCount, sampleTime);
    QVariantMap res;
    res["data"] = data;
    res["triggerCount"] = triggerCount;
-   res["sampleTime"] = mSimulation.getSampleTime();
+   res["sampleTime"] = sampleTime;
    return res;
 }
 

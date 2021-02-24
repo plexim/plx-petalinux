@@ -595,20 +595,32 @@ bool SimulationRPC::syncDataBlockInfos()
                int mNumSamples;
                int mComponentPathLength;
             };
+            struct DataCaptureInfoResponseV2
+            {
+               int mInstance;
+               int mWidth;
+               int mNumSamples;
+               int mComponentPathLength;
+               double mSampleTime;
+            };
 
-            struct DataCaptureInfoResponse rsp;
+            struct DataCaptureInfoResponseV2* rsp;
             if (buffer.size() < (int)sizeof(struct DataCaptureInfoResponse))
             {
                log(QString("Cannot read data sink info."));
                return false;
             }
-            rsp = *((struct DataCaptureInfoResponse*) buffer.data());
+            rsp = (struct DataCaptureInfoResponseV2*) buffer.data();
             DataCaptureInfo entry =
             {
-               .mInstance = rsp.mInstance,
-               .mWidth = rsp.mWidth,
-               .mNumSamples = rsp.mNumSamples
+               .mInstance = rsp->mInstance,
+               .mWidth = rsp->mWidth,
+               .mNumSamples = rsp->mNumSamples
             };
+            if (buffer.size() == (int)sizeof(struct DataCaptureInfoResponseV2))
+               entry.mSampleTime = rsp->mSampleTime;
+            else
+               entry.mSampleTime = getSampleTime();
             volatile char* componentPath = (volatile char*)mReceiver->getRxBuffer();
             //componentPath[rsp.mComponentPathLength-1] = 0;
             const QString componentPathStr((const char*)componentPath);
@@ -739,7 +751,7 @@ int SimulationRPC::getDataCaptureTriggerCount(const QString& aDataCapturePath)
 
 void SimulationRPC::getDataCaptureData(const QString& aDataCapturePath,
                                     QVariantList& aData,
-                                    int& aTriggerCount)
+                                    int& aTriggerCount, double& aSampleTime)
 {
 
    struct DataCaptureDataRequest
@@ -778,6 +790,7 @@ void SimulationRPC::getDataCaptureData(const QString& aDataCapturePath,
             aData << (QVariant)d;
          }
       }
+      aSampleTime = it->mSampleTime;
    }
    else
    {

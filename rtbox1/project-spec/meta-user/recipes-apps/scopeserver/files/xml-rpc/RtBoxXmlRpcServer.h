@@ -61,6 +61,7 @@ private:
    int mBoardSerial;
    QString mMacAddress;
    QString mFpgaVersion;
+   QString mFanFilename;
 };
 
 
