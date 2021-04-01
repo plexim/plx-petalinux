@@ -40,7 +40,7 @@ index 7734b99..6f401b4 100644
 +	u32 callid = regs[0] & ARM_SMCCC_CALLID_MASK;
 +	struct jailhouse_cell_desc* config = this_cell()->config;
 +	const u32* allowed_sip_ids = jailhouse_cell_allowed_sip_ids(config);
-+	int i = 0;
++	u32 i = 0;
 +	bool sip_id_found = false;
  
  	switch (SMCCC_GET_OWNER(regs[0])) {

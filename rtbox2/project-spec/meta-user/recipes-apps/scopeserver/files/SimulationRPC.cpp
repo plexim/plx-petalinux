@@ -282,12 +282,11 @@ bool SimulationRPC::tuneParameters(QByteArray& aParameters)
 }
 
 
-bool SimulationRPC::getScopeBuffer(QVector<float> &aBuffer, int aBufferIndex, int aOffset)
+bool SimulationRPC::getScopeBuffer(uint8_t* aData, int aLength, int aBufferIndex, int aOffset)
 {
-   size_t len = aBuffer.size() * sizeof(float);
-   char* buf = (char*)mReceiver->getScopeBuffer() + aBufferIndex * (mLastReceivedModelResponse.mScopeBufferSize / 2);
-   memcpy(aBuffer.data(), buf + aOffset, len - aOffset);
-   memcpy(aBuffer.data() + (len-aOffset)/sizeof(float), buf, aOffset);
+   uint8_t* buf = (uint8_t*)mReceiver->getScopeBuffer() + aBufferIndex * (mLastReceivedModelResponse.mScopeBufferSize / 2);
+   memcpy(aData, buf + aOffset, aLength - aOffset);
+   memcpy(aData + aLength-aOffset, buf, aOffset);
    return true;
 }
 

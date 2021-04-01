@@ -47,11 +47,11 @@ signals:
    void error(QString err);
    void sigLog(QString);
    void sigError(QString);
-   void sendRequest(QByteArray);
+   void sendRequest(const QByteArray);
    void simulationError();
 
 public slots:
-   void send(QByteArray);
+   void send(const QByteArray);
    void shutdown();
 
 protected slots:

@@ -209,7 +209,7 @@ public:
                         QByteArray& aChecksum, QByteArray& aModelName, int& aAnalogOutVoltageRange,
                         int& aAnalogInVoltageRange, int& aDigitalOutVoltage);
    bool verifyAPIVersion(int& aVersion);
-   bool getScopeBuffer(QVector<float> &aBuffer, int aBufferIndex, int aOffset);
+   bool getScopeBuffer(uint8_t* aData, int aLength, int aBufferIndex, int aOffset);
    bool openConnection();
    bool checkConnection(bool aVerbose=true);
    void shutdownSimulation();

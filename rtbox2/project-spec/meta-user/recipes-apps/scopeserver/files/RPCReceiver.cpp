@@ -363,7 +363,7 @@ void RPCReceiver::reportErrorMessage(const QString& aMsg)
    emit logMessage(1, aMsg.toLocal8Bit());
 }
 
-void RPCReceiver::send(QByteArray aData)
+void RPCReceiver::send(const QByteArray aData)
 {
    if (!mSimulationConnection.isOpen())
       return;
@@ -378,7 +378,7 @@ void RPCReceiver::send(QByteArray aData)
          while (totalMsgLength > 0)
          {
             int chunkSize = qMin(totalMsgLength, 496);
-            if (!sendMsg(aData.data() + bytesSent, chunkSize))
+            if (!sendMsg(aData.constData() + bytesSent, chunkSize))
             {
                qWarning("Can't send message to simulation core.");
                if (mMutex.tryLock(100))
@@ -513,7 +513,7 @@ void RPCReceiver::close()
    mSimulationConnection.close();
 }
 
-bool RPCReceiver::sendMsg(const void* aData, int aLength)
+bool RPCReceiver::sendMsg(const char* aData, int aLength)
 {
    //qDebug() << "sending" << *(int*)aData << aLength;
    if ((size_t)aLength > member_size(struct Msg, mMsg))
@@ -523,8 +523,6 @@ bool RPCReceiver::sendMsg(const void* aData, int aLength)
       return false; // no more free buffer
    mSendQueue->mMsgs[head].mLength = aLength;
    memcpy(mSendQueue->mMsgs[head].mMsg, aData, aLength);
-   // memory barrier
-   asm volatile("dmb ish" ::: "memory");
    mSendQueue->mInfo.mHead++;
    return true;
 }

@@ -278,7 +278,7 @@ void RPCReceiver::reportError(const QString &aMsg)
    emit sigError(aMsg);
 }
 
-void RPCReceiver::send(QByteArray aData)
+void RPCReceiver::send(const QByteArray aData)
 {
    if (!mSimulationConnection.isOpen())
       return;

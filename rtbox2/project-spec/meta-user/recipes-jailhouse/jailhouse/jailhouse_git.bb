@@ -6,10 +6,9 @@ SRC_URI = "git://github.com/siemens/jailhouse.git;branch=wip/arm64-zero-exits \
 	  file://0001-core-Add-configuration-option-for-allowed-IDs-in-SMC.patch \
 	  file://0003-hypervisor-Conditionally-forward-SiP-calls-to-ARM-tr.patch \
 	  file://0004-no-kbuild-of-tools.patch \
-	  file://0005-tools-makefile.patch \
 	"
 
-SRCREV = "13c360e08dec34c916093f60cb2e5eb8a3c19947"
+SRCREV = "ee0e5c42c9baf1389481c372693cd8fab0e1cb88"
 PV = "0.12-git${SRCPV}"
 
 CELLS = ""

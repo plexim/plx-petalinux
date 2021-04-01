@@ -28,6 +28,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <vector>
 
 ServerAsync::ServerAsync(quint16 port)
  : mSampleTime(0),
@@ -298,51 +299,40 @@ void ServerAsync::receiveScopeData(const struct SimulationRPC::ArmResponse& aRes
    if (!mTcpSocket)
       return; // TCP connection has been closed
 
-   QVector<float> buffer(aResp.mLength / sizeof(float));
-   qint32 errCode = 0;
+   struct header
+   {
+      int32_t mMsg;
+      int32_t mTransactionId;
+      uint32_t mErrCode;
+      int32_t mNumSamples;
+      float mSampleTime;
+      int32_t mNumActiveSignals;
+   };
 
-   if (!mSimulation->getScopeBuffer(buffer, aResp.mBufferIndex, aResp.mOffset))
-   {
-       errCode = -1;
-   }
-      
-   QVector<int32_t> sentSignalIds = QVector<int32_t>() << 0;
-      
-   IOHelper ioHelper(*mTcpSocket);
+   static std::vector<uint8_t> buf;
+   int newSize = aResp.mLength + aResp.mNumActiveSignals * sizeof(int32_t) + sizeof(struct header);
+   if (buf.size() != newSize)
+      buf.resize(newSize);
+
+   struct header* hdr = (struct header*)buf.data();
+   if (mSimulation->getScopeBuffer(buf.data()+aResp.mNumActiveSignals * sizeof(int32_t) + sizeof(struct header), 
+                                   aResp.mLength, aResp.mBufferIndex, aResp.mOffset))
+       hdr->mErrCode = 0;
+   else
+      hdr->mErrCode = -1;
    
-    
-   try
-   {
-      int msgType = REPLY_SIGNALDATA;
-      ioHelper.writeAsync(&msgType);
-      ioHelper.writeAsync(&aResp.mTransactionId);
-      ioHelper.writeAsync(&errCode);
-      
-      if (errCode != 0)
-      {
-         return;
-      }
-      qint32 samplesToSend = aResp.mLength / aResp.mNumActiveSignals / sizeof(float);
-      ioHelper.writeAsync(&samplesToSend);
-      
-      float sampleTime = (float)aResp.mSampleTime * mSamplePeriod;
-      ioHelper.writeAsync(&sampleTime);
-      
-//      float initialTime = aTriggerDelay * mSim->sampleTime();
-//      ioHelper.writeAsync(&initialTime);
-            
-      QVector<qint32> signalIds(aResp.mNumActiveSignals);
-      const quint16* activeSignals = &aResp.mActiveSignals;
-      for (int i=0; i<aResp.mNumActiveSignals; ++i)
-      {
-         signalIds[i] = activeSignals[i];
-      }
-      
-      ioHelper.writeAsync(&aResp.mNumActiveSignals);
-      ioHelper.writeAsync(signalIds.data(), aResp.mNumActiveSignals);
-      ioHelper.writeAsync(buffer.data(), aResp.mLength / sizeof(float));
-      //doLogging(QString("Sent %1 samples to client").arg(samplesToSend));
-      
+   hdr->mMsg = REPLY_SIGNALDATA;
+   hdr->mTransactionId=aResp.mTransactionId;
+   hdr->mNumSamples = aResp.mLength / aResp.mNumActiveSignals / sizeof(float);
+   hdr->mSampleTime = (float)aResp.mSampleTime * mSamplePeriod;
+   hdr->mNumActiveSignals = aResp.mNumActiveSignals;
+   int32_t* signalIds = (int32_t*)(buf.data()+sizeof(struct header));
+   const uint16_t* activeSignals = &aResp.mActiveSignals;
+   for (int i=0; i<aResp.mNumActiveSignals; ++i)
+      signalIds[i] = activeSignals[i];
+   IOHelper ioHelper(*mTcpSocket);
+   try {
+      ioHelper.writeAsync(buf.data(), buf.size());
    }
    catch (IOHelper::IOError &err)
    {

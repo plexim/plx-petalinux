@@ -23,7 +23,7 @@
 struct {
 	struct jailhouse_system header;
 	__u64 cpus[1];
-	struct jailhouse_memory mem_regions[11];
+	struct jailhouse_memory mem_regions[10];
 	struct jailhouse_irqchip irqchips[1];
 	struct jailhouse_pci_device pci_devices[1];
 	__u32 allowed_sip_ids[16];
@@ -132,12 +132,6 @@ struct {
 			.phys_start = 0xfffc0000,
 			.virt_start = 0xfffc0000,
 			.size =       0x00040000,
-			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE,
-		},
-		/* TCM */ {
-			.phys_start = 0xffe00000,
-			.virt_start = 0xffe00000,
-			.size =       0x000e0000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE,
 		},
 	},

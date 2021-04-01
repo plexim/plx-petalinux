@@ -48,7 +48,7 @@ public:
       bool readAsync(T *aBuf, int aNumItems = 1);
 
    template <typename T>
-      void writeAsync(T *aBuf, int aNumItems = 1);
+      void writeAsync(const T *aBuf, int aNumItems = 1);
 
    
 private:
@@ -109,7 +109,7 @@ bool IOHelper::readAsync(T *aBuf, int aNumItems)
 
 
 template <typename T>
-void IOHelper::writeAsync(T *aBuf, int aNumItems)
+void IOHelper::writeAsync(const T *aBuf, int aNumItems)
 {
    if (aNumItems < 0)
       throw IOError(QString("Invalid number of items: %1").arg(aNumItems));

@@ -57,12 +57,12 @@ signals:
    void error(QString err);
    void sigLog(QString);
    void sigError(QString);
-   void sendRequest(QByteArray);
+   void sendRequest(const QByteArray);
    void logMessage(int, QByteArray);
    void simulationError();
 
 public slots:
-   void send(QByteArray);
+   void send(const QByteArray);
    void shutdown();
    void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, int aWriteDevice);
 
@@ -77,7 +77,7 @@ protected:
    void readAll();
    bool reconnect();
    void close();
-   bool sendMsg(const void* aData, int aLength);
+   bool sendMsg(const char* aData, int aLength);
    static QString findUIODevice();
 
 private:
