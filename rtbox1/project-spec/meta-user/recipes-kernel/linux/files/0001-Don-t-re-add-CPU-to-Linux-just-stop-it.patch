@@ -1,0 +1,52 @@
+From 7043f1176539cf415a674b5b70170c9e7250693b Mon Sep 17 00:00:00 2001
+From: Oliver Schwartz <schwartz@plexim.com>
+Date: Mon, 29 Mar 2021 12:37:29 +0200
+Subject: [PATCH] Don't re-add CPU to Linux, just stop it.
+
+---
+ arch/arm/mach-zynq/slcr.c            | 1 +
+ drivers/remoteproc/zynq_remoteproc.c | 6 +++++-
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/mach-zynq/slcr.c b/arch/arm/mach-zynq/slcr.c
+index a838f6efcdbe..9d51ef0c49f4 100644
+--- a/arch/arm/mach-zynq/slcr.c
++++ b/arch/arm/mach-zynq/slcr.c
+@@ -198,6 +198,7 @@ void zynq_slcr_cpu_stop(int cpu)
+ 	reg |= (SLCR_A9_CPU_CLKSTOP | SLCR_A9_CPU_RST) << cpu;
+ 	zynq_slcr_write(reg, SLCR_A9_CPU_RST_CTRL_OFFSET);
+ }
++EXPORT_SYMBOL(zynq_slcr_cpu_stop);
+ 
+ /**
+  * zynq_slcr_cpu_state - Read/write cpu state
+diff --git a/drivers/remoteproc/zynq_remoteproc.c b/drivers/remoteproc/zynq_remoteproc.c
+index 34e0d163842b..09010bce6f70 100644
+--- a/drivers/remoteproc/zynq_remoteproc.c
++++ b/drivers/remoteproc/zynq_remoteproc.c
+@@ -42,6 +42,8 @@
+ /* Maximum on chip memories used by the driver*/
+ #define MAX_ON_CHIP_MEMS        32
+ 
++extern void zynq_slcr_cpu_stop(int cpu);
++
+ /* Structure for storing IRQs */
+ struct irq_list {
+ 	int irq;
+@@ -171,10 +173,12 @@ static int zynq_rproc_stop(struct rproc *rproc)
+ 	dev_dbg(rproc->dev.parent, "%s\n", __func__);
+ 
+ 	/* Cpu can't be power on - for example in nosmp mode */
++	/*
+ 	ret = cpu_up(1);
+ 	if (ret)
+ 		dev_err(dev, "Can't power on cpu1 %d\n", ret);
+-
++   */
++   zynq_slcr_cpu_stop(1);
+ 	return 0;
+ }
+ 
+-- 
+2.21.1 (Apple Git-122.3)
+
