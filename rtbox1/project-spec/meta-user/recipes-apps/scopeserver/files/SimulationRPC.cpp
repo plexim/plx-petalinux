@@ -353,11 +353,6 @@ void SimulationRPC::reportError(QString aMsg)
 
 void SimulationRPC::shutdownSimulation()
 {
-   if (checkRunning())
-   {
-      // stop timer unconditionally
-      poke(XPAR_TRIGGERMANAGER_0_0, 0);
-   }
    mServer.closeConnection();
    emit shutdownRequest();
    // Wait gracefully for 1 second
@@ -367,6 +362,15 @@ void SimulationRPC::shutdownSimulation()
    closeConnection();
    if (checkRunning())
    {
+      // stop PWM
+      poke(XPAR_DIGITALOUTPUT_PWMGEN_0_S00_AXI_BASEADDR, 0);
+      // stop timer unconditionally
+      poke(XPAR_TRIGGERMANAGER_0_0, 0);
+      QTimer::singleShot(200, &loop, &QEventLoop::quit);
+      loop.exec();
+   }
+   if (checkRunning())
+   {
       setRunning(false);
       int timeout = 10;
       while ((checkRunning() || QFile::exists("/dev/rpmsg0")) && timeout > 0)
@@ -374,9 +378,6 @@ void SimulationRPC::shutdownSimulation()
          QThread::currentThread()->usleep(200*1000);
          timeout--;
       }
-
-      //QProcess::execute("/sbin/modprobe", QStringList() << "-r" << "rpmsg_user_dev_driver");
-      //QProcess::execute("/sbin/modprobe", QStringList() << "-r" << "zynq_remoteproc");
       mModelTimeStamp = 0;
    }
    mSimulationStatus = SimulationStatus::STOPPED;
@@ -422,6 +423,15 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
                    .arg(mFirmwareVersion.mVersionMajor)
                    .arg(mFirmwareVersion.mVersionMinor));
       }
+      // check for known incompatibel versions
+      if (mLastReceivedLibraryVersion.mVersionMajor == 2 &&
+          mLastReceivedLibraryVersion.mVersionMinor == 1 &&
+          mLastReceivedLibraryVersion.mVersionPatch < 4) 
+      {
+         return(QString("The firmware on this box requires that target support package 2.1.4 "
+                        "or newer is installed on the host PC."));
+      }
+   
    }
    else if (mSimulationStatus == SimulationStatus::ERROR)
       return QString("Simulation startup failed.");

@@ -19,6 +19,8 @@ SRC_URI = "file://rtbox-webserver/ \
         file://cgi-bin/front-panel.cgi \
         file://cgi-bin/netstate.cgi \
         file://cgi-bin/ipstate.cgi \
+        file://private/syslog.cgi \
+        file://private/scopeserverlog.cgi \
 	file://cgihandler \
         "
 
@@ -32,7 +34,7 @@ RDEPENDS_${PN} += "perl-module-io-socket-unix"
 RDEPENDS_${PN} += "perl-module-fcntl"
 RDEPENDS_${PN} += "perl-module-errno"
 
-FILES_${PN} += "/www/cgi /www/pages"
+FILES_${PN} += "/www/cgi /www/pages /www/private"
 
 S = "${WORKDIR}"
 
@@ -47,6 +49,7 @@ do_install() {
 	install -d ${D}/www/cgi
         install -d ${D}/www/pages
 	cp -R ${S}/cgi-bin ${D}/www/pages
+	cp -R ${S}/private ${D}/www
 	install -c ${S}/cgihandler.pl ${D}/www/cgi
 	install -d ${D}/var/sock
 	install -d ${D}/etc/init.d

@@ -4425,6 +4425,7 @@ CONFIG_qt5-platform-plugin-oled=y
 # CONFIG_cairomm is not set
 # CONFIG_can-utils is not set
 CONFIG_kernel-module-jailhouse=y
+CONFIG_lighttpd-module-alias=y
 CONFIG_lighttpd-module-fastcgi=y
 CONFIG_lighttpd-module-webdav=y
 CONFIG_ntp=y

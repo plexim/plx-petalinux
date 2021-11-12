@@ -21,6 +21,9 @@ SRC_URI = "file://rtbox-webserver/ \
         file://cgi-bin/ipstate.cgi \
         file://cgi-bin/netstate2.cgi \
         file://cgi-bin/ipstate2.cgi \
+        file://private/consolelog.cgi \
+        file://private/syslog.cgi \
+        file://private/scopeserverlog.cgi \
 	file://cgihandler \
 	file://lib/dirheader.html \
 	file://js/webdav-min.js \
@@ -31,7 +34,7 @@ SRC_URI = "file://rtbox-webserver/ \
 DEPENDS = "lighttpd spawn-fcgi"
 RDEPENDS_${PN} = "perl"
 
-FILES_${PN} += "/www/pages/js /www/pages/css /www/cgi /www/pages /www/lib"
+FILES_${PN} += "/www/pages/js /www/pages/css /www/cgi /www/pages /www/lib /www/private"
 
 S = "${WORKDIR}"
 
@@ -50,6 +53,7 @@ do_install() {
         cp -R ${S}/js/* ${D}/www/pages/js/
 	cp -R ${S}/css ${D}/www/pages
 	cp -R ${S}/cgi-bin ${D}/www/pages
+	cp -R ${S}/private ${D}/www
 	install -c ${S}/cgihandler.pl ${D}/www/cgi
 	install -d ${D}/var/sock
 	install -d ${D}/etc/init.d

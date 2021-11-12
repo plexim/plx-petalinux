@@ -32,6 +32,7 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include "PerformanceCounter.h"
+#include "xml-rpc/xparameters.h"
 
 #include <QtCore/QDebug>
 
@@ -322,8 +323,18 @@ void SimulationRPC::shutdownSimulation()
    mPerformanceCounter->deinit();
    // Wait gracefully for 1 second
    QEventLoop loop;
-   QTimer::singleShot(1000, &loop, &QEventLoop::quit);
+   QTimer::singleShot(800, &loop, &QEventLoop::quit);
    loop.exec();
+   if (checkRunning())
+   {
+      // stop PWM
+      poke(XPAR_DIGITALOUT_PWMGEN_0_S00_AXI_BASEADDR, 0);
+      poke(XPAR_DIGITALOUT_PWMGEN_1_S00_AXI_BASEADDR, 0);
+      // stop timer unconditionally
+      poke(XPAR_TRIGGERMANAGER_0_0, 0);
+      QTimer::singleShot(200, &loop, &QEventLoop::quit);
+      loop.exec();
+   }
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "shutdown" << "1");
    mModelTimeStamp = 0;
    mSimulationStatus = SimulationStatus::STOPPED;

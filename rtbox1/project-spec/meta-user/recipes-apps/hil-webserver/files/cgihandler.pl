@@ -135,6 +135,25 @@ sub checkRunning()
    return $ret;
 }
 
+sub outputFile($)
+{
+   my ($filename) = @_; 
+   print "<pre>";
+   if (open(FH, '<' ,$filename))
+   {
+      while ( <FH> )
+      {
+         print $_;
+      }
+   }
+   else
+   {
+      print "Error: $!";
+   }
+   print "</pre>";
+   close FH;
+}
+
 my $query;
 while ($query = CGI::Fast->new) 
 {
@@ -329,6 +348,18 @@ while ($query = CGI::Fast->new)
          print $query->header();
          print(encode_json($ret));
 
+         last SWITCH;
+      }
+      if (/^syslog$/)
+      {
+         print $query->header();
+         outputFile('/var/log/messages');
+         last SWITCH;
+      }
+      if (/^scopeserverlog$/)
+      {
+         print $query->header();
+         outputFile('/var/log/scopeserver.log');
          last SWITCH;
       }
       else 

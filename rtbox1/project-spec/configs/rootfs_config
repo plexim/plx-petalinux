@@ -4156,6 +4156,7 @@ CONFIG_rpmsg-rtbox-driver=y
 #
 CONFIG_libgcc=y
 CONFIG_lighttpd=y
+CONFIG_lighttpd-module-alias=y
 CONFIG_lighttpd-module-fastcgi=y
 CONFIG_ntp=y
 CONFIG_spawn-fcgi=y
