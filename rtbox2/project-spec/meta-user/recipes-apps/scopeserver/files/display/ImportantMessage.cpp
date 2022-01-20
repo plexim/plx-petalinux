@@ -29,7 +29,7 @@ ImportantMessage::ImportantMessage(Display *aDisplay, QWidget *aParent)
 
     setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-    mMessageLabel = new QLabel;
+    mMessageLabel = new ImportantMessageText;
     mMessageLabel->setAlignment(Qt::AlignHCenter);
     mMessageLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     mMessageLabel->setWordWrap(true);

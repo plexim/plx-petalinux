@@ -16,9 +16,16 @@
 #define IMPORTANTMESSAGE_H
 
 #include <QtWidgets/QScrollArea>
+#include <QtWidgets/QLabel>
 
 class Display;
-class QLabel;
+
+
+class ImportantMessageText: public QLabel
+{
+    Q_OBJECT
+};
+
 
 class ImportantMessage: public QScrollArea
 {
@@ -37,7 +44,7 @@ protected:
 private:
     Display *mDisplay;
     QWidget *mPreviouslyActiveWidget;
-    QLabel *mMessageLabel;
+    ImportantMessageText *mMessageLabel;
 };
 
 #endif // IMPORTANTMESSAGE_H

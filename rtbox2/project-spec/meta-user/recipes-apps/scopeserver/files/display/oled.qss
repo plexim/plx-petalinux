@@ -93,8 +93,14 @@ SimulationMessages {
 }
 
 
+
 ImportantMessage {
    margin: 4px;
    border: 1px solid white;
-   padding: 4px;
+   padding: 0px;
 }
+
+ImportantMessageText {
+   margin: 4px;
+}
+
