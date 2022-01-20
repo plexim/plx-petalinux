@@ -41,7 +41,7 @@ CanHandler::CanHandler(int aCanModule, RPCReceiver* aParent)
 {
 }
 
-void CanHandler::canInit(const struct SimulationRPC::CanSetupMsg& aSetupMsg)
+void CanHandler::canInit(const struct SimulationRPC::CanSetupMsg& aSetupMsg, int aMsgSize)
 {
    if (mCanFd)
       return;
@@ -65,6 +65,10 @@ void CanHandler::canInit(const struct SimulationRPC::CanSetupMsg& aSetupMsg)
       }
    }
    can_set_bitrate(mDeviceName, aSetupMsg.mBaudRate);
+   if (aMsgSize == sizeof(struct SimulationRPC::CanSetupMsg)) // check for compatibility within 2.1.x releases
+   {
+      can_set_restart_ms(mDeviceName, aSetupMsg.mRecoveryTimeout);
+   }
    if (can_do_start(mDeviceName) < 0)
    {
       mParent->reportError(QString("Error while starting CAN interface: ") + strerror(errno));

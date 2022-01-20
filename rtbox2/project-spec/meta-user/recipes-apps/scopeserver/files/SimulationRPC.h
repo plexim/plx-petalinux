@@ -125,6 +125,7 @@ public:
       uint8_t  reserverd3;
       uint32_t mBaudRate;
       int32_t  mTermination;
+      uint32_t mRecoveryTimeout;
    };
  
    struct CanTransmitMsg {

@@ -43,7 +43,7 @@ do_configure() {
 
 
 do_compile() {           
-             oe_runmake
+             oe_runmake PETALINUX=${PETALINUX}
 }
 
 do_install() {

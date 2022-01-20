@@ -167,7 +167,7 @@ bool RPCReceiver::processMessage(int aMessage, QByteArray& aMsgBuf)
           {
              const struct SimulationRPC::CanSetupMsg* canMsg = (const struct SimulationRPC::CanSetupMsg*)aMsgBuf.data();
              if (canMsg->mModuleId < sizeof(mCanHandlers)/sizeof(CanHandler*))
-                mCanHandlers[canMsg->mModuleId]->canInit(*canMsg);
+                mCanHandlers[canMsg->mModuleId]->canInit(*canMsg, aMsgBuf.size());
           }
           break;
        }

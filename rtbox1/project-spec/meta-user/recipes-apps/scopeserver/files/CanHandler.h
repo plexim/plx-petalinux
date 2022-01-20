@@ -27,7 +27,7 @@ class CanHandler : public QObject
 
 public:
    CanHandler(int aCanModule, RPCReceiver* aParent);
-   void canInit(const struct SimulationRPC::CanSetupMsg& aSetupMsg);
+   void canInit(const struct SimulationRPC::CanSetupMsg& aSetupMsg, int aMsgSize);
    void canTransmit(const struct SimulationRPC::CanTransmitMsg& aSetupMsg);
    void canStop();
    void canRequestId(const struct SimulationRPC::CanRequestIdMsg& aRequestMsg);
