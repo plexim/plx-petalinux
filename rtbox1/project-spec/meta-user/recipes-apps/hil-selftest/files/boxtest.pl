@@ -192,6 +192,18 @@ sub disableDigitalOuts()
    setDigitalOutput($base+91, 1);
 }
 
+sub setDigitalOuts3V()
+{
+   my $base = zynq_base();
+   setDigitalOutput($base+90, 0);
+}
+
+sub setDigitalOuts5V()
+{
+   my $base = zynq_base();
+   setDigitalOutput($base+90, 1);
+}
+
 sub enableAnalogOuts()
 {
    `poke 0x43c00004 1`;
@@ -284,16 +296,40 @@ sub getAveragedAnalogInput($$)
 
 sub testDigitalIOs
 {
+   makeOutput(zynq_base() + 90);
+   setDigitalOuts3V();
    enableDigitalOuts();
    my @idx = (0..31);
    my $i;
    my $errorFlag = 0;
    my $base = zynq_base() + 54;
-   print "Testing digital I/Os ...";
+   print "Testing digital I/Os 3.3V";
    for $i (@idx)
    {
       setDigitalOutput($base+$i, 0);
    }
+   for $i (@idx)
+   {
+      setDigitalOutput($base+$i, 1);
+      usleep(10);
+      for my $j (@idx)
+      {
+         if (($i != $j) && (getDigitalInput($j) == 1))
+         {
+            print "\nERROR: Input $j is high when output $i is set high";
+            $errorFlag = 1;
+         }
+         elsif (($i == $j) && (getDigitalInput($j) == 0))
+         {
+            print "\nERROR: Input $j is low when output $i is set high";
+            $errorFlag = 1;
+         }
+
+      }
+      setDigitalOutput($base + $i, 0);
+   }
+   setDigitalOuts5V();
+   print " 5V ...";
    for $i (@idx)
    {
       setDigitalOutput($base+$i, 1);
@@ -792,33 +828,35 @@ sub testCAN
    if (!$dumpProcessInfo{'pid'})
    {
       # child process
-      exec('/bin/candump', '-T', '500', 'can1');
+      exec('/usr/bin/candump', 'can1');
       exit;
    }
    usleep(100000);
    my $errorFlag = 1;
-   system ('cansend', 'can0', '61f#ff.ff.02.02.00.68.00.00.00');
+   system ('cansend', 'can0', '-i', '0x61f', '0xff', '0xff', '0x02', '0x02', '0x00', '0x68', '0x00', '0x00', '0x00');
    if ($?)
    {
       print "cansend FAILED: $?\n";
       return $errorFlag;
    }
-   while (1)
+   my $rin = '';
+   my $fh = $dumpProcessInfo{'pipe'};
+   vec($rin, fileno($fh), 1) =1;
+
+   my $nfound = select(my $rout = $rin, undef, my $eout = $rin, 1);
+   if ($nfound)
    {
-      my $newline = readline($dumpProcessInfo{'pipe'});
+      readline($fh);
+      my $newline = readline($fh);
       if (defined($newline))
       {
-         if ($newline eq "  can1  61F   [8]  FF FF 02 02 00 68 00 00\n")
+         if ($newline eq "<0x61f> [8] ff ff 02 02 00 68 00 00 \n")
          {
             $errorFlag = 0;
-            last;
          }
       }
-      elsif ($! != EAGAIN)
-      {
-         last;
-      }
    }
+   `/sbin/ip link set down can1`;
    close($dumpProcessInfo{'pipe'});
    waitpid($dumpProcessInfo{'pid'}, 0);
    delete $dumpProcessInfo{'pid'};

@@ -1,7 +1,7 @@
 import { Component, OnInit, Inject, Input } from '@angular/core';
 import { switchMap, filter } from 'rxjs/operators';
 
-import { RtboxXmlrpcService } from '../shared/rtbox-xmlrpc.service';
+import { RtboxCommunicationService } from '../shared/rtbox-communication.service';
 import { RefreshControlService } from '../shared/refresh-control.service';
 import { Status } from '../shared/interfaces';
 import { RTBOX_TYPE } from '../shared/rtbox-type';
@@ -24,7 +24,7 @@ export class DiagnosticsComponent implements OnInit {
   @Input() refresh = false; // Send requests only when needed (controlled from the parent component)
   status: Status = {
     temperature: 0,
-    fanSpeed: 0,
+    fanSpeed: [],
     logPosition: 0,
     applicationLog: '',
     clearLog: true,
@@ -47,7 +47,7 @@ export class DiagnosticsComponent implements OnInit {
     minMax[1] = newValue;
   }
 
-  constructor(private rs: RtboxXmlrpcService,
+  constructor(private rs: RtboxCommunicationService,
               private refreshService: RefreshControlService,
               @Inject(RTBOX_TYPE) public rtboxType: number) {}
 
@@ -61,11 +61,16 @@ export class DiagnosticsComponent implements OnInit {
   }
 
   private updateStatus(newStat: Status): void {
-    this.status.temperature = newStat.temperature;
+    this.status.temperature = newStat.temperature[0];
     this.status.fanSpeed = newStat.fanSpeed;
 
-    DiagnosticsComponent.updateMinMax(newStat.temperature, this.temperatureMinMax);
-    DiagnosticsComponent.updateMinMax(newStat.fanSpeed, this.fanSpeedMinMax);
+    DiagnosticsComponent.updateMinMax(newStat.temperature[0], this.temperatureMinMax);
+    this.fanSpeedMinMax[0] = newStat.fanSpeed[0];
+    if (newStat.fanSpeed.length > 1) {
+       this.fanSpeedMinMax[1] = newStat.fanSpeed[1];
+    } else {
+       this.fanSpeedMinMax[1] = newStat.fanSpeed[0];
+    }
 
     if (newStat.clearLog) {
       this.status.modelTimeStamp = newStat.modelTimeStamp;
@@ -78,7 +83,7 @@ export class DiagnosticsComponent implements OnInit {
       this.status.applicationLog += newStat.applicationLog;
     }
 
-    if (this.rtboxType > 1) {
+    if (newStat.voltages) {
       this.updatePowerConsumption(newStat);
     }
   }
@@ -86,9 +91,16 @@ export class DiagnosticsComponent implements OnInit {
   private updatePowerConsumption(newStat: Status): void {
     this.powerData = new Array<Row>();
 
-    for (let i = 0; i < newStat.voltages.length; ++i) {
+    for (let i = 0; i < newStat.voltages.length-1; ++i) {
       this.powerData.push(new Row(newStat.voltages[i], newStat.currents[i]));
     }
+    let current12V = 0;
+    // sum up additional current values
+    for (let i = newStat.voltages.length-1; i < newStat.currents.length; ++i) {
+      current12V += newStat.currents[i];
+    }
+    this.powerData.push(new Row(newStat.voltages[newStat.voltages.length-1], current12V));
+    
 
     this.totalPower = this.powerData.reduce((soFar, row) => soFar + row.power, 0);
   }

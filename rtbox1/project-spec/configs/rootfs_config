@@ -409,7 +409,7 @@ CONFIG_mtd-utils-ubifs=y
 #
 # canutils 
 #
-# CONFIG_canutils is not set
+CONFIG_canutils=y
 # CONFIG_canutils-dbg is not set
 # CONFIG_canutils-dev is not set
 
@@ -4155,11 +4155,12 @@ CONFIG_rpmsg-rtbox-driver=y
 # user packages 
 #
 CONFIG_libgcc=y
-CONFIG_lighttpd=y
 CONFIG_lighttpd-module-alias=y
 CONFIG_lighttpd-module-fastcgi=y
+CONFIG_lighttpd-module-webdav=y
 CONFIG_ntp=y
 CONFIG_spawn-fcgi=y
+CONFIG_lighttpd=y
 
 #
 # PetaLinux RootFS Settings

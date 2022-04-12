@@ -37,6 +37,7 @@ class MaiaXmlRpcServer;
 #include <QtCore/QStringList>
 #include <QtCore/QObject>
 #include <QtCore/QVariant>
+#include <QtCore/QPointer>
 
 class MaiaXmlRpcServerConnection : public QObject {
 	Q_OBJECT
@@ -50,16 +51,16 @@ private slots:
    void disconnected();
 
 private:
-   void sendResponse(QString content);
-   void parseCall(QString call);
+   void parseCall(QByteArray call);
    bool invokeMethodWithVariants(QObject *obj,
            const QByteArray &method, const QVariantList &args,
            QVariant *ret, Qt::ConnectionType type = Qt::AutoConnection);
    static QByteArray getReturnType(const QMetaObject *obj,
               const QByteArray &method, const QList<QByteArray> argTypes);
+   void sendContinueResponse() const;
    
    MaiaXmlRpcServer& mServer;
-   QTcpSocket *clientConnection;
+   QPointer<QTcpSocket> clientConnection;
    QStringList mHeaderString;
    bool mCallProcessing;
    bool mDisconnected;

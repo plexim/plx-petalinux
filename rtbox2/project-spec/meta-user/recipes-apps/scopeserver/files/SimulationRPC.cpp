@@ -26,7 +26,7 @@
 #include "ReleaseInfo.h"
 #include "xml-rpc/RTBoxError.h"
 #include "RPCReceiver.h"
-#include "FanControl.h"
+#include "TemperatureControl.h"
 #include <unistd.h>
 #include <cmath>
 #include <sys/mman.h>
@@ -58,7 +58,10 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
    mInitComplete(false),
    mWaitForFirstTrigger(false),
    mSimulationStatus(SimulationStatus::STOPPED),
-   mLastScopeArmTime(std::chrono::steady_clock::now())
+   mLastScopeArmTime(std::chrono::steady_clock::now()),
+   mHwVersionMajor(0),
+   mHwVersionMinor(0),
+   mHwVersionRevision(0)
 {
    unsigned thisVersion = static_cast<unsigned>(floor(sqrt(ReleaseInfo::SCOPESERVER_VERSION)*1000+.5));
    mFirmwareVersion.mVersionMajor = thisVersion/1000000;
@@ -74,6 +77,20 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
       f.close();
    }
    mRtBox3 = (rtbox3Value == "1");
+   QFile eeprom("/sys/bus/i2c/devices/0-0052/eeprom");
+   if (eeprom.open(QIODevice::ReadOnly))
+   {
+       uint16_t version;
+       eeprom.read((char*)&version, sizeof(version));
+       if (version == 1)
+       {
+          eeprom.read((char*)&mHwVersionMajor, sizeof(mHwVersionMajor));
+          eeprom.read((char*)&mHwVersionMinor, sizeof(mHwVersionMinor));
+          eeprom.read((char*)&mHwVersionRevision, sizeof(mHwVersionRevision));
+       }
+       eeprom.close();
+   }
+
    mPerformanceCounter = new PerformanceCounter(this);
    if (openConnection() && checkConnection(false))
    {
@@ -84,10 +101,11 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
          syncDataBlockInfos();
       }
    }
-   if (!QCoreApplication::arguments().contains("-nofan"))
-   {
-      mFanControl = new FanControl(this);
-   }
+
+   bool controlFan = !QCoreApplication::arguments().contains("-nofan");
+   mTemperatureControl = new TemperatureControl(this, controlFan);
+   connect(mTemperatureControl, &TemperatureControl::displayMessageRequest, this, &SimulationRPC::logMessage);
+   connect(mTemperatureControl, &TemperatureControl::displayMessageRequest, this, &SimulationRPC::logMessageForWeb);
 }
 
 
@@ -111,6 +129,7 @@ bool SimulationRPC::openConnection()
       connect(p, SIGNAL (finished()), p, SLOT (deleteLater()));
       connect(thread, SIGNAL (finished()), thread, SLOT (deleteLater()));
       connect(p, &RPCReceiver::initComplete, this, &SimulationRPC::initComplete);
+      connect(p, &RPCReceiver::initEthercat, this, &SimulationRPC::initEthercat);
       connect(p, &RPCReceiver::scopeArmResponse, this, &SimulationRPC::scopeArmResponse);
       connect(p, &RPCReceiver::tuneParameterResponse, this, &SimulationRPC::tuneParameterResponse);
       connect(p, &RPCReceiver::sigLog, this, &SimulationRPC::log);
@@ -321,15 +340,16 @@ void SimulationRPC::shutdownSimulation()
       closeConnection();
    }
    mPerformanceCounter->deinit();
+   mSimulationStatus = SimulationStatus::STOPPED;
    // Wait gracefully for 1 second
    QEventLoop loop;
    QTimer::singleShot(800, &loop, &QEventLoop::quit);
    loop.exec();
    if (checkRunning())
    {
-      // stop PWM
-      poke(XPAR_DIGITALOUT_PWMGEN_0_S00_AXI_BASEADDR, 0);
-      poke(XPAR_DIGITALOUT_PWMGEN_1_S00_AXI_BASEADDR, 0);
+      // disable Powerstages
+      uint32_t reg = peek(XPAR_DIGITALOUTPUT_POWERSTAGEPROTECTION_0_S00_AXI_BASEADDR);
+      poke(XPAR_DIGITALOUTPUT_POWERSTAGEPROTECTION_0_S00_AXI_BASEADDR, reg & 0x3fffffff);
       // stop timer unconditionally
       poke(XPAR_TRIGGERMANAGER_0_0, 0);
       QTimer::singleShot(200, &loop, &QEventLoop::quit);
@@ -353,7 +373,6 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    memset(&mLastReceivedModelResponse, 0, sizeof(mLastReceivedModelResponse));
    memset(&mLastReceivedLibraryVersion, 0, sizeof(mLastReceivedLibraryVersion));
    QByteArray inputConfig(32, 0);
-   //initDigitalInputs(inputConfig);
    mDataCaptureMap.clear();
    mProgrammableValueConstMap.clear();
    mInitComplete = false;
@@ -407,6 +426,8 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
       gettimeofday(&tv, NULL);
       msg->mStartSec = tv.tv_sec;
       msg->mStartUSec = tv.tv_usec;
+      msg->mHwVersionMajor = mHwVersionMajor;
+      msg->mHwVersionMinor = mHwVersionMinor;
       emit sendRequest(buf);
    }
    else if (mSimulationStatus == SimulationStatus::ERROR)
@@ -474,39 +495,27 @@ void SimulationRPC::poke(quint32 aAddress, quint32 aValue)
 }
 
 
-void SimulationRPC::initDigitalInputs(const QByteArray& aConfig)
+bool SimulationRPC::setDigitalOut(int aGpio, bool aValue)
 {
-   if (!QFile::exists("/sys/bus/i2c/devices/0-0074/gpio"))
-      return; // V1.0 boxes
-   if (aConfig.size() != 32)
+   QString dirName = QString("/sys/class/gpio/gpio%1").arg(aGpio);
+   if (!QDir(dirName).exists())
    {
-      log("initDigitalInputs(): invalid size.");
-      return;
+      QFile exportFile("/sys/class/gpio/export");
+      exportFile.open(QIODevice::WriteOnly);
+      exportFile.write(QByteArray::number(aGpio).append('\n'));
+      exportFile.close();
    }
-   QDir ioDir("/sys/bus/i2c/devices/0-0074/gpio");
-   QStringList chips = ioDir.entryList(QStringList() << "gpiochip*");
-   if (chips.isEmpty())
-      return;
-   int baseAddr = chips[0].mid(8).toInt();
-   for (int i=0; i<32; i++)
-   {
-      QString dirName = QString("/sys/class/gpio/gpio%1").arg(i+baseAddr);
-      QFile directionFile(dirName + "/direction");
-      directionFile.open(QIODevice::WriteOnly);
-      directionFile.write("out\n");
-      directionFile.close();
-      QFile valueFile(dirName + "/value");
-      valueFile.open(QIODevice::WriteOnly);
-      if (aConfig[i] == 3)
-         valueFile.write("1\n");
-      else
-         valueFile.write("0\n");
-      valueFile.close();
-      directionFile.open(QIODevice::WriteOnly);
-      if (aConfig[i] != 2 && aConfig[i] != 3)
-         directionFile.write("in\n");
-      directionFile.close();
-   }
+   if (!QDir(dirName).exists())
+      return false;
+   QFile directionFile(dirName + "/direction");
+   directionFile.open(QIODevice::WriteOnly);
+   directionFile.write("out\n");
+   directionFile.close();
+   QFile valueFile(dirName + "/value");
+   valueFile.open(QIODevice::WriteOnly);
+   valueFile.write(aValue ? "1\n" : "0\n");
+   valueFile.close();
+   return true;
 }
 
 
@@ -728,6 +737,9 @@ bool SimulationRPC::syncDataBlockInfos()
 
 int SimulationRPC::getDataCaptureTriggerCount(const QString& aDataCapturePath)
 {
+   if (mSimulationStatus != SimulationStatus::RUNNING)
+      throw(RTBoxError(tr("Simulation is not running.")));
+
    struct DataCaptureBufferFullCountRequest
    {
       int msg;
@@ -763,6 +775,8 @@ void SimulationRPC::getDataCaptureData(const QString& aDataCapturePath,
                                     QVariantList& aData,
                                     int& aTriggerCount, double& aSampleTime)
 {
+   if (mSimulationStatus != SimulationStatus::RUNNING)
+      throw(RTBoxError(tr("Simulation is not running.")));
 
    struct DataCaptureDataRequest
    {
@@ -811,6 +825,9 @@ void SimulationRPC::getDataCaptureData(const QString& aDataCapturePath,
 
 void SimulationRPC::setProgrammableValueData(const QString& aDataCapturePath, const QVariant& aData)
 {
+   if (mSimulationStatus != SimulationStatus::RUNNING)
+      throw(RTBoxError(tr("Simulation is not running.")));
+
    struct ProgrammableValueConstDataRequest
    {
       int msg;
@@ -902,33 +919,6 @@ void SimulationRPC::tuneParameterResponse(int aErrorCode)
 }
 
 
-bool SimulationRPC::syncDigitalInputConfig()
-{
-   struct DigitalInputConfigRequest
-   {
-      int msg;
-      int mLength;
-   };
-
-   const struct DigitalInputConfigRequest configReq = {
-      .msg = MSG_QUERY_DI_CONFIG,
-      .mLength = sizeof(struct DigitalInputConfigRequest)
-   };
-   QByteArray buffer;
-   if (!mReceiver)
-      return false;
-   if (!mReceiver->waitForMessage((char*)&configReq, sizeof(configReq), RSP_QUERY_DI_CONFIG, buffer, 1000))
-      return false;
-   else
-   {
-      if (buffer.size() != 32)
-         return false;
-      initDigitalInputs(buffer);
-   }
-
-   return true;
-}
-
 void SimulationRPC::logMessageForWeb(int aFlags, QByteArray aMessage)
 {
    Q_UNUSED(aFlags);
@@ -940,6 +930,46 @@ void SimulationRPC::initComplete()
    mInitComplete = true;
    emit initCompleteDone();
 }
+
+void SimulationRPC::initEthercat(int aUseEthercat)
+{
+   QDir ioDir("/sys/bus/i2c/devices/0-0074/gpio");
+   QStringList chips = ioDir.entryList(QStringList() << "gpiochip*");
+   if (chips.isEmpty())
+      return;
+   int baseAddr = chips[0].mid(8).toInt();
+   QFile binFile("/lib/firmware/esf_r5.elf");
+   if (!binFile.exists())
+      mServer.reportError(tr("Ethercat firmware file not found."));
+   else
+   {
+      setDigitalOut(baseAddr+3, !aUseEthercat); // set ethercat multiplexer
+      setDigitalOut(baseAddr+4, 0); // assert reset of ethercat chip
+      setDigitalOut(baseAddr+4, 1); // deassert reset of ethercat chip
+      QFile stateFile("/sys/class/remoteproc/remoteproc1/state");
+      stateFile.open(QIODevice::ReadWrite);
+      QByteArray state = stateFile.readAll();
+      stateFile.reset();
+      if (state.startsWith("running"))
+      {
+         stateFile.write("stop\n");
+         do {
+            state = stateFile.readAll();
+            stateFile.reset();
+         } while (!state.startsWith("offline"));
+      }
+      if (aUseEthercat)
+      {
+         QFile firmwareFile("/sys/class/remoteproc/remoteproc1/firmware");
+         firmwareFile.open(QIODevice::WriteOnly);
+         firmwareFile.write("esf_r5.elf\n");
+         firmwareFile.close();
+         stateFile.write("start\n");
+      }
+      stateFile.close();
+   }
+}
+
 
 void SimulationRPC::simulationError()
 {

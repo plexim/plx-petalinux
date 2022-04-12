@@ -1,5 +1,5 @@
 import { Component, OnInit, Output, EventEmitter, Inject } from '@angular/core';
-import { RtboxXmlrpcService } from '../shared/rtbox-xmlrpc.service';
+import { RtboxCommunicationService } from '../shared/rtbox-communication.service';
 import { switchMap } from 'rxjs/operators';
 
 import { RefreshControlService } from '../shared/refresh-control.service';
@@ -43,7 +43,7 @@ export class ProcessorLoadComponent implements OnInit {
     return array.fill(undefined).map(factory);
   }
 
-  constructor(private rs: RtboxXmlrpcService,
+  constructor(private rs: RtboxCommunicationService,
               private refresh: RefreshControlService,
               @Inject(RTBOX_TYPE) public rtboxType: number) {}
 

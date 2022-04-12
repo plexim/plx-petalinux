@@ -210,58 +210,6 @@ QVariant MaiaObject::fromXml(const QDomElement &elem) {
 	return QVariant();
 }
 
-
-QString MaiaObject::prepareCall(QString method, QList<QVariant> args) {
-	
-
-	QDomDocument doc;
-
-	QDomProcessingInstruction header = doc.createProcessingInstruction( "xml", QString("version=\"1.0\" encoding=\"UTF-8\"" ));
-	doc.appendChild(header);
-	
-	QDomElement methodCall = doc.createElement("methodCall");
-	QDomElement methodName = doc.createElement("methodName");
-	QDomElement params = doc.createElement("params");
-	QDomElement param;
-
-	doc.appendChild(methodCall);
-	methodCall.appendChild(methodName);
-	methodName.appendChild(doc.createTextNode(method));
-
-	methodCall.appendChild(params);
-
-	for(int i = 0; i < args.size(); ++i) {
-		param = doc.createElement("param");
-		param.appendChild(toXml(args.at(i)));
-		params.appendChild(param);
-	}
-
-	return doc.toString();
-}
-
-QString MaiaObject::prepareResponse(QVariant arg) {
-
-	QDomDocument doc;
-
-	QDomProcessingInstruction header = doc.createProcessingInstruction( "xml", QString("version=\"1.0\" encoding=\"UTF-8\"" )); 
-	doc.appendChild(header);
-	
-	QDomElement methodResponse = doc.createElement("methodResponse");
-	QDomElement params = doc.createElement("params");
-	QDomElement param;
-
-	doc.appendChild(methodResponse);
-
-	methodResponse.appendChild(params);
-
-	if(!arg.isNull()) {
-		param = doc.createElement("param");
-		param.appendChild(toXml(arg));
-		params.appendChild(param);
-	}
-	return doc.toString();
-}
-
 void MaiaObject::parseResponse(QString response, QNetworkReply* reply) {
 	QDomDocument doc;
 	QVariant arg;

@@ -21,10 +21,18 @@ file://xml-rpc/maiaObject.cpp \
 file://xml-rpc/maiaXmlRpcServerConnection.h \
 file://xml-rpc/maiaXmlRpcServerConnection.cpp \
 file://xml-rpc/maiaXmlRpcServer.h \
+file://xml-rpc/maiaXmlRpcServer.cpp \
 file://xml-rpc/maiaObject.h \
 file://xml-rpc/maiaFault.h \
+file://xml-rpc/maiaXmlRpcClient.h \
+file://xml-rpc/maiaXmlRpcClient.cpp \
 file://xml-rpc/RTBoxError.h \
-file://xml-rpc/maiaXmlRpcServer.cpp \
+file://xml-rpc/maiaStreamHandler.cpp \
+file://xml-rpc/maiaStreamHandler.h \
+file://xml-rpc/maiaXmlStreamHandler.cpp \
+file://xml-rpc/maiaXmlStreamHandler.h \
+file://xml-rpc/maiaJsonStreamHandler.cpp \
+file://xml-rpc/maiaJsonStreamHandler.h \
 file://xml-rpc/RtBoxXmlRpcServer.cpp \
 file://LocalServerConnection.cpp \
 file://main.cpp \
@@ -51,13 +59,15 @@ file://FanControl.h \
 file://scopeserver.pro \
 file://xparameters.h \
 file://xparameters_ps.h \
+file://ToFileHandler.h \
+file://ToFileHandler.cpp \
+file://FileWriter.h \
+file://FileWriter.cpp \
 		  "
 
 S = "${WORKDIR}"
 
 require recipes-qt/qt5/qt5.inc
-
-do_compile[nostamp] ="1"
 
 # Add dependency packages
 DEPENDS += "qtbase libxslt libsocketcan"

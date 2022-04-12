@@ -34,13 +34,16 @@
 #include <QtCore/QDebug>
 
 MaiaXmlRpcServer::MaiaXmlRpcServer(quint16 port, QObject* aParent) : QObject(aParent) {
-	connect(&server, SIGNAL(newConnection()), this, SLOT(newConnection()));
+	connect(&serverIPv4, SIGNAL(newConnection()), this, SLOT(newConnectionIPv4()));
+	connect(&serverIPv6, SIGNAL(newConnection()), this, SLOT(newConnectionIPv6()));
    addMethod("system.listMethods", this, "listMethods",
-             "This method lists all the methods that the XML-RPC server knows how to dispatch");
+             "This method lists all the methods that the RPC server knows how to dispatch");
    addMethod("system.methodHelp", this, "methodHelp",
              "Returns help text if defined for the method passed, otherwise returns an empty string");
-	if (!server.listen(QHostAddress::Any, port))
-      qCritical() << tr("Faild to open IPV4 port for XML-RPC: %1").arg(server.errorString()).toUtf8().data();
+	if (!serverIPv4.listen(QHostAddress::Any, port))
+      qCritical() << tr("Faild to open IPV4 port for RPC: %1").arg(serverIPv4.errorString()).toUtf8().data();
+   if (!serverIPv6.listen(QHostAddress::AnyIPv6, port))
+      qWarning() << tr("Faild to open IPv6 port for RPC: %1").arg(serverIPv6.errorString()).toUtf8().data();
 }
 
 void MaiaXmlRpcServer::addMethod(QString method, QObject* responseObject, 
@@ -67,13 +70,18 @@ void MaiaXmlRpcServer::getMethod(QString method, QObject **responseObject, const
 	*responseSlot = slotMap[method];
 }
 
-void MaiaXmlRpcServer::newConnection() {
-   QTcpSocket *connection = server.nextPendingConnection();
+void MaiaXmlRpcServer::newConnectionIPv4() {
+	QTcpSocket *connection = serverIPv4.nextPendingConnection();
+   new MaiaXmlRpcServerConnection(connection, *this);
+}
+
+void MaiaXmlRpcServer::newConnectionIPv6() {
+	QTcpSocket *connection = serverIPv6.nextPendingConnection();
    new MaiaXmlRpcServerConnection(connection, *this);
 }
 
 QHostAddress MaiaXmlRpcServer::getServerAddress() {
-	return server.serverAddress();
+	return serverIPv4.serverAddress();
 }
 
 QVariantList MaiaXmlRpcServer::listMethods()

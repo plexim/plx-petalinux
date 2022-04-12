@@ -243,6 +243,16 @@ sub disableDigitalOuts()
    setDacConfig($dacConfig | 0x40)
 }
 
+sub setDigitalOuts3V()
+{
+   setDacConfig($dacConfig & 0xdf)
+}
+
+sub setDigitalOuts5V()
+{
+   setDacConfig($dacConfig | 0x20)
+}
+
 sub enableAnalogOuts()
 {
    #`poke 0x43c00004 1`;
@@ -340,6 +350,7 @@ sub getAveragedAnalogInput($$)
 
 sub testDigitalIOs
 {
+   setDigitalOuts3V();
    enableDigitalOuts();
    my @idx = (0..31);
    if ($rtbox3)
@@ -348,7 +359,7 @@ sub testDigitalIOs
    }
    my $i;
    my $errorFlag = 0;
-   print "Testing digital I/Os ...";
+   print "Testing digital I/Os with 3.3V";
    for $i (@idx)
    {
       setDigitalOutput($i+416, 0);
@@ -372,6 +383,28 @@ sub testDigitalIOs
       }
       setDigitalOutput($i+416, 0);
    }
+   setDigitalOuts5V();
+   print " 5V ...";
+   for $i (@idx)
+   {
+      setDigitalOutput($i+416, 1);
+      for my $j (@idx)
+      {
+         if (($i != $j) && (getDigitalInput($j) == 1))
+         {
+            print "\nERROR: Input $j is high when output $i is set high";
+            $errorFlag = 1;
+         }
+         elsif (($i == $j) && (getDigitalInput($j) == 0))
+         {
+            print "\nERROR: Input $j is low when output $i is set high";
+            $errorFlag = 1;
+         }
+
+      }
+      setDigitalOutput($i+416, 0);
+   }
+
    if ($errorFlag)
    {
       print " FAIL\n";
@@ -790,7 +823,7 @@ sub testCAN
    {
       readline($fh);
       my $newline = readline($fh);                                                           
-      if (defined($newline))                                                                                      
+      if (defined($newline))
       {
          if ($newline eq "<0x61f> [8] ff ff 02 02 00 68 00 00 \n")
          {                      
@@ -816,23 +849,27 @@ sub testCAN
 
 sub testVoltages()
 {
-   print "Testing Voltages: 12.6V ";
+   opendir(my $dh, "/sys/bus/i2c/devices/0-0040/hwmon");
+   my @entries = grep { /^hwmon/ } readdir($dh);
+   closedir($dh);
+   my $hwmon= "/sys/bus/i2c/devices/0-0040/hwmon/$entries[0]/";
+   print "Testing Voltages: 13.0V ";
    my $errorFlag = 0;
-   my $volt12 = readLineFile("/sys/class/hwmon/hwmon1/in3_input");
-   if ($volt12 < 12400 || $volt12 > 12800)
+   my $volt12 = readLineFile($hwmon . "in3_input");
+   if ($volt12 < 12800 || $volt12 > 13100)
    {
       print "Error: " . $volt12/1000 . "V\n";
       $errorFlag = 1;
    }
    print "3.3V ";
-   my $volt33 = readLineFile("/sys/class/hwmon/hwmon1/in1_input");
+   my $volt33 = readLineFile($hwmon . "in1_input");
    if ($volt33 < 3200 || $volt33 > 3400)
    {
       print "Error: " . $volt33/1000 . "V\n";
       $errorFlag = 1;
    }
    print "5.0V ";
-   my $volt50 = readLineFile("/sys/class/hwmon/hwmon1/in2_input");
+   my $volt50 = readLineFile($hwmon . "in2_input");
    if ($volt50 < 4900 || $volt50 > 5100)
    {
       print "ERROR: " . $volt50/1000 . "V\n";

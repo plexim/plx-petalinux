@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RtboxXmlrpcService } from '../shared/rtbox-xmlrpc.service';
+import { RtboxCommunicationService } from '../shared/rtbox-communication.service';
 import { Observable } from 'rxjs';
 
 import { SerialInfo, SimulationInfo } from '../shared/interfaces';
@@ -15,7 +15,7 @@ export class InfoComponent implements OnInit {
   serials$: Observable<SerialInfo>;
   info$: Observable<SimulationInfo>;
 
-  constructor(private rs: RtboxXmlrpcService) {}
+  constructor(private rs: RtboxCommunicationService) {}
 
   ngOnInit(): void {
     this.hostname$ = this.rs.hostname();

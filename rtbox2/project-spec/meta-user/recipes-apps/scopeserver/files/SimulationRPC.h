@@ -27,7 +27,7 @@
 class ServerAsync;
 class QVariant;
 struct MsgHdr;
-class FanControl;
+class TemperatureControl;
 class PerformanceCounter;
 
 #pragma pack(push, 4)
@@ -79,7 +79,11 @@ public:
       MSG_LOG,
       TO_FILE_BUFFER_FULL,
       MSG_GET_TO_FILE_INFO, // 40
-      RSP_GET_TO_FILE_INFO
+      RSP_GET_TO_FILE_INFO,
+      MSG_XCP_CMD,
+      RSP_XCP_SEND_DTO,
+      RSP_XCP_SEND_CTO,
+      NOTIFICATION_INIT_ETHERCAT
    };
 
    enum class SimulationStatus {
@@ -199,7 +203,15 @@ public:
       int mStartOnFirstTrigger;
       uint64_t mStartSec;
       uint64_t mStartUSec;
+      uint16_t mHwVersionMajor;
+      uint16_t mHwVersionMinor;
+   };
 
+   struct XcpCommandMsg
+   {
+      int mMsg;
+      int mMsgLength;
+      char mData[1]; // dummy placeholder array of length 1
    };
 
    SimulationRPC(ServerAsync& aServer);
@@ -248,6 +260,7 @@ public slots:
 
 protected slots:
    void initComplete();
+   void initEthercat(int);
    void receiveError(QString aError);
    void scopeArmResponse(QByteArray);
    void tuneParameterResponse(int);
@@ -256,7 +269,6 @@ protected slots:
 
 protected:
    bool verifyAPIVersion(bool aVerbose);
-   void initDigitalInputs(const QByteArray& aConfig);
    void poke(quint32 aAddress, quint32 aValue);
    bool doQuerySimulation();
    bool checkRunning();
@@ -264,7 +276,7 @@ protected:
    bool closeConnection();
    bool syncDataCaptureInfo(int aInstance);
    bool syncDataBlockInfos();
-   bool syncDigitalInputConfig();
+   bool setDigitalOut(int aGpio, bool aValue);
 
 private:
    struct QueryModelResponse {
@@ -310,13 +322,16 @@ private:
    QMap<QString, ProgrammableValueConstInfo> mProgrammableValueConstMap;
    QPointer<RPCReceiver> mReceiver;
    bool mRtBox3;
-   FanControl* mFanControl;
+   TemperatureControl* mTemperatureControl;
    QByteArray mMessageBuffer;
    bool mInitComplete;
    QPointer<PerformanceCounter> mPerformanceCounter;
    bool mWaitForFirstTrigger;
    SimulationStatus mSimulationStatus;
    std::chrono::steady_clock::time_point mLastScopeArmTime;
+   uint16_t mHwVersionMajor;
+   uint16_t mHwVersionMinor;
+   uint8_t mHwVersionRevision;
 };
 
 #pragma pack(pop)

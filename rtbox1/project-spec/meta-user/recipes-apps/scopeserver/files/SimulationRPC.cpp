@@ -98,6 +98,11 @@ SimulationRPC::~SimulationRPC()
       mSharedMemoryFile.unmap((uchar*)mRxBuffer);
       mRxBuffer = nullptr;
    }
+   if (mToFileBuffer)
+   {
+      mSharedMemoryFile.unmap((uchar*)mToFileBuffer);
+      mToFileBuffer = nullptr;
+   }
    if (mTxBuffer)
    {
       mTxBufferFile.unmap((uchar*)mTxBuffer);
@@ -133,6 +138,7 @@ bool SimulationRPC::openConnection(bool aVerbose)
       connect(p, &RPCReceiver::simulationError, this, &SimulationRPC::simulationError);
       connect(this, &SimulationRPC::sendRequest, p, &RPCReceiver::send);
       connect(this, &SimulationRPC::shutdownRequest, p, &RPCReceiver::shutdown);
+      connect(this, &SimulationRPC::initToFileHandler, p, &RPCReceiver::initializeToFileHandler);
       QEventLoop eventLoop;
       connect(thread, &QThread::started, &eventLoop, &QEventLoop::quit);
       thread->start(QThread::HighPriority);
@@ -219,6 +225,11 @@ bool SimulationRPC::doQuerySimulation()
       mSharedMemoryFile.unmap((uchar*)mRxBuffer);
       mRxBuffer = nullptr;
    }
+   if (mToFileBuffer)
+   {
+      mSharedMemoryFile.unmap((uchar*)mToFileBuffer);
+      mToFileBuffer = nullptr;
+   }
 
    mSharedMemoryFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
    
@@ -232,6 +243,13 @@ bool SimulationRPC::doQuerySimulation()
       mLastReceivedModelResponse.mRxTxBufferSize/2,
       QFileDevice::NoOptions
    );
+
+   mToFileBuffer = mSharedMemoryFile.map(
+      mLastReceivedModelResponse.mToFileBufferAddress,
+      mLastReceivedModelResponse.mToFileBufferSize,
+      QFileDevice::NoOptions
+   );
+   mReceiver->setToFileBuffer(mToFileBuffer);
 
    mSharedMemoryFile.close();
    if (mSharedMemory == nullptr) 
@@ -354,6 +372,7 @@ void SimulationRPC::reportError(QString aMsg)
 void SimulationRPC::shutdownSimulation()
 {
    mServer.closeConnection();
+   mSimulationStatus = SimulationStatus::STOPPED;
    emit shutdownRequest();
    // Wait gracefully for 1 second
    QEventLoop loop;
@@ -362,8 +381,9 @@ void SimulationRPC::shutdownSimulation()
    closeConnection();
    if (checkRunning())
    {
-      // stop PWM
-      poke(XPAR_DIGITALOUTPUT_PWMGEN_0_S00_AXI_BASEADDR, 0);
+      // disable Powerstages
+      uint32_t reg = peek(XPAR_DIGITALOUTPUT_POWERSTAGEPROTECTION_0_S00_AXI_BASEADDR);
+      poke(XPAR_DIGITALOUTPUT_POWERSTAGEPROTECTION_0_S00_AXI_BASEADDR, reg & 0x3fffffff);
       // stop timer unconditionally
       poke(XPAR_TRIGGERMANAGER_0_0, 0);
       QTimer::singleShot(200, &loop, &QEventLoop::quit);
@@ -380,7 +400,6 @@ void SimulationRPC::shutdownSimulation()
       }
       mModelTimeStamp = 0;
    }
-   mSimulationStatus = SimulationStatus::STOPPED;
 }
 
 
@@ -423,15 +442,6 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
                    .arg(mFirmwareVersion.mVersionMajor)
                    .arg(mFirmwareVersion.mVersionMinor));
       }
-      // check for known incompatibel versions
-      if (mLastReceivedLibraryVersion.mVersionMajor == 2 &&
-          mLastReceivedLibraryVersion.mVersionMinor == 1 &&
-          mLastReceivedLibraryVersion.mVersionPatch < 4) 
-      {
-         return(QString("The firmware on this box requires that target support package 2.1.4 "
-                        "or newer is installed on the host PC."));
-      }
-   
    }
    else if (mSimulationStatus == SimulationStatus::ERROR)
       return QString("Simulation startup failed.");
@@ -629,6 +639,8 @@ bool SimulationRPC::syncDataBlockInfos()
       .mLength = sizeof(struct NumDataCapturesRequest)
    };
 
+   struct
+
    QByteArray buffer;
    if (!mReceiver)
       return false;
@@ -643,6 +655,7 @@ bool SimulationRPC::syncDataBlockInfos()
       }
       int numDataCaptures = *((int*)buffer.data());
       int numProgrammableValueConst = *((int*)(buffer.data() + sizeof(int)));
+      int numToFileBlocks = *((int*)(buffer.data() + 2 * sizeof(int)));
       for (int i=0; i<numDataCaptures; i++)
       {
          struct DataCaptureInfoRequest
@@ -742,6 +755,47 @@ bool SimulationRPC::syncDataBlockInfos()
             mProgrammableValueConstMap[componentPathStr] = entry;
          }
       }
+
+      for (int i=0; i<numToFileBlocks; i++)
+      {
+         struct ToFileInfoRequest
+         {
+            int mMsg;
+            int mLength;
+            int mInstance;
+         };
+
+         const struct ToFileInfoRequest infoReq = {
+            .mMsg = MSG_GET_TO_FILE_INFO,
+            .mLength = sizeof(struct ToFileInfoRequest),
+            .mInstance = i
+         };
+         if (mReceiver->waitForMessage((char*)&infoReq, sizeof(infoReq), RSP_GET_TO_FILE_INFO, buffer, 1000))
+         {
+            struct ToFileInfoResponse
+            {
+               int mInstance;
+               int mFileType;
+               int mWriteDevice;
+               int mNumSamples;
+               int mWidth;
+               int mBufferOffset;
+               int mFileNameLength;
+            };
+
+            struct ToFileInfoResponse rsp;
+            if (buffer.size() < (int)sizeof(struct ToFileInfoResponse))
+            {
+               log(QString("Cannot read To File block info"));
+               return false;
+            }
+            rsp = *((struct ToFileInfoResponse*)buffer.data());
+            volatile char* fileName = (volatile char*)getToFileBuffer();
+            const QString fileNameStr((const char*)fileName);
+            log(QString("Registering ToFile block with file name: %1").arg(fileNameStr));
+            emit initToFileHandler(fileNameStr, mLastReceivedModelName, rsp.mWidth, rsp.mNumSamples, rsp.mBufferOffset, rsp.mFileType);
+         }
+      }
    }
    return true;
 }
@@ -749,6 +803,9 @@ bool SimulationRPC::syncDataBlockInfos()
 
 int SimulationRPC::getDataCaptureTriggerCount(const QString& aDataCapturePath)
 {
+   if (mSimulationStatus != SimulationStatus::RUNNING)
+      throw(RTBoxError(tr("Simulation is not running.")));
+
    struct DataCaptureBufferFullCountRequest
    {
       int msg;
@@ -784,6 +841,9 @@ void SimulationRPC::getDataCaptureData(const QString& aDataCapturePath,
                                     QVariantList& aData,
                                     int& aTriggerCount, double& aSampleTime)
 {
+   if (mSimulationStatus != SimulationStatus::RUNNING)
+      throw(RTBoxError(tr("Simulation is not running.")));
+
    struct DataCaptureDataRequest
    {
       int msg;
@@ -831,6 +891,9 @@ void SimulationRPC::getDataCaptureData(const QString& aDataCapturePath,
 
 void SimulationRPC::setProgrammableValueData(const QString& aDataCapturePath, const QVariant& aData)
 {
+   if (mSimulationStatus != SimulationStatus::RUNNING)
+      throw(RTBoxError(tr("Simulation is not running.")));
+
    struct ProgrammableValueConstDataRequest
    {
       int msg;

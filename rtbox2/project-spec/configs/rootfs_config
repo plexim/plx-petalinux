@@ -461,7 +461,7 @@ CONFIG_mtd-utils=y
 #
 # canutils 
 #
-# CONFIG_canutils is not set
+CONFIG_canutils=y
 # CONFIG_canutils-dev is not set
 # CONFIG_canutils-dbg is not set
 
@@ -4386,11 +4386,13 @@ CONFIG_xf86-video-modesetting=y
 # CONFIG_display-qt-test is not set
 CONFIG_display-scripts=y
 CONFIG_eeprom-config=y
+CONFIG_ethercat-firmware=y
 # CONFIG_fancontrol is not set
 # CONFIG_gpio-demo is not set
 CONFIG_hil-config=y
 CONFIG_hil-selftest=y
 CONFIG_hil-webserver=y
+# CONFIG_iio-tools is not set
 CONFIG_ioinit=y
 CONFIG_jailhouse-init=y
 # CONFIG_libgd is not set
@@ -4398,6 +4400,8 @@ CONFIG_jailhouse-init=y
 CONFIG_peekpoke=y
 CONFIG_perl-cgi-fast=y
 CONFIG_phy-reset=y
+CONFIG_physical-model-logger=y
+CONFIG_power-scripts=y
 # CONFIG_resolver-read is not set
 CONFIG_scopeserver=y
 # CONFIG_set-resolver-offset is not set
@@ -4425,7 +4429,6 @@ CONFIG_qt5-platform-plugin-oled=y
 # CONFIG_cairomm is not set
 # CONFIG_can-utils is not set
 CONFIG_kernel-module-jailhouse=y
-CONFIG_lighttpd-module-alias=y
 CONFIG_lighttpd-module-fastcgi=y
 CONFIG_lighttpd-module-webdav=y
 CONFIG_ntp=y

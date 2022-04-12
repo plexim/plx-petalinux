@@ -1,5 +1,6 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { ViewChild, ElementRef } from '@angular/core';
+import { TemplateRef } from '@angular/core';
 import { BsModalService, BsModalRef, ModalOptions } from 'ngx-bootstrap/modal';
 
 import { RTBOX_TYPE } from '../shared/rtbox-type';
@@ -21,10 +22,10 @@ export class RearPanelComponent implements OnInit {
 
   showDetails(selector: string): void
   {
-     this.showDsubDetail(this[selector] as ElementRef);
+     this.showDsubDetail(this[selector] as TemplateRef<any>);
   }
 
-  private showDsubDetail(which: ElementRef): void
+  private showDsubDetail(which: TemplateRef<any>): void
   {
     const config: ModalOptions = { class: 'modal-lg' };
 

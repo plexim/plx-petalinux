@@ -43,6 +43,13 @@
                   <pre ng-if="!server.notImplemented" class="application-log">{{testLog}}</pre>
                </div>
             </div>
+            <div class="row">
+                <div class="col-sm-12">
+                   <label>Filename: </label>
+                   <input type="text" ng-model="filename" placeholder=".log"/>
+                   <input class="btn btn-primary btn-xs" type="button" ng-disabled="testStatus.running" ng-click="download()" value="Download file"/>
+                </div>
+            </div>
          </div>
       </div>
    </div>

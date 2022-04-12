@@ -37,7 +37,7 @@ if [ -e /dev/sda1 ]; then
       mkdir /run/media/sda1/ToFileTargetBlock
    fi
    if [ -d /run/media/sda1/ToFileTargetBlock ]; then
-      mount /run/media/sda1/ToFileTargetBlock /www/pages/dav -o bind
+      mount /run/media/sda1/ToFileTargetBlock /www/pages/dav/ssd -o bind
    fi
 fi
 
@@ -48,6 +48,9 @@ if [ -d /run/media/mmcblk1p1/config ]; then
          cat ${file} | tr -d '\r' > /${file} 
       done
 fi
+
+#allow full access from webserver to mounted USB disks
+usermod -a -G disk www-data
 
 if [ ! -f /run/media/mmcblk1p1/config/etc/hostname ]; then 
    echo "rtbox-"`sed -e "s/://g" /sys/class/net/eth0/address` > /etc/hostname

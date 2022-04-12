@@ -9,7 +9,7 @@ angular.module('rtBoxTest', ['ui.bootstrap', 'angularSpinner'])
 .controller('modelCtrl', ['$scope', '$http', '$httpParamSerializerJQLike', function ($scope, $http, $httpParamSerializerJQLike) {
 
    $scope.hostname = '';
-	   $scope.server = {
+   $scope.server = {
       lost: false,
       error: false,
       notImplemented: false,

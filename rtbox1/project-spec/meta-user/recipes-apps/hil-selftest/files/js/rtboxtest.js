@@ -3,6 +3,7 @@
    All rights reserved.
 */
 
+
 angular.module('rtBoxTest', ['ui.bootstrap', 'angularSpinner'])
 
 .controller('modelCtrl', ['$scope', '$http', '$httpParamSerializerJQLike', function ($scope, $http, $httpParamSerializerJQLike) {
@@ -18,15 +19,6 @@ angular.module('rtBoxTest', ['ui.bootstrap', 'angularSpinner'])
    };
 
    (function() {
-      $http({
-         url: '/cgi-bin/hostname.cgi',
-         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-         }
-      })
-      .then( function(response) {
-         $scope.hostname = response.data;
-      });
       $http({
          url: '/cgi-bin/boxtest.cgi',
          headers: {
@@ -44,6 +36,7 @@ angular.module('rtBoxTest', ['ui.bootstrap', 'angularSpinner'])
 .controller('testCtrl', ['$scope', '$http', '$timeout', '$httpParamSerializerJQLike', '$uibModal', function ($scope, $http, $timeout, $httpParamSerializerJQLike, $uibModal) {
 
    $scope.testLog = 'Starting test application ...\n';
+   $scope.filename = ".log";
 
    $scope.refreshStatus = function() {
       $http({
@@ -72,6 +65,25 @@ angular.module('rtBoxTest', ['ui.bootstrap', 'angularSpinner'])
       $scope.refreshTabPromise = $timeout(function() {
          $scope.refreshStatus();
       }, 500);
+   };
+
+   // Function to download data to a file
+   $scope.download = function() {
+      var file = new Blob([$scope.testLog], {type: 'text/plain'});
+      if (window.navigator.msSaveOrOpenBlob) // IE10+
+         window.navigator.msSaveOrOpenBlob(file, $scope.filename);
+      else { // Others
+         var a = document.createElement("a"),
+            url = URL.createObjectURL(file);
+         a.href = url;
+         a.download = $scope.filename;
+         document.body.appendChild(a);
+         a.click();
+         setTimeout(function() {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+         }, 0);
+      }
    };
 
    (function() {                                                                

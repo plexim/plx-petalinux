@@ -23,7 +23,7 @@
 struct {
 	struct jailhouse_cell_desc cell;
 	__u64 cpus[1];
-	struct jailhouse_memory mem_regions[11];
+	struct jailhouse_memory mem_regions[14];
 	struct jailhouse_irqchip irqchips[1];
 	struct jailhouse_pci_device pci_devices[1];
 } __attribute__((packed)) config = {
@@ -59,7 +59,7 @@ struct {
 		/* AXI Peripherals */ {
 			.phys_start = 0x80001000,
 			.virt_start = 0x80001000,
-			.size =          0x3f000,
+			.size =          0x8f000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_IO | JAILHOUSE_MEM_ROOTSHARED,
 		},
@@ -70,9 +70,16 @@ struct {
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_IO | JAILHOUSE_MEM_ROOTSHARED,
 		},
-		/* UART */ {
+		/* UART 1 */ {
 			.phys_start = 0xff010000,
 			.virt_start = 0xff010000,
+			.size = 0x1000,
+			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
+				JAILHOUSE_MEM_IO | JAILHOUSE_MEM_ROOTSHARED,
+		},
+		/* UART 0 */ {
+			.phys_start = 0xff000000,
+			.virt_start = 0xff000000,
 			.size = 0x1000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_IO | JAILHOUSE_MEM_ROOTSHARED,
@@ -121,6 +128,18 @@ struct {
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_EXECUTE | JAILHOUSE_MEM_LOADABLE,
 		},
+		/* SHM for ethercat on R5 core 1 */ {
+			.phys_start = 0x3d000000,
+			.virt_start = 0x3d000000,
+			.size =       0x01000000,
+			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE,
+		},
+		/* IPI for ethercat on R5 core 1 */ {
+			.phys_start = 0xff350000,
+			.virt_start = 0xff350000,
+			.size =       0x00010000,
+			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE | JAILHOUSE_MEM_IO,
+		},
 	},
 	.irqchips = {
 	    /* GIC */ {
@@ -140,7 +159,7 @@ struct {
 			.domain = 1,
 			.bdf = 0 << 3,
 			.bar_mask = JAILHOUSE_IVSHMEM_BAR_MASK_INTX,
-			.shmem_regions_start = 7,
+			.shmem_regions_start = 8,
                         .shmem_dev_id = 1,
 			.shmem_peers = 1,
 			.shmem_protocol = JAILHOUSE_SHMEM_PROTO_UNDEFINED,

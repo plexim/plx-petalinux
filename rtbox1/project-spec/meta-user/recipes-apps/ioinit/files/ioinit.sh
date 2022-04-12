@@ -6,8 +6,9 @@ echo 2 > /sys/class/hwmon/${FAN_DEV}/pwm1_enable
 
 # Current calibration
 if [ -d /sys/bus/i2c/devices/0-0040/hwmon ]; then
-  echo 20000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon0/shunt1_resistor
-  echo 20000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon0/shunt2_resistor
+  echo 40000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon0/shunt1_resistor
+  echo 40000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon0/shunt2_resistor
+  echo 20000 > /sys/bus/i2c/devices/0-0040/hwmon/hwmon0/shunt3_resistor
 fi
 
 # Disable Digital Outs

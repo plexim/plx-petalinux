@@ -6,7 +6,9 @@ SOURCES += main.cpp Server.cpp IOHelper.cpp SimulationRPC.cpp LocalServer.cpp Lo
     RPCReceiver.cpp \
     UdpTxHandler.cpp \
     UdpRxHandler.cpp \
-    FanControl.cpp
+    FanControl.cpp \
+    ToFileHandler.cpp \
+    FileWriter.cpp
 
 HEADERS += Server.h IOHelper.h SimulationRPC.h LocalServer.h LocalServerConnection.h ReleaseInfo.h \
     CanHandler.h \
@@ -15,7 +17,9 @@ HEADERS += Server.h IOHelper.h SimulationRPC.h LocalServer.h LocalServerConnecti
     UdpRxHandler.h \
     FanControl.h \
     xparameters.h \
-    xparameters_ps.h
+    xparameters_ps.h \
+    ToFileHandler.h \
+    FileWriter.h
 
 HEADERS += xml-rpc/maiaFault.h
 SOURCES += xml-rpc/maiaFault.cpp
@@ -25,6 +29,14 @@ HEADERS += xml-rpc/maiaXmlRpcServer.h
 SOURCES += xml-rpc/maiaXmlRpcServer.cpp
 HEADERS += xml-rpc/maiaXmlRpcServerConnection.h
 SOURCES += xml-rpc/maiaXmlRpcServerConnection.cpp
+HEADERS += xml-rpc/maiaXmlRpcClient.h
+SOURCES += xml-rpc/maiaXmlRpcClient.cpp
+HEADERS += xml-rpc/maiaStreamHandler.h
+SOURCES += xml-rpc/maiaStreamHandler.cpp
+HEADERS += xml-rpc/maiaXmlStreamHandler.h
+SOURCES += xml-rpc/maiaXmlStreamHandler.cpp
+HEADERS += xml-rpc/maiaJsonStreamHandler.h
+SOURCES += xml-rpc/maiaJsonStreamHandler.cpp
 HEADERS += xml-rpc/RtBoxXmlRpcServer.h
 SOURCES += xml-rpc/RtBoxXmlRpcServer.cpp
 

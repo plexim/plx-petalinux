@@ -21,7 +21,10 @@ SRC_URI = "file://rtbox-webserver/ \
         file://cgi-bin/ipstate.cgi \
         file://private/syslog.cgi \
         file://private/scopeserverlog.cgi \
-	file://cgihandler \
+        file://js/webdav-min.js \
+        file://css/webdavstyle-min.css \
+        file://cgihandler \
+        file://lib/dirheader.html \
         "
 
 
@@ -34,7 +37,7 @@ RDEPENDS_${PN} += "perl-module-io-socket-unix"
 RDEPENDS_${PN} += "perl-module-fcntl"
 RDEPENDS_${PN} += "perl-module-errno"
 
-FILES_${PN} += "/www/cgi /www/pages /www/private"
+FILES_${PN} += "/www/cgi /www/pages /www/pages/js /www/pages/css /www/pages/dav/usb /www/lib /www/private"
 
 S = "${WORKDIR}"
 
@@ -47,7 +50,11 @@ do_compile() {
 
 do_install() {
 	install -d ${D}/www/cgi
-        install -d ${D}/www/pages
+        install -d ${D}/www/pages/js
+        install -d ${D}/www/pages/dav/usb
+        install -d ${D}/www/lib
+        cp -R ${S}/js/* ${D}/www/pages/js/
+	cp -R ${S}/css ${D}/www/pages
 	cp -R ${S}/cgi-bin ${D}/www/pages
 	cp -R ${S}/private ${D}/www
 	install -c ${S}/cgihandler.pl ${D}/www/cgi
@@ -57,4 +64,5 @@ do_install() {
         install -d ${D}/etc/rcS.d
 	ln -s /etc/init.d/cgihandler ${D}/etc/rcS.d/S71cgihandler
 	cp -R ${S}/rtbox-webserver/rtbox1/* ${D}/www/pages
+	install ${S}/lib/dirheader.html ${D}/www/lib
 }

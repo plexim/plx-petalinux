@@ -1,0 +1,25 @@
+From b7048a79a55055959c0a0ae45c5669139670afdd Mon Sep 17 00:00:00 2001
+From: Jader Colombo <colombo@plexim.com>
+Date: Tue, 2 Mar 2021 16:47:29 +0100
+Subject: [PATCH] Do not modify OT enable bit in CONF1 register.
+
+---
+ drivers/iio/adc/xilinx-ams.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iio/adc/xilinx-ams.h b/drivers/iio/adc/xilinx-ams.h
+index 3d900a9df82f..ac2605f7e7b2 100644
+--- a/drivers/iio/adc/xilinx-ams.h
++++ b/drivers/iio/adc/xilinx-ams.h
+@@ -76,7 +76,7 @@
+ #define AMS_REG_SEQ2_MASK_SHIFT  16
+ #define AMS_REG_SEQ1_MASK_SHIFT  22
+ 
+-#define AMS_REGCFG1_ALARM_MASK   0xF0F
++#define AMS_REGCFG1_ALARM_MASK   0xF0E
+ #define AMS_REGCFG3_ALARM_MASK   0x3F
+ 
+ #define AMS_ALARM_TEMP            0x140
+-- 
+2.24.3
+

@@ -75,6 +75,9 @@ public:
       MSG_START_SIMULATION,
       MSG_QUERY_DI_CONFIG,
       RSP_QUERY_DI_CONFIG,
+      TO_FILE_BUFFER_FULL,
+      MSG_GET_TO_FILE_INFO,
+      RSP_GET_TO_FILE_INFO //40
    };
 
    enum class SimulationStatus {
@@ -170,6 +173,19 @@ public:
       int mRunningCycleTime;
    };
 
+   struct ToFileBufferFullMsg
+   {
+      int mInstance;
+      int mCurrentReadBuffer;
+   };
+
+   struct ToFileInfo
+   {
+      int mWidth;
+      int mNumSamples;
+      int mBufferOffset;
+   };
+
    struct SimulationStartMsg
    {
       int mMsg;
@@ -211,6 +227,7 @@ signals:
    void initComplete();
    void sendRequest(QByteArray);
    void shutdownRequest();
+   void initToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType);
 
 public slots:
    void log(QString aMsg);
@@ -235,6 +252,7 @@ protected:
    bool syncDataBlockInfos();
    bool syncDigitalInputConfig();
    void setRunning(bool aRun);
+   inline void* getToFileBuffer() { return mToFileBuffer; }
 
 private:
    struct QueryModelResponse {
@@ -246,6 +264,8 @@ private:
       quint32 mTxBufferAddress;
       quint32 mRxBufferAddress;
       quint32 mRxTxBufferSize;
+      quint32 mToFileBufferAddress;
+      quint32 mToFileBufferSize;
       qint32 mDacSpan;
       qint32 mAnalogInputVoltageRange;
       qint32 mDigitalOutVoltage;
@@ -271,6 +291,7 @@ private:
    QFile mTxBufferFile;
    volatile uchar* mSharedMemory;
    volatile void* mRxBuffer;
+   void* mToFileBuffer;
    void* mTxBuffer;
    const quint32 mPageSize;
    struct QueryModelResponse mLastReceivedModelResponse;

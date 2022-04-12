@@ -14,6 +14,7 @@
 
 #include "UdpRxHandler.h"
 #include "RPCReceiver.h"
+#include "SimulationRPC.h"
 #include <QtNetwork/QUdpSocket>
 
 UdpRxHandler::UdpRxHandler(uint16_t aPort, RPCReceiver *aParent)

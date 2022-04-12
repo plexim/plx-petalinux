@@ -35,6 +35,7 @@ SRC_URI += "file://user_2018-08-21-09-30-00.cfg \
             file://user_2020-02-11-15-08-00.cfg \
             file://user_2020-04-14-15-14-00.cfg \
             file://user_2020-09-14-14-49-00.cfg \
+            file://user_2021-04-28-16-34-00.cfg \
             "
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
@@ -43,4 +44,5 @@ SRC_URI += "file://cadence_mdio1.patch"
 SRC_URI += "file://cadence_mdio2.patch"
 SRC_URI += "file://0001-Fix-spidev-compatibility.patch"
 SRC_URI += "file://0001-Allow-normal-access-to-mapped-PCI-shmem.patch"
+SRC_URI += "file://xilinx-ams-driver.patch"
 

@@ -24,6 +24,7 @@
 #include <QtCore/QSocketNotifier>
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
+#include "ToFileHandler.h"
 
 #define IOC_GET_QUEUE_LENGTH	        _IOR('z', 1, unsigned int)
 #define IOC_GET_CURRENT_BUFFER_LENGTH   _IOR('z', 2, unsigned int)
@@ -54,6 +55,7 @@ RPCReceiver::RPCReceiver()
    for (int i=0; i<2; i++)
       mCanHandlers[i] = nullptr;
    connect(this, &RPCReceiver::sendRequest, this, &RPCReceiver::send, Qt::QueuedConnection);
+   ToFileHandler::staticInit();
 }
 
 RPCReceiver::~RPCReceiver()
@@ -67,6 +69,12 @@ RPCReceiver::~RPCReceiver()
    {
       (*it)->stop();
    }
+
+   for (auto it = mToFileHandlers.begin(); it != mToFileHandlers.end(); ++ it)
+   {
+      (*it)->stop();
+   }
+
    if (mNotifier)
    {
       delete mNotifier;
@@ -176,7 +184,8 @@ bool RPCReceiver::processMessage(int aMessage, QByteArray& aMsgBuf)
           if (readData(aMsgBuf))
           {
              const struct SimulationRPC::CanTransmitMsg* canMsg = (const struct SimulationRPC::CanTransmitMsg*)aMsgBuf.data();
-             if (canMsg->mModuleId < sizeof(mCanHandlers)/sizeof(CanHandler*))
+             if (canMsg->mModuleId < sizeof(mCanHandlers)/sizeof(CanHandler*) && 
+                 mCanHandlers[canMsg->mModuleId])
                 mCanHandlers[canMsg->mModuleId]->canTransmit(*canMsg);
           }
           break;
@@ -224,6 +233,18 @@ bool RPCReceiver::processMessage(int aMessage, QByteArray& aMsgBuf)
              }
           }
           break;
+       }
+       case SimulationRPC::TO_FILE_BUFFER_FULL:
+       {
+         if (readData(aMsgBuf))
+         {
+            const struct SimulationRPC::ToFileBufferFullMsg* toFileMsg = (const struct SimulationRPC::ToFileBufferFullMsg*)aMsgBuf.data();
+            if (toFileMsg->mInstance < mToFileHandlers.size())
+            {
+               mToFileHandlers[toFileMsg->mInstance]->writeToFileBuffer(toFileMsg->mCurrentReadBuffer);
+            }
+         }
+         break;
        }
        case SimulationRPC::MSG_ERROR:
           emit simulationError();
@@ -326,6 +347,14 @@ void RPCReceiver::shutdown()
       (*it)->deleteLater();
    }
    mUdpRxHandlers.clear();
+
+   for (auto it = mToFileHandlers.begin(); it != mToFileHandlers.end(); ++it)
+   {
+      (*it)->stop();
+      (*it)->deleteLater();
+   }
+   mToFileHandlers.clear();
+
    if (!mSimulationConnection.isOpen())
       return;
    if (mNotifier)
@@ -347,5 +376,12 @@ void RPCReceiver::openConnection()
    }
    mNotifier = new QSocketNotifier(mSimulationConnection.handle(), QSocketNotifier::Read, this);
    connect(mNotifier, SIGNAL(activated(int)), this, SLOT(receiveData()));
+}
+
+void RPCReceiver::initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType)
+{
+   QString modelName = QString(aModelName);
+   ToFileHandler* newToFileHandler = new ToFileHandler(modelName, aFileName, aWidth, aNumSamples, aBufferOffset, aFileType, this);
+   mToFileHandlers.push_back(newToFileHandler);
 }
 

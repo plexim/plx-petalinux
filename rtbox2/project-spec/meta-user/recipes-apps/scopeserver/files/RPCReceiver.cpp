@@ -21,6 +21,8 @@
 #include "CanHandler.h"
 #include "UdpTxHandler.h"
 #include "UdpRxHandler.h"
+#include "XcpHandler.h"
+#include "xcpTl.h"
 #include <QtCore/QSocketNotifier>
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
@@ -84,7 +86,8 @@ RPCReceiver::RPCReceiver()
    mReceiveQueue(nullptr),
    mScopeBuffer(nullptr),
    mCurrentMessageFilter(0),
-   mCpuPerformanceCounters(nullptr)
+   mCpuPerformanceCounters(nullptr),
+   mXcpHandler(nullptr)
 {
    QString uioDev = RPCReceiver::findUIODevice();
    if (uioDev.isEmpty())
@@ -108,6 +111,8 @@ RPCReceiver::~RPCReceiver()
    {
       (*it)->stop();
    }
+   if (mXcpHandler)
+      mXcpHandler->stop();
    for (auto it = mToFileHandlers.begin(); it != mToFileHandlers.end(); ++it)
    {
       (*it)->stop(false);
@@ -132,6 +137,7 @@ void RPCReceiver::process()
    for (int i=0; i<2; i++)
       mCanHandlers[i] = new CanHandler(i, this);
    mUdpTxHandler = new UdpTxHandler(this);
+   mXcpHandler = new XcpHandler(5555, this);
 }
 
 
@@ -263,7 +269,8 @@ bool RPCReceiver::processMessage(int aMessage)
           if (readMsgData(buffer))
           {
              const struct SimulationRPC::CanTransmitMsg* canMsg = (const struct SimulationRPC::CanTransmitMsg*)buffer.data();
-             if (canMsg->mModuleId < sizeof(mCanHandlers)/sizeof(CanHandler*))
+             if (canMsg->mModuleId < sizeof(mCanHandlers)/sizeof(CanHandler*) &&
+                 mCanHandlers[canMsg->mModuleId])
                 mCanHandlers[canMsg->mModuleId]->canTransmit(*canMsg);
           }
           break;
@@ -341,6 +348,28 @@ bool RPCReceiver::processMessage(int aMessage)
        case SimulationRPC::MSG_ERROR:
           emit simulationError();
           break;
+       case SimulationRPC::RSP_XCP_SEND_DTO:
+       {
+          QByteArray buffer;
+          if (readMsgData(buffer))
+          {
+             unsigned int bufferIndex = *(unsigned int*)buffer.data();
+             if (bufferIndex < XCPTL_DTO_QUEUE_SIZE)
+             	udpTlSendDtoPacket(mXcpDtoBuffer[bufferIndex]);
+          }
+          break;
+       }
+       case SimulationRPC::RSP_XCP_SEND_CTO:
+          udpTlSendCrmPacket(mXcpCtoBuffer);
+          break;
+       case SimulationRPC::NOTIFICATION_INIT_ETHERCAT:
+       {
+          QByteArray buffer;
+          log(QString("Model initialization complete."));
+          readMsgData(buffer);
+          emit initEthercat(*((const int*)buffer.constData()));
+          break;
+       }
        default:
           log(QString("Unexpected message from simulation core %1").arg(aMessage));
           return false;
@@ -427,6 +456,9 @@ void RPCReceiver::shutdown()
       (*it)->deleteLater();
    }
    mToFileHandlers.clear();
+   mXcpHandler->stop();
+   mXcpHandler->deleteLater();
+   mXcpHandler = nullptr;
    const int shutdownMsg = 0xef56a55a;
    sendMsg((const char*)&shutdownMsg, sizeof(int));
    emit finished();
@@ -472,7 +504,8 @@ bool RPCReceiver::mapBuffers(int aScopeBufferSize, int aToFileBufferSize, int aR
    }
    mSendQueue = (struct MsgQueue*)mSimulationConnection.map(
       2*4096,
-      ((2*sizeof(struct MsgQueue)-1)/4096+1)*4096 + aScopeBufferSize + aToFileBufferSize + aRxTxBufferSize,
+      ((2*sizeof(struct MsgQueue)-1)/4096+1)*4096 + aScopeBufferSize + aToFileBufferSize + aRxTxBufferSize +
+      XCPTL_DTO_QUEUE_SIZE * 8192 + ((sizeof(tXcpCtoMessage)-1)/4096+1)*4096,
       QFileDevice::NoOptions
    );
 
@@ -488,6 +521,9 @@ bool RPCReceiver::mapBuffers(int aScopeBufferSize, int aToFileBufferSize, int aR
    mToFileBuffer = mScopeBuffer + aScopeBufferSize;
    mRxBuffer = (volatile char*)mToFileBuffer + aToFileBufferSize;
    mTxBuffer = (char*)mRxBuffer + aRxTxBufferSize/2;
+   for (int i=0; i<XCPTL_DTO_QUEUE_SIZE; i++)
+      mXcpDtoBuffer[i] = (void*)mRxBuffer + aRxTxBufferSize + 8192*i;
+   mXcpCtoBuffer = (void*)mRxBuffer + aRxTxBufferSize + 8192*XCPTL_DTO_QUEUE_SIZE;
    return true;
 }
 

@@ -23,7 +23,7 @@
 struct {
 	struct jailhouse_system header;
 	__u64 cpus[1];
-	struct jailhouse_memory mem_regions[10];
+	struct jailhouse_memory mem_regions[12];
 	struct jailhouse_irqchip irqchips[1];
 	struct jailhouse_pci_device pci_devices[1];
 	__u32 allowed_sip_ids[16];
@@ -117,7 +117,7 @@ struct {
 		/* AXI Peripherals */ {
 			.phys_start = 0x80001000,
 			.virt_start = 0x80001000,
-			.size =          0x3f000,
+			.size =          0x8f000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_IO,
 		},
@@ -127,6 +127,18 @@ struct {
 			.size = 0x1000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_IO | JAILHOUSE_MEM_ROOTSHARED,
+		},
+		/* r5_1_tcm_a */ {
+			.phys_start = 0xFFE90000,
+			.virt_start = 0xFFE90000,
+			.size =       0x00010000,
+			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE,
+		},
+		/* r5_1_tcm_b */ {
+			.phys_start = 0xFFEB0000,
+			.virt_start = 0xFFEB0000,
+			.size =       0x00010000,
+			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE,
 		},
 		/* OCM */ {
 			.phys_start = 0xfffc0000,

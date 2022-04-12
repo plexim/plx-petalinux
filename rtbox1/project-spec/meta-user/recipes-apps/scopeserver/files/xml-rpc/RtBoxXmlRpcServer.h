@@ -37,7 +37,9 @@ protected slots:
    QVariant querySimulation();
    QVariant hostname();
    QVariant status(int aModelTimeStamp, int aLogPosition);
+   QVariant status(double aModelTimeStamp, double aLogPosition); // used with JSON/CBOR and qt 5.12
    QVariant start(int aStartOnFirstTrigger = 0);
+   QVariant start(double aStartOnFirstTrigger); // used with JSON/CBOR and qt 5.12
    QVariant stop();
    QVariant serials();
    QVariant getDataCaptureTriggerCount(const QString& aDataCapturePath);
@@ -48,6 +50,7 @@ protected slots:
    QVariant getProgrammableValueBlocks();
    QVariant getDataCaptureBlocks();
    QVariant loadElf(const QByteArray& aData);
+   QVariant loadElf(const QString& aData);
    QVariant reboot(const QString& aSecret);
 
 protected:

@@ -17,9 +17,9 @@ import { InfoComponent } from './info/info.component';
 import { ConnectionStatusInterceptor } from './shared/connection-status-interceptor';
 import { CONNECTION_STATUS } from './shared/connection-status';
 import { RTBOX_TYPE } from './shared/rtbox-type';
-import { XmlrpcService } from './shared/xmlrpc.service';
-import { RtboxXmlrpcService } from './shared/rtbox-xmlrpc.service';
-import { RtboxXmlrpcStubService } from './shared/rtbox-xmlrpc-stub.service';
+import { RtboxCommunicationStubService } from './shared/rtbox-communication-stub.service';
+import { RtboxCommunicationService } from './shared/rtbox-communication.service';
+import { RtboxJsonService } from './shared/rtbox-json.service';
 import { RtboxCgiService } from './shared/rtbox-cgi.service';
 import { RtboxCgiStubService } from './shared/rtbox-cgi-stub.service';
 import { DiagnosticsComponent } from './diagnostics/diagnostics.component';
@@ -74,9 +74,8 @@ import { LabeledLedComponent } from './lib/labeled-led/labeled-led.component';
     HttpClientModule
   ],
   providers: [
-    XmlrpcService,
     // For exemplary/random data, specify stub services here:
-    { provide : RtboxXmlrpcService, useClass: RtboxXmlrpcService },
+    { provide : RtboxCommunicationService, useClass: RtboxJsonService },
     { provide : RtboxCgiService, useClass: RtboxCgiService },
     { provide: HTTP_INTERCEPTORS, useClass: ConnectionStatusInterceptor, multi: true },
     { provide: CONNECTION_STATUS, useValue: new BehaviorSubject('') },

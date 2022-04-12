@@ -10,6 +10,11 @@ if [ -d /media/mmcblk0p1/config ]; then
       done
 fi
 
+mkdir /media/usb
+
+#allow full access from webserver to mounted USB disks
+usermod -a -G disk www-data
+
 if [ ! -f /media/mmcblk0p1/config/etc/hostname ]; then 
    echo "rtbox-"`sed -e "s/://g" /sys/class/net/eth0/address` > /etc/hostname
 fi
@@ -17,6 +22,10 @@ fi
 mkdir /media/nand
 if [ ! -c /dev/ubi0 ]; then
    /usr/sbin/ubiattach /dev/ubi_ctrl -m 0
+   if [ $? -ne 0 ]; then
+      /usr/sbin/ubiformat /dev/mtd0 -y
+      /usr/sbin/ubiattach /dev/ubi_ctrl -m 0
+   fi
 fi
 if [ ! -c /dev/ubi0_0 ]; then
    /usr/sbin/ubimkvol /dev/ubi0 -N nand -S 4012

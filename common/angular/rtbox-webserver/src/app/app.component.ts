@@ -6,7 +6,7 @@ import { switchMap } from 'rxjs/operators';
 import { RefreshControlService } from './shared/refresh-control.service';
 import { CONNECTION_STATUS } from './shared/connection-status';
 import { RTBOX_TYPE } from './shared/rtbox-type';
-import { RtboxXmlrpcService } from './shared/rtbox-xmlrpc.service';
+import { RtboxCommunicationService } from './shared/rtbox-communication.service';
 import { SerialInfo, SimulationInfo } from './shared/interfaces';
 import { FrontPanelComponent } from './front-panel/front-panel.component';
 
@@ -30,7 +30,7 @@ export class AppComponent implements OnInit {
   @ViewChild('tabset') tabset: TabsetComponent;
 
 
-  constructor(private rs: RtboxXmlrpcService,
+  constructor(private rs: RtboxCommunicationService,
               private refresh: RefreshControlService,
               @Inject(RTBOX_TYPE) public rtboxType: number,
               @Inject(CONNECTION_STATUS) status: BehaviorSubject<string>) {

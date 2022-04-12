@@ -194,6 +194,11 @@ QVariant RtBoxXmlRpcServer::querySimulation()
    return retValues;
 }
 
+QVariant RtBoxXmlRpcServer::status(double aModelTimeStamp, double aLogPosition)
+{
+   return status(static_cast<int>(aModelTimeStamp), static_cast<int>(aLogPosition));
+}
+
 QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
 {
    QVariantMap retValues;
@@ -204,10 +209,14 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
       logPosition = aLogPosition;
       clearLog = 0;
    }
-    QByteArray temp;
+   QByteArray temp;
    readLineFile("/sys/devices/soc0/amba/f8007100.adc/iio:device0/in_temp0_raw", temp);
+   QVariantList temperatures;
+   temperatures.append(QVariant((temp.toUInt() * 503.975) / 4096 - 273.15));
+   QVariantList fanSpeeds;
    QByteArray fanSpeed;
    readLineFile(mFanFilename, fanSpeed);
+   fanSpeeds.append(fanSpeed.toInt());
    QString log;
    QFile logFile("/sys/kernel/debug/remoteproc/remoteproc0/trace0");
    if (logFile.open(QIODevice::ReadOnly))
@@ -217,13 +226,38 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
       logPosition = logFile.pos();
       logFile.close();  
    }
-   retValues["temperature"] = (temp.toUInt() * 503.975) / 4096 - 273.15;
-   retValues["fanSpeed"] = fanSpeed.toInt();
+   QDir hwmonDir("/sys/bus/i2c/devices/0-0040/hwmon/hwmon0");
+   if (hwmonDir.exists())
+   {
+      QVariantList voltages;
+      for (int i=1; i<4; i++)
+      {
+         QByteArray measurement;
+         readLineFile(QString("/sys/bus/i2c/devices/0-0040/hwmon/hwmon0/in%1_input").arg(i), measurement);
+         voltages.append(QVariant(measurement.toInt()/1000.0));
+      }
+      QVariantList currents;
+      for (int i=1; i<4; i++)
+      {
+         QByteArray measurement;
+         readLineFile(QString("/sys/bus/i2c/devices/0-0040/hwmon/hwmon0/curr%1_input").arg(i), measurement);
+         currents.append(QVariant(measurement.toInt()/1000.0));
+      }
+      retValues["voltages"] = voltages;
+      retValues["currents"] = currents;
+   }   
+   retValues["temperature"] = temperatures;
+   retValues["fanSpeed"] = fanSpeeds;
    retValues["logPosition"] = logPosition;
    retValues["applicationLog"] = log;
    retValues["clearLog"] = clearLog;
    retValues["modelTimeStamp"] = mSimulation.getModelTimeStamp();
    return retValues;
+}
+
+QVariant RtBoxXmlRpcServer::start(double aStartOnFirstTrigger)
+{
+   return start(static_cast<int>(aStartOnFirstTrigger));
 }
 
 QVariant RtBoxXmlRpcServer::start(int aStartOnFirstTrigger)
@@ -314,6 +348,11 @@ QVariant RtBoxXmlRpcServer::loadElf(const QByteArray &aData)
    }
    else
       throw(RTBoxError(QString("Cannot open firmware file: %1").arg(firmwareFile.errorString())));
+}
+
+QVariant RtBoxXmlRpcServer::loadElf(const QString &aData)
+{
+   return loadElf(QByteArray::fromBase64(aData.toLatin1()));
 }
 
 QVariant RtBoxXmlRpcServer::setProgrammableValueData(const QString& aProgrammableValuePath,

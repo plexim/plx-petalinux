@@ -1,9 +1,10 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { ViewChild, ElementRef } from '@angular/core';
+import { TemplateRef } from '@angular/core';
 import { BsModalService, BsModalRef, ModalOptions } from 'ngx-bootstrap/modal';
 
 import { RtboxCgiService } from '../shared/rtbox-cgi.service';
-import { RtboxXmlrpcService } from '../shared/rtbox-xmlrpc.service';
+import { RtboxCommunicationService } from '../shared/rtbox-communication.service';
 import { Rtbox1LedState, FrontPanelState, SimulationInfo } from '../shared/interfaces';
 import { RTBOX_TYPE } from '../shared/rtbox-type';
 import { LedLight } from '../lib/labeled-led/labeled-led.component';
@@ -58,7 +59,7 @@ export class FrontPanelComponent implements OnInit {
   }
 
   constructor(private cgi: RtboxCgiService,
-              private rs: RtboxXmlrpcService,
+              private rs: RtboxCommunicationService,
               @Inject(RTBOX_TYPE) public rtboxType: number,
               private modalService: BsModalService) {}
 
@@ -95,10 +96,10 @@ export class FrontPanelComponent implements OnInit {
 
   showDetails(selector: string): void
   {
-     this.showDsubDetail(this[selector] as ElementRef);
+     this.showDsubDetail(this[selector] as TemplateRef<any>);
   }
 
-  private showDsubDetail(which: ElementRef): void
+  private showDsubDetail(which: TemplateRef<any>): void
   {
     const config: ModalOptions = { class: 'modal-lg' };
 

@@ -1,9 +1,9 @@
 Plecs {
   Name          "testApp"
-  Version       "4.4"
+  Version       "4.6"
   CircuitModel  "DiscStateSpace"
   StartTime     "0.0"
-  StopTime      "1.0"
+  TimeSpan      "1.0"
   Timeout       ""
   Solver        "FixedStepDiscrete"
   MaxStep       "1e-5"
@@ -227,7 +227,7 @@ Plecs {
     Index         "16"
   }
   Schematic {
-    Location      [1882, 492; 2560, 1107]
+    Location      [1509, 562; 2187, 1177]
     ZoomFactor    1
     SliderPosition [0, 0]
     ShowBrowser   off
@@ -355,30 +355,70 @@ Plecs {
       LabelAlign    up
       TargetPortIndices ""
       SampleTime    "0"
+      EnforceBaseTask "1"
       CodeFcnLang   "2"
-      CodeFcn       "local Declarations = StringList:new();\n\nDeclarations:ap"
-"pend(\"u16 getPca6416_DAC_BRD1();\\n\");\nDeclarations:append(\"u16 getPca641"
-"6_DAC_BRD2();\\n\");\nDeclarations:append(\"/* Override doStep() with (almost"
-") empty code. */\\n\");\nDeclarations:append(\"void doStep()\\n\");\nDeclarat"
-"ions:append(\"{\\n\");\nDeclarations:append(\"   plxClearIrq();\\n\");\nDecla"
-"rations:append(\"   plxSetBufferAdresses();\\n\");\nDeclarations:append(\"   "
-"if (plxGetUdpUpdateFlag(0))\\n\");\nDeclarations:append(\"   {\\n\");\nDeclar"
-"ations:append(\"      setPca6416_DAC_BRD1((getPca6416_DAC_BRD1() & 0xff00) + "
-"udpRxBuffer0[0]);\\n\");\nDeclarations:append(\"      setPca6416_DAC_BRD2((ge"
-"tPca6416_DAC_BRD2() & 0xff00) + udpRxBuffer0[1]);\\n\");\nDeclarations:append"
-"(\"      printk(\\\"DAC: 0x%x\\\\n\\\", getPca6416_DAC_BRD2());\\n\");\nDecla"
-"rations:append(\"   }\\n\");\nDeclarations:append(\"   if (plxGetUdpUpdateFla"
-"g(1))\\n\");\nDeclarations:append(\"   {\\n\");\nDeclarations:append(\"      "
-"plxSetPullups(udpRxBuffer1[0], udpRxBuffer1[1], udpRxBuffer1[2]);\\n\");\nDec"
-"larations:append(\"   }\\n\");\nDeclarations:append(\"}\\n\");\n\nreturn {\n "
-" Declarations = Declarations,\n}\n"
+      CodeFcn       "local Declarations = StringList:new();\n"
+"\n"
+"Declarations:append([=[\n"
+"u16 getPca6416_DAC_BRD1();\n"
+"u16 getPca6416_DAC_BRD2();\n"
+"/* Override doStep() with (almost) empty code. */\n"
+"void doStep()\n"
+"{\n"
+"   plxSetBufferAdresses();\n"
+"\n"
+"   /* UDP Receive : 'testApp/ReceiveConfig' */\n"
+"   {\n"
+"      int currReadBufferIdx = udpRxCurrentReadBufferIdx[0];\n"
+"      int newReadBufferIdx = !currReadBufferIdx;\n"
+"      udpRxUpdateFlags[currReadBufferIdx][0] = 0;\n"
+"      if (udpRxUpdateFlags[newReadBufferIdx][0])\n"
+"      {\n"
+"         udpRxBufferPtr0=udpRxDoubleBuffer0[newReadBufferIdx];\n"
+"         udpRxCurrentReadBufferIdx[0]=newReadBufferIdx;\n"
+"      }\n"
+"   }\n"
+"\n"
+"   /* UDP Receive : 'testApp/ReceivePullups' */\n"
+"   {\n"
+"      int currReadBufferIdx = udpRxCurrentReadBufferIdx[1];\n"
+"      int newReadBufferIdx = !currReadBufferIdx;\n"
+"      udpRxUpdateFlags[currReadBufferIdx][1] = 0;\n"
+"      if (udpRxUpdateFlags[newReadBufferIdx][1])\n"
+"      {\n"
+"         udpRxBufferPtr1=udpRxDoubleBuffer1[newReadBufferIdx];\n"
+"         udpRxCurrentReadBufferIdx[1]=newReadBufferIdx;\n"
+"      }\n"
+"   }\n"
+"\n"
+"   int udpIdx0 = udpRxCurrentReadBufferIdx[0];\n"
+"   if (udpRxUpdateFlags[udpIdx0][0])\n"
+"   {\n"
+"      setPca6416_DAC_BRD1((getPca6416_DAC_BRD1() & 0xff00) + udpRxBufferPtr0["
+"0]);\n"
+"      setPca6416_DAC_BRD2((getPca6416_DAC_BRD2() & 0xff00) + udpRxBufferPtr0["
+"1]);\n"
+"      printk(\"DAC: 0x%x\\n\", getPca6416_DAC_BRD2());\n"
+"   }\n"
+"   int udpIdx1 = udpRxCurrentReadBufferIdx[1];\n"
+"   if (udpRxUpdateFlags[udpIdx1][1])\n"
+"   {\n"
+"      plxSetPullups(udpRxBufferPtr1[0], udpRxBufferPtr1[1], udpRxBufferPtr1[2"
+"]);\n"
+"   }\n"
+"}\n"
+"]=]);\n"
+"\n"
+"return {\n"
+"  Declarations = Declarations,\n"
+"}\n"
       MaskHelp      "qthelp://com.plexim.rtbox.1.0/doc/do_rtbox.html"
       MaskDisplayLang "0"
       MaskIconFrame on
       MaskIconOpaque off
       MaskIconRotates on
       Schematic {
-        Location      [1481, 760; 2532, 995]
+        Location      [360, 503; 1411, 738]
         ZoomFactor    1
         SliderPosition [0, 0]
         ShowBrowser   off
@@ -458,7 +498,7 @@ Plecs {
         Index         "2"
       }
       Schematic {
-        Location      [415, 55; 699, 222]
+        Location      [415, 58; 699, 225]
         ZoomFactor    1
         SliderPosition [0, 0]
         ShowBrowser   off
@@ -1241,8 +1281,7 @@ Plecs {
       }
     }
     Component {
-      Type          Reference
-      SrcComponent  "PLECSRTBoxLib/Resolver Out"
+      Type          TargetCode
       Name          "Resolver Out2"
       Show          on
       Position      [395, 140]
@@ -1251,30 +1290,381 @@ Plecs {
       Frame         [-25, -20; 25, 20]
       LabelPosition [0, 23]
       LabelAlign    up
+      TargetPortIndices "10 11 14 12"
+      SampleTime    "0"
+      EnforceBaseTask "3"
+      CodeFcnLang   "2"
+      CodeFcn       "local InitCode = StringList:new()\n"
+"local OutputCode = StringList:new()\n"
+"local Require = ResourceList:new()\n"
+"\n"
+"local module = Block.Mask.module - 1\n"
+"local gain = Block.Mask.gain\n"
+"local offset = Block.Mask.offset\n"
+"\n"
+"-- register the hardware resources\n"
+"Require:add(\"Resolver out\", module+1)\n"
+"\n"
+"InitCode:append(\"if (!setupResolverOut(%i, %f, %f))\\n\" % { module, gain, o"
+"ffset })\n"
+"InitCode:append(\"{\\n\");\n"
+"InitCode:append(\"   //plxErrorFlag = 1;\\n\");\n"
+"InitCode:append(\"   //return;\\n\");\n"
+"InitCode:append(\"}\\n\");\n"
+"\n"
+"OutputCode:append(\"setResolverOut(%i, %s);\\n\" % { module, Block.InputSigna"
+"l[1][1] })\n"
+"\n"
+"return {\n"
+"\tInclude = \"plexim/ResolverOut.h\",\n"
+"\tRequire = Require,\n"
+"\tInitCode = InitCode,\n"
+"\tOutputCode = OutputCode\n"
+"}"
+      MaskType      "Resolver Out"
+      MaskDescription "Emulate a two-pole transmitter resolver. \n"
+"\n"
+"An incoming exciter voltage is multiplied with sine and cosine of the resolve"
+"r angle."
+      MaskHelp      "qthelp://com.plexim.rtbox.1.0/doc/resolver_out_rtbox.html"
+      MaskDisplay   "text(['Resolver' char(10) 'Out'])"
+      MaskIconFrame on
+      MaskIconOpaque off
+      MaskIconRotates on
+      MaskInit      "if offset < 0 || offset > 5\n"
+"   error('\"DC output offset\" must be a value between 0 and 5 Volts.');\n"
+"end\n"
+"\n"
+"if gain < 0 || gain > 1\n"
+"   error('\"Gain\" must be a value between 0 and 1.');\n"
+"end\n"
       Parameter {
         Variable      "module"
+        Prompt        "Resolver module"
+        Type          FixedText
+        PossibleValues {"Resolver 1", "Resolver 2"}
         Value         "2"
         Show          off
+        Tunable       off
+        TabName       ""
       }
       Parameter {
         Variable      "gain"
+        Prompt        "Gain (0..1)"
+        Type          FreeText
         Value         "1"
         Show          off
+        Tunable       off
+        TabName       ""
       }
       Parameter {
         Variable      "offset"
+        Prompt        "DC output offset [V]"
+        Type          FreeText
         Value         "2.5"
         Show          off
-      }
-      Parameter {
-        Variable      "TargetPortIndices"
-        Value         "10 11 14 12"
-        Show          off
+        Tunable       off
+        TabName       ""
       }
       Terminal {
         Type          Input
         Position      [-25, 0]
         Direction     left
+      }
+      Schematic {
+        Location      [463, 548; 1514, 783]
+        ZoomFactor    0.99328
+        SliderPosition [0, 0]
+        ShowBrowser   off
+        BrowserWidth  100
+        Component {
+          Type          TargetOutput
+          Name          "sin"
+          Show          on
+          Position      [410, 60]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Input
+          Name          base64 "IM64"
+          Show          off
+          Position      [135, 80]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Index"
+            Value         "1"
+            Show          on
+          }
+          Parameter {
+            Variable      "InitialOutput"
+            Value         "[]"
+            Show          off
+          }
+          Parameter {
+            Variable      "HasDirectFeedthrough"
+            Value         "2"
+            Show          off
+          }
+          Parameter {
+            Variable      "Width"
+            Value         "1"
+            Show          off
+          }
+        }
+        Component {
+          Type          TargetOutput
+          Name          "cos"
+          Show          on
+          Position      [410, 90]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Trigonometry
+          Name          "Trigonometric\nFunction"
+          Show          off
+          Position      [215, 65]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Operator"
+            Value         "1"
+            Show          off
+          }
+          Parameter {
+            Variable      "Unit"
+            Value         "1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Trigonometry
+          Name          "Trigonometric\nFunction1"
+          Show          off
+          Position      [215, 95]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Operator"
+            Value         "2"
+            Show          off
+          }
+          Parameter {
+            Variable      "Unit"
+            Value         "1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Gain
+          Name          "Gain"
+          Show          off
+          Position      [275, 65]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "K"
+            Value         "gain"
+            Show          off
+          }
+          Parameter {
+            Variable      "Multiplication"
+            Value         "1"
+            Show          off
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "11"
+            Show          off
+          }
+        }
+        Component {
+          Type          Gain
+          Name          "Gain1"
+          Show          off
+          Position      [275, 95]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "K"
+            Value         "gain"
+            Show          off
+          }
+          Parameter {
+            Variable      "Multiplication"
+            Value         "1"
+            Show          off
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "11"
+            Show          off
+          }
+        }
+        Component {
+          Type          TargetInput
+          Name          "Exc"
+          Show          on
+          Position      [135, 20]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+        }
+        Component {
+          Type          Product
+          Name          "Product"
+          Show          off
+          Position      [340, 60]
+          Direction     up
+          Flipped       off
+          Parameter {
+            Variable      "IconShape"
+            Value         "1"
+            Show          off
+          }
+          Parameter {
+            Variable      "Inputs"
+            Value         "2"
+            Show          off
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "11"
+            Show          off
+          }
+        }
+        Component {
+          Type          Product
+          Name          "Product1"
+          Show          off
+          Position      [340, 90]
+          Direction     up
+          Flipped       off
+          Parameter {
+            Variable      "IconShape"
+            Value         "1"
+            Show          off
+          }
+          Parameter {
+            Variable      "Inputs"
+            Value         "2"
+            Show          off
+          }
+          Parameter {
+            Variable      "DataType"
+            Value         "11"
+            Show          off
+          }
+        }
+        Component {
+          Type          TargetOutput
+          Name          base64 "zrg="
+          Show          on
+          Position      [410, 125]
+          Direction     right
+          Flipped       off
+          Parameter {
+            Variable      "Width"
+            Value         "-1"
+            Show          off
+          }
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  base64 "IM64"
+          SrcTerminal   1
+          Points        [170, 80]
+          Branch {
+            Points        [170, 65]
+            DstComponent  "Trigonometric\nFunction"
+            DstTerminal   1
+          }
+          Branch {
+            Points        [170, 95]
+            Branch {
+              DstComponent  "Trigonometric\nFunction1"
+              DstTerminal   1
+            }
+            Branch {
+              Points        [170, 125]
+              DstComponent  base64 "zrg="
+              DstTerminal   1
+            }
+          }
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "Trigonometric\nFunction"
+          SrcTerminal   2
+          DstComponent  "Gain"
+          DstTerminal   1
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "Trigonometric\nFunction1"
+          SrcTerminal   2
+          DstComponent  "Gain1"
+          DstTerminal   1
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "Gain"
+          SrcTerminal   2
+          DstComponent  "Product"
+          DstTerminal   3
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "Gain1"
+          SrcTerminal   2
+          DstComponent  "Product1"
+          DstTerminal   3
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "Exc"
+          SrcTerminal   1
+          Points        [300, 20; 300, 55]
+          Branch {
+            DstComponent  "Product"
+            DstTerminal   2
+          }
+          Branch {
+            Points        [300, 85]
+            DstComponent  "Product1"
+            DstTerminal   2
+          }
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "Product"
+          SrcTerminal   1
+          DstComponent  "sin"
+          DstTerminal   1
+        }
+        Connection {
+          Type          Signal
+          SrcComponent  "Product1"
+          SrcTerminal   1
+          DstComponent  "cos"
+          DstTerminal   1
+        }
       }
     }
     Component {
@@ -1605,4 +1995,4 @@ Plecs {
     }
   }
 }
-DemoSignature "OPjkvTmR9yPCDJZuQ5vl+DGbb14Dg14lhrkLVKQPuf4="
+DemoSignature "Gbr6Bri0g4V6r40RzFUxHKQNHXH872BMcrhw6t2zrHc="

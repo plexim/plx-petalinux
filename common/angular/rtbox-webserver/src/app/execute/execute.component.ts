@@ -1,7 +1,7 @@
 import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { flatMap, tap } from 'rxjs/operators';
 import { RtboxCgiService } from '../shared/rtbox-cgi.service';
-import { RtboxXmlrpcService } from '../shared/rtbox-xmlrpc.service';
+import { RtboxCommunicationService } from '../shared/rtbox-communication.service';
 import { RefreshControlService } from '../shared/refresh-control.service';
 import { TemplateRef } from '@angular/core';
 import { BsModalService, BsModalRef, ModalOptions } from 'ngx-bootstrap/modal';
@@ -23,13 +23,13 @@ export class ExecuteComponent implements OnInit {
   startSimulationErrorMsg = '';
   secondsUntilReload: number = undefined;
   private readonly modalConfig: ModalOptions = { class: 'modal-sm' };
-  @ViewChild('modalError') modalError: ElementRef;
-  @ViewChild('rebootWait') rebootWait: ElementRef;
+  @ViewChild('modalError') modalError: TemplateRef<any>;
+  @ViewChild('rebootWait') rebootWait: TemplateRef<any>;
 
   private readonly noop = () => undefined;
 
   constructor(private cgi: RtboxCgiService,
-              private rs: RtboxXmlrpcService,
+              private rs: RtboxCommunicationService,
               private refresh: RefreshControlService,
               private modalService: BsModalService) {}
 

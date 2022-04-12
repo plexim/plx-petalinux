@@ -62,13 +62,4 @@ import 'zone.js/dist/zone';  // Included with Angular CLI.
  * APPLICATION IMPORTS
  */
 
-import * as process from 'process';
-import * as buffer from 'buffer';
 
-/* tslint:disable:no-string-literal */
-window['process'] = process;
-window['Buffer'] = buffer.Buffer;
-/* tslint:enable:no-string-literal */
-
-
-(window as any).global = window;

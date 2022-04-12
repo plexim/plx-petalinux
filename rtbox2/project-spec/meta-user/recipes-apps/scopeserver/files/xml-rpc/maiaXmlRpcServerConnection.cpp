@@ -27,16 +27,25 @@
 
 #include "maiaXmlRpcServerConnection.h"
 #include "maiaXmlRpcServer.h"
+#include "maiaXmlStreamHandler.h"
+#include "maiaJsonStreamHandler.h"
+// #include "maiaCborStreamHandler.h"
 
 #include <QtCore/QByteArray>
 #include <QtCore/QMetaMethod>
-#include <QtCore/QDebug>
 #include <QtCore/QRegularExpression>
 #include <QtNetwork/QTcpSocket>
-#include <QtXml/QDomDocument>
 #include "maiaFault.h"
-#include "maiaObject.h"
 #include "RTBoxError.h"
+#include <memory>
+
+// make_unique does not exist in C++ 11, declare it here
+namespace std {
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+}
 
 MaiaXmlRpcServerConnection::MaiaXmlRpcServerConnection(QTcpSocket *connection, MaiaXmlRpcServer& aParent)
  : QObject(&aParent),
@@ -46,26 +55,29 @@ MaiaXmlRpcServerConnection::MaiaXmlRpcServerConnection(QTcpSocket *connection, M
    mHeaderComplete(false),
    mContentLength(-1)
 {
-   clientConnection = connection;
-   connect(clientConnection, SIGNAL(readyRead()), this, SLOT(readFromSocket()));
+	clientConnection = connection;
+	connect(clientConnection, SIGNAL(readyRead()), this, SLOT(readFromSocket()));
    connect(clientConnection, SIGNAL(disconnected()), &aParent, SIGNAL(disconnected()));
    connect(clientConnection, SIGNAL(disconnected()), this, SLOT(disconnected()));
 }
 
-MaiaXmlRpcServerConnection::~MaiaXmlRpcServerConnection() {
-   clientConnection->deleteLater();
+MaiaXmlRpcServerConnection::~MaiaXmlRpcServerConnection()
+{
+    if (!clientConnection.isNull())
+        clientConnection->deleteLater();
 }
 
 void MaiaXmlRpcServerConnection::readFromSocket()
 {
-   QString lastLine;
+   bool expectContinue = false;
 
-   while(clientConnection->canReadLine() && !mHeaderComplete)
+	while(clientConnection->canReadLine() && !mHeaderComplete)
    {
-      lastLine = clientConnection->readLine();
-      if(lastLine == "\r\n") { /* http header end */
-         mHeaderComplete = true;
-         if (mHeaderString.isEmpty()) {
+		const auto lastLine = clientConnection->readLine().trimmed();
+		if(lastLine.isEmpty()) { /* http header end */
+			mHeaderComplete = true;
+         if (mHeaderString.isEmpty())
+         {
             qDebug() << "Empty header!";
             return;
          }
@@ -83,20 +95,18 @@ void MaiaXmlRpcServerConnection::readFromSocket()
                clientConnection->disconnectFromHost();
                return;
             } else {
-               sendResponse("");
                return;
             }
          } else if(!mHeaderString[0].startsWith("POST")) {
-            // return http error
-            qDebug() << "No Post!";
-            sendResponse("");
-            return;
-         } else if(mContentLength <= 0) {
-            /* return fault */
-            qDebug() << "No Content Length";
-            return;
-         }
-      }
+				/* return http error */
+				qDebug() << "No Post!";
+				return;
+			} else if(mContentLength <= 0) {
+				/* return fault */
+				qDebug() << "No Content Length";
+				return;
+			}
+		}
       else
       {
          mHeaderString << lastLine;
@@ -107,166 +117,174 @@ void MaiaXmlRpcServerConnection::readFromSocket()
             if (!ok)
                mContentLength = -1;
          }
+         else if (lastLine.toLower().startsWith("expect:"))
+         {
+            expectContinue = lastLine.mid(7).trimmed() == "100-continue";
+         }
       }
-   }
-   
-   if (mHeaderComplete)
+	}
+	
+	if (mHeaderComplete)
    {
+      if (expectContinue)
+      {
+         sendContinueResponse();
+         // give the client some time to actually send the content
+         clientConnection->waitForReadyRead(3000);         
+      }
       if(mContentLength <= clientConnection->bytesAvailable())
       {
-         /* all data complete */
-         parseCall(clientConnection->readAll());
-      }
+			/* all data complete */
+			parseCall(clientConnection->readAll());
+		}
    }
 }
 
-void MaiaXmlRpcServerConnection::sendResponse(QString content) {
-   QByteArray data("HTTP/1.0 200 Ok\r\n"
-                   "Server: MaiaXmlRpc/0.1\r\n"
-                   "Access-Control-Allow-Origin: *\r\n"
-                   "Content-Type: text/xml\r\n"
-                   "Connection: close\r\n"
-                   "\r\n");
-   data += content.toUtf8();
-   clientConnection->write(data);
-   clientConnection->disconnectFromHost();   
-}
-
-void MaiaXmlRpcServerConnection::parseCall(QString call) {
-   QDomDocument doc;
+void MaiaXmlRpcServerConnection::parseCall(QByteArray call) {
+   std::unique_ptr<MaiaStreamHandler> streamHandler;
+   QString methodName;
    QList<QVariant> args;
    QVariant ret;
-   QString response;
+
+   if (call.startsWith("<"))
+   {
+      streamHandler = std::make_unique<MaiaXmlStreamHandler>(*clientConnection.data());
+   }
+   else if (call.startsWith("{") || call.startsWith("["))
+   {
+      streamHandler = std::make_unique<MaiaJsonStreamHandler>(*clientConnection.data());
+   }
+   // else if (call.size() > 0 && (call.front() & 0xe0) == 0xa0) // CBOR major type 5 (map)
+   // {
+   //    streamHandler = std::make_unique<MaiaCborStreamHandler>(*clientConnection.data());
+   // }
+   else
+   {
+      // Reply with an xml response if request content isn't clear
+      streamHandler = std::make_unique<MaiaXmlStreamHandler>(*clientConnection.data());
+      MaiaFault fault(-32700, "parse error: not well formed");
+      streamHandler->sendError(fault);
+      return;
+   }
+
+   Q_ASSERT(streamHandler);
+
+   ret = streamHandler->parseRequest(call, methodName, args);
+   if (ret.canConvert<MaiaFault>())
+   {
+      streamHandler->sendError(ret.value<MaiaFault>());
+      return;
+   }
+
+   Q_ASSERT(ret.isNull());
+
+   // Check if the requeste method exists
    QObject *responseObject;
    const char *responseSlot;
-   
-   if(!doc.setContent(call)) { /* recieved invalid xml */
-      MaiaFault fault(-32700, "parse error: not well formed");
-      sendResponse(fault.toString());
-      return;
-   }
-   
-   QDomElement methodNameElement = doc.documentElement().firstChildElement("methodName");
-   QDomElement params = doc.documentElement().firstChildElement("params");
-   if(methodNameElement.isNull()) { /* invalid call */
-      MaiaFault fault(-32600, "server error: invalid xml-rpc. not conforming to spec");
-      sendResponse(fault.toString());
-      return;
-   }
-   
-   QString methodName = methodNameElement.text();
-   
    mServer.getMethod(methodName, &responseObject, &responseSlot);
-   if(!responseObject) { /* unknown method */
+   if (!responseObject) /* unknown method */
+   {
       MaiaFault fault(-32601, "server error: requested method not found");
-      sendResponse(fault.toString());
+      streamHandler->sendError(fault);
       return;
    }
-   
-   QDomNode paramNode = params.firstChild();
-   while(!paramNode.isNull()) {
-      args << MaiaObject::fromXml( paramNode.firstChild().toElement());
-      paramNode = paramNode.nextSibling();
-   }
-   
-   try 
+
+   // Execute the actual method
+   try
    {
       mCallProcessing = true;
-      if(!invokeMethodWithVariants(responseObject, responseSlot, args, &ret)) { /* error invoking... */
+      if (!invokeMethodWithVariants(responseObject, responseSlot, args, &ret)) /* error invoking... */
+      {
          MaiaFault fault(-32602, "server error: invalid method parameters");
-         sendResponse(fault.toString());
+         streamHandler->sendError(fault);
          return;
       }
-
-      if(ret.canConvert<MaiaFault>()) {
-         response = ret.value<MaiaFault>().toString();
-      } else {
-         response = MaiaObject::prepareResponse(ret);
-      }
-      
-   } catch(RTBoxError& e)
-   {
-      MaiaFault fault(-32500, "method execution error: " + e.errMsg);
-      response = fault.toString();
    }
+   catch(RTBoxError& e)
+   {
+      ret = QVariant::fromValue(MaiaFault(-32500, "method execution error: " + e.errMsg));
+   }
+
    mCallProcessing = false;
    if (mDisconnected)
       deleteLater();
+   else if (ret.canConvert<MaiaFault>())
+      streamHandler->sendError(ret.value<MaiaFault>());
    else
-      sendResponse(response);
+      streamHandler->sendResponse(ret);
 }
 
 
-/*   taken from http://delta.affinix.com/2006/08/14/invokemethodwithvariants/
-   thanks to Justin Karneges once again :) */
+/*	taken from http://delta.affinix.com/2006/08/14/invokemethodwithvariants/
+	thanks to Justin Karneges once again :) */
 bool MaiaXmlRpcServerConnection::invokeMethodWithVariants(QObject *obj,
-         const QByteArray &method, const QVariantList &args,
-         QVariant *ret, Qt::ConnectionType type) {
+			const QByteArray &method, const QVariantList &args,
+			QVariant *ret, Qt::ConnectionType type) {
 
-   // QMetaObject::invokeMethod() has a 10 argument maximum
-   if(args.count() > 10)
-      return false;
+	// QMetaObject::invokeMethod() has a 10 argument maximum
+	if(args.count() > 10)
+		return false;
 
-   QList<QByteArray> argTypes;
-   for(int n = 0; n < args.count(); ++n)
-      argTypes += args[n].typeName();
+	QList<QByteArray> argTypes;
+	for(int n = 0; n < args.count(); ++n)
+		argTypes += args[n].typeName();
 
-   // get return type
-   int metatype = 0;
-   QByteArray retTypeName = getReturnType(obj->metaObject(), method, argTypes);
-   if(!retTypeName.isEmpty()  && retTypeName != "QVariant") {
-      metatype = QMetaType::type(retTypeName.data());
-      if(metatype == 0) // lookup failed
-         return false;
-   }
+	// get return type
+	int metatype = 0;
+	QByteArray retTypeName = getReturnType(obj->metaObject(), method, argTypes);
+	if(!retTypeName.isEmpty()  && retTypeName != "QVariant") {
+		metatype = QMetaType::type(retTypeName.data());
+		if(metatype == 0) // lookup failed
+			return false;
+	}
 
-   QGenericArgument arg[10];
-   for(int n = 0; n < args.count(); ++n)
-      arg[n] = QGenericArgument(args[n].typeName(), args[n].constData());
+	QGenericArgument arg[10];
+	for(int n = 0; n < args.count(); ++n)
+		arg[n] = QGenericArgument(args[n].typeName(), args[n].constData());
 
-   QGenericReturnArgument retarg;
-   QVariant retval;
-   if(metatype != 0 && retTypeName != "void") {
-      retval = QVariant(metatype, (const void *)0);
-      retarg = QGenericReturnArgument(retval.typeName(), retval.data());
-   } else { /* QVariant */
-      retarg = QGenericReturnArgument("QVariant", &retval);
-   }
+	QGenericReturnArgument retarg;
+	QVariant retval;
+	if(metatype != 0) {
+		retval = QVariant(metatype, (const void *)0);
+		retarg = QGenericReturnArgument(retval.typeName(), retval.data());
+	} else { /* QVariant */
+		retarg = QGenericReturnArgument("QVariant", &retval);
+	}
 
-   if(retTypeName.isEmpty() || retTypeName == "void") { /* void */
-      if(!QMetaObject::invokeMethod(obj, method.data(), type,
-                  arg[0], arg[1], arg[2], arg[3], arg[4],
-                  arg[5], arg[6], arg[7], arg[8], arg[9]))
-         return false;
-   } else {
-      if(!QMetaObject::invokeMethod(obj, method.data(), type, retarg,
-                  arg[0], arg[1], arg[2], arg[3], arg[4],
-                  arg[5], arg[6], arg[7], arg[8], arg[9]))
-         return false;
-   }
+	if(retTypeName.isEmpty()) { /* void */
+		if(!QMetaObject::invokeMethod(obj, method.data(), type,
+						arg[0], arg[1], arg[2], arg[3], arg[4],
+						arg[5], arg[6], arg[7], arg[8], arg[9]))
+			return false;
+	} else {
+		if(!QMetaObject::invokeMethod(obj, method.data(), type, retarg,
+						arg[0], arg[1], arg[2], arg[3], arg[4],
+						arg[5], arg[6], arg[7], arg[8], arg[9]))
+			return false;
+	}
 
-   if(retval.isValid() && ret)
-      *ret = retval;
-   return true;
+	if(retval.isValid() && ret)
+		*ret = retval;
+	return true;
 }
 
 QByteArray MaiaXmlRpcServerConnection::getReturnType(const QMetaObject *obj,
-         const QByteArray &method, const QList<QByteArray> argTypes) {
-   for(int n = 0; n < obj->methodCount(); ++n) {
-      QMetaMethod m = obj->method(n);
-      QByteArray sig = m.methodSignature();
-      int offset = sig.indexOf('(');
-      if(offset == -1)
-         continue;
-      QByteArray name = sig.mid(0, offset);
-      if(name != method)
-         continue;
-      if(m.parameterTypes() != argTypes)
-         continue;
+			const QByteArray &method, const QList<QByteArray> argTypes) {
+	for(int n = 0; n < obj->methodCount(); ++n) {
+		QMetaMethod m = obj->method(n);
+		QByteArray sig = m.methodSignature();
+		int offset = sig.indexOf('(');
+		if(offset == -1)
+			continue;
+		QByteArray name = sig.mid(0, offset);
+		if(name != method)
+			continue;
+		if(m.parameterTypes() != argTypes)
+			continue;
 
-      return m.typeName();
-   }
-   return QByteArray();
+		return m.typeName();
+	}
+	return QByteArray();
 }
 
 void MaiaXmlRpcServerConnection::disconnected()
@@ -276,3 +294,15 @@ void MaiaXmlRpcServerConnection::disconnected()
    else 
       deleteLater();
 }
+
+void MaiaXmlRpcServerConnection::sendContinueResponse() const
+{
+   static const QByteArray data("HTTP/1.1 100 Continue\r\n"
+                                "Server: MaiaXmlRpc/0.1\r\n"
+                                "\r\n");
+   clientConnection->write(data);
+   clientConnection->flush();
+}
+ 
+
+

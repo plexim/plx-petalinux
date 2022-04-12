@@ -27,6 +27,7 @@ class QSocketNotifier;
 class CanHandler;
 class UdpTxHandler;
 class UdpRxHandler;
+class ToFileHandler;
 
 class RPCReceiver : public QObject
 {
@@ -38,6 +39,8 @@ public:
    bool waitForMessage(char* aSendMsg, int aMsgSize, int aMessageId, QByteArray& aData, unsigned long aTimeout);
    void log(const QString& aMsg);
    void reportError(const QString& aMsg);
+   inline void* getToFileBuffer() { return mToFileBuffer; }
+   inline void setToFileBuffer(void* aBuffer) { mToFileBuffer = aBuffer; }
 
 signals:
    void initComplete();
@@ -53,6 +56,7 @@ signals:
 public slots:
    void send(const QByteArray);
    void shutdown();
+   void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType);
 
 protected slots:
    void receiveData();
@@ -74,6 +78,8 @@ private:
    CanHandler* mCanHandlers[2];
    UdpTxHandler* mUdpTxHandler;
    std::list<UdpRxHandler*> mUdpRxHandlers;
+   std::vector<ToFileHandler*> mToFileHandlers;
+   void* mToFileBuffer;
 };
 
 #endif // RPCRECEIVER

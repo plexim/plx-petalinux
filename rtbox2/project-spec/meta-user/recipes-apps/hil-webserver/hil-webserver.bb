@@ -34,7 +34,7 @@ SRC_URI = "file://rtbox-webserver/ \
 DEPENDS = "lighttpd spawn-fcgi"
 RDEPENDS_${PN} = "perl"
 
-FILES_${PN} += "/www/pages/js /www/pages/css /www/cgi /www/pages /www/lib /www/private"
+FILES_${PN} += "/www/pages/js /www/pages/css /www/cgi /www/pages /www/lib /www/private /www/pages/dav/usb /www/pages/dav/ssd"
 
 S = "${WORKDIR}"
 
@@ -49,6 +49,8 @@ do_compile() {
 do_install() {
 	install -d ${D}/www/cgi
 	install -d ${D}/www/pages/js
+	install -d ${D}/www/pages/dav/usb
+	install -d ${D}/www/pages/dav/ssd
 	install -d ${D}/www/lib
         cp -R ${S}/js/* ${D}/www/pages/js/
 	cp -R ${S}/css ${D}/www/pages

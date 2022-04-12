@@ -22,6 +22,7 @@
 #include <QtCore/QFile>
 #include <list>
 #include <vector>
+#include "xcpTl_if.h"
 
 class SimulationRPC;
 class QSocketNotifier;
@@ -29,6 +30,7 @@ class CanHandler;
 class UdpTxHandler;
 class UdpRxHandler;
 class ToFileHandler;
+class XcpHandler;
 struct MsgQueue;
 
 class RPCReceiver : public QObject
@@ -51,6 +53,7 @@ public:
 
 signals:
    void initComplete();
+   void initEthercat(int);
    void scopeArmResponse(QByteArray);
    void tuneParameterResponse(int);
    void finished();
@@ -87,6 +90,8 @@ private:
    void* mTxBuffer;
    void* mScopeBuffer;
    void* mToFileBuffer;
+   void* mXcpDtoBuffer[XCPTL_DTO_QUEUE_SIZE];
+   void* mXcpCtoBuffer;
    QFile mSimulationConnection;
    QSocketNotifier* mNotifier;
    QMutex mMutex;
@@ -98,6 +103,7 @@ private:
    std::list<UdpRxHandler*> mUdpRxHandlers;
    uint32_t* mCpuPerformanceCounters;
    std::vector<ToFileHandler*> mToFileHandlers;
+   XcpHandler* mXcpHandler;
 };
 
 #endif // RPCRECEIVER

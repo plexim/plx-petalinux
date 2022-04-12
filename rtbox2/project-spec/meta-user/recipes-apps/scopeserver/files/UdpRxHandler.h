@@ -16,8 +16,6 @@
 #define UDPRXHANDLER_H
 
 #include <QObject>
-#include "SimulationRPC.h"
-#include <QtCore/QSocketNotifier>
 
 class RPCReceiver;
 class QUdpSocket;
