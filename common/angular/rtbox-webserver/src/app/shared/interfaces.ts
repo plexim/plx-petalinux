@@ -23,7 +23,7 @@ export interface SimulationInfo {
 }
 
 export interface Status {
-  temperature: number;
+  temperature: number[];
   fanSpeed: number[];
   logPosition: number;
   applicationLog: string;

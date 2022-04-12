@@ -30,10 +30,11 @@
 #define MAIAOBJECT_H
 
 class QNetworkReply;
+class QXmlStreamReader;
+class QDomElement;
 
 #include <QtCore/QObject>
 #include <QtCore/QVariant>
-#include <QtXml/QDomElement>
 
 
 class MaiaObject : public QObject {
@@ -42,8 +43,8 @@ class MaiaObject : public QObject {
 	public:
 		MaiaObject(QObject* parent = 0);
 		static QDomElement toXml(QVariant arg);
-		static QVariant fromXml(const QDomElement &elem);
-		
+		static QVariant fromXml(const QDomElement &elem);		
+		static QVariant fromXml(QXmlStreamReader &aXml);
 	public slots:
 		void parseResponse(QString response, QNetworkReply* reply);
 	

@@ -34,54 +34,46 @@
 #include <QtCore/QDebug>
 
 MaiaXmlRpcServer::MaiaXmlRpcServer(quint16 port, QObject* aParent) : QObject(aParent) {
-	connect(&serverIPv4, SIGNAL(newConnection()), this, SLOT(newConnectionIPv4()));
-	connect(&serverIPv6, SIGNAL(newConnection()), this, SLOT(newConnectionIPv6()));
+   connect(&mServer, SIGNAL(newConnection()), this, SLOT(newConnection()));
    addMethod("system.listMethods", this, "listMethods",
              "This method lists all the methods that the RPC server knows how to dispatch");
    addMethod("system.methodHelp", this, "methodHelp",
              "Returns help text if defined for the method passed, otherwise returns an empty string");
-	if (!serverIPv4.listen(QHostAddress::Any, port))
-      qCritical() << tr("Faild to open IPV4 port for RPC: %1").arg(serverIPv4.errorString()).toUtf8().data();
-   if (!serverIPv6.listen(QHostAddress::AnyIPv6, port))
-      qWarning() << tr("Faild to open IPv6 port for RPC: %1").arg(serverIPv6.errorString()).toUtf8().data();
+   if (!mServer.listen(QHostAddress::Any, port))
+      qCritical() << tr("Faild to open port for RPC: %1").arg(mServer.errorString()).toUtf8().data();
 }
 
 void MaiaXmlRpcServer::addMethod(QString method, QObject* responseObject, 
                                  const char* responseSlot, QString aMethodHelp) 
 {
-	objectMap[method] = responseObject;
-	slotMap[method] = responseSlot;
+   objectMap[method] = responseObject;
+   slotMap[method] = responseSlot;
    helpMap[method] = aMethodHelp;
 }
 
 void MaiaXmlRpcServer::removeMethod(QString method) {
-	objectMap.remove(method);
-	slotMap.remove(method);
+   objectMap.remove(method);
+   slotMap.remove(method);
    helpMap.remove(method);
 }
 
 void MaiaXmlRpcServer::getMethod(QString method, QObject **responseObject, const char **responseSlot) {
-	if(!objectMap.contains(method)) {
-		*responseObject = NULL;
-		*responseSlot = NULL;
-		return;
-	}
-	*responseObject = objectMap[method];
-	*responseSlot = slotMap[method];
+   if(!objectMap.contains(method)) {
+      *responseObject = NULL;
+      *responseSlot = NULL;
+      return;
+   }
+   *responseObject = objectMap[method];
+   *responseSlot = slotMap[method];
 }
 
-void MaiaXmlRpcServer::newConnectionIPv4() {
-	QTcpSocket *connection = serverIPv4.nextPendingConnection();
-   new MaiaXmlRpcServerConnection(connection, *this);
-}
-
-void MaiaXmlRpcServer::newConnectionIPv6() {
-	QTcpSocket *connection = serverIPv6.nextPendingConnection();
+void MaiaXmlRpcServer::newConnection() {
+   QTcpSocket *connection = mServer.nextPendingConnection();
    new MaiaXmlRpcServerConnection(connection, *this);
 }
 
 QHostAddress MaiaXmlRpcServer::getServerAddress() {
-	return serverIPv4.serverAddress();
+   return mServer.serverAddress();
 }
 
 QVariantList MaiaXmlRpcServer::listMethods()

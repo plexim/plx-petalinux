@@ -43,21 +43,18 @@ public:
    QHostAddress getServerAddress();
    void getMethod(QString method, QObject **responseObject, const char** responseSlot);
    
-   inline quint16 getIPv4Port() const { return serverIPv4.serverPort(); }
-   inline quint16 getIPv6Port() const { return serverIPv6.serverPort(); }
+   inline quint16 getPort() const { return mServer.serverPort(); }
    
 signals:
    void disconnected();
    
 private slots:
-   void newConnectionIPv4();
-   void newConnectionIPv6();
+   void newConnection();
    QVariantList listMethods();
    QVariant methodHelp(const QString& aMethod);
    
 private:
-   QTcpServer serverIPv4;
-   QTcpServer serverIPv6;
+   QTcpServer mServer;
    QHash<QString, QObject*> objectMap;
    QHash<QString, const char*> slotMap;
    QHash<QString, QString> helpMap;

@@ -23,7 +23,7 @@ class Row {
 export class DiagnosticsComponent implements OnInit {
   @Input() refresh = false; // Send requests only when needed (controlled from the parent component)
   status: Status = {
-    temperature: 0,
+    temperature: [],
     fanSpeed: [],
     logPosition: 0,
     applicationLog: '',
@@ -38,13 +38,18 @@ export class DiagnosticsComponent implements OnInit {
   powerData: Array<Row> = undefined;
   totalPower = 0;
 
-  private static updateMinMax(newValue: number, minMax: number[]): void
+  private static updateMinMax(newValue: number[], minMax: number[]): void
   {
-    // In this context, the max. value is not really tracked (it's always identical to the current value, which results
-    // in no visual traces of the maximum). If desired, set the first element of minMax to the max of its current value
-    // and the newValue.
-    minMax[0] = newValue;
-    minMax[1] = newValue;
+    // The first value in minMax is displayed as the orange max value in the background,
+    // the second in blue as the foreground. If only one value is passed in newValue,
+    // set both minMax values to the same values.
+    // Otherwise, assume that the first value is larger than the second.
+    minMax[0] = newValue[0];
+    if (newValue.length > 1) {
+       minMax[1] = newValue[1];
+    } else {
+       minMax[1] = newValue[0];
+    }
   }
 
   constructor(private rs: RtboxCommunicationService,
@@ -61,16 +66,11 @@ export class DiagnosticsComponent implements OnInit {
   }
 
   private updateStatus(newStat: Status): void {
-    this.status.temperature = newStat.temperature[0];
+    this.status.temperature = newStat.temperature;
     this.status.fanSpeed = newStat.fanSpeed;
 
-    DiagnosticsComponent.updateMinMax(newStat.temperature[0], this.temperatureMinMax);
-    this.fanSpeedMinMax[0] = newStat.fanSpeed[0];
-    if (newStat.fanSpeed.length > 1) {
-       this.fanSpeedMinMax[1] = newStat.fanSpeed[1];
-    } else {
-       this.fanSpeedMinMax[1] = newStat.fanSpeed[0];
-    }
+    DiagnosticsComponent.updateMinMax(newStat.temperature, this.temperatureMinMax);
+    DiagnosticsComponent.updateMinMax(newStat.fanSpeed, this.fanSpeedMinMax);
 
     if (newStat.clearLog) {
       this.status.modelTimeStamp = newStat.modelTimeStamp;
@@ -91,16 +91,11 @@ export class DiagnosticsComponent implements OnInit {
   private updatePowerConsumption(newStat: Status): void {
     this.powerData = new Array<Row>();
 
-    for (let i = 0; i < newStat.voltages.length-1; ++i) {
+    for (let i = 0; i < newStat.voltages.length; ++i) {
       this.powerData.push(new Row(newStat.voltages[i], newStat.currents[i]));
     }
-    let current12V = 0;
-    // sum up additional current values
-    for (let i = newStat.voltages.length-1; i < newStat.currents.length; ++i) {
-      current12V += newStat.currents[i];
-    }
-    this.powerData.push(new Row(newStat.voltages[newStat.voltages.length-1], current12V));
-    
+    // if an additional current is present (+12V8_DIGITAL) it is ignored deliberately
+    // because the power consumption is already measured on the 3.3 and 5V rail.
 
     this.totalPower = this.powerData.reduce((soFar, row) => soFar + row.power, 0);
   }

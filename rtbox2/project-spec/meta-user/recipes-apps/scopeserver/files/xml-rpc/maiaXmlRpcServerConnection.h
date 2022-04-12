@@ -51,7 +51,7 @@ private slots:
    void disconnected();
 
 private:
-   void parseCall(QByteArray call);
+   void parseCall(const QByteArray& call);
    bool invokeMethodWithVariants(QObject *obj,
            const QByteArray &method, const QVariantList &args,
            QVariant *ret, Qt::ConnectionType type = Qt::AutoConnection);

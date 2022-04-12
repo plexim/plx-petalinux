@@ -29,6 +29,8 @@
 #include "maiaObject.h"
 #include <QtCore/QDateTime>
 #include <QtCore/QDebug>
+#include <QtCore/QXmlStreamReader>
+#include <QtXml/QDomElement>
 
 MaiaObject::MaiaObject(QObject* parent) : QObject(parent){
 	QDomImplementation::setInvalidDataPolicy(QDomImplementation::DropInvalidChars);
@@ -208,6 +210,68 @@ QVariant MaiaObject::fromXml(const QDomElement &elem) {
 		qDebug() << "Cannot demarshal unknown type " << typeElement.tagName().toLower();
 	}
 	return QVariant();
+}
+
+QVariant MaiaObject::fromXml(QXmlStreamReader& aXml) {
+	aXml.readNextStartElement();
+	if(aXml.name() != "value") {
+		return QVariant();
+	}
+	// If no type is indicated, the type is string.
+	if(aXml.readNext() == QXmlStreamReader::Characters) {
+		QString val = aXml.text().toString();
+                aXml.readNext();
+		return QVariant(val);
+	}
+	
+	const QString typeName = aXml.name().toString().toLower();
+	QVariant ret;
+	if(typeName == "string")
+		ret = QVariant(aXml.readElementText());
+	else if(typeName == "i4" || typeName == "int")
+		ret = QVariant(aXml.readElementText().toInt());
+	else if(typeName == "double")
+		ret = QVariant(aXml.readElementText().toDouble());
+	else if (typeName == "boolean") {
+                QString val = aXml.readElementText();
+		if(val.toLower() == "true" || val == "1")
+			ret = QVariant(true);
+		else
+			ret = QVariant(false);
+	} else if(typeName == "base64")
+		ret = QVariant(QByteArray::fromBase64( aXml.readElementText().toLatin1()));
+	else if(typeName == "datetime" || typeName == "datetime.iso8601")
+		ret = QVariant(QDateTime::fromString(aXml.readElementText(), "yyyyMMddThh:mm:ss"));
+	else if(typeName == "nil") // Non-standard extension: http://ontosys.com/xml-rpc/extensions.php
+		ret = QVariant();
+	else if ( typeName == "array" ) {
+		QList<QVariant> values;
+		aXml.readNextStartElement(); // data
+		QVariant element = fromXml(aXml);
+		while (element.isValid()) {
+			values << element;
+			element = fromXml(aXml);
+		}	
+		ret = QVariant(values);
+		aXml.skipCurrentElement();
+	}
+	else if ( typeName == "struct" ) {
+		QMap<QString, QVariant> map;
+		while(aXml.readNextStartElement()) { // member
+			aXml.readNextStartElement();
+			if (aXml.name() == QLatin1String("name")) {
+				const QString key = aXml.readElementText();
+				const QVariant data = fromXml(aXml);
+				map[key] = data;
+			}
+			aXml.skipCurrentElement();
+		}
+		ret = QVariant(map);
+	} else {
+		qDebug() << "Cannot demarshal unknown type " << typeName;
+	}
+	aXml.skipCurrentElement();
+	return ret;
 }
 
 void MaiaObject::parseResponse(QString response, QNetworkReply* reply) {

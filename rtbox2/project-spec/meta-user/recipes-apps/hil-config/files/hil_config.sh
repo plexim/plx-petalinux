@@ -7,9 +7,11 @@ if [ $? -ne 0 ]; then
    mount /dev/mmcblk0p1 /run/media/mmcblk0p1 -o ro
 fi
 if [ -d /etc/dropbear ]; then
-   if [ ! -d /run/media/mmcblk0p1/etc/dropbear ]; then
+   if [ ! -f /run/media/mmcblk0p1/etc/dropbear/dropbear_rsa_host_key ]; then
    	mount -o remount,rw /dev/mmcblk0p1 /run/media/mmcblk0p1
    	mkdir -p /run/media/mmcblk0p1/etc/dropbear
+        /usr/sbin/dropbearkey -t rsa -f /run/media/mmcblk0p1/etc/dropbear/dropbear_rsa_host_key
+        mount -o remount,ro /dev/mmcblk0p1
    fi
    rmdir /etc/dropbear && ln -s /run/media/mmcblk0p1/etc/dropbear /etc
 fi

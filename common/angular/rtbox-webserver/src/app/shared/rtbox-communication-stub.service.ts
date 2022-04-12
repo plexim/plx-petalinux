@@ -67,7 +67,7 @@ export class RtboxCommunicationStubService implements RtboxCommunicationService 
     const randInt = max => Math.floor(Math.random() * Math.floor(max));
 
     const info: Status = {
-      temperature: randInt(100),
+      temperature: [randInt(100)],
       fanSpeed: [randInt(6000)],
       logPosition: 0,
       applicationLog: '',

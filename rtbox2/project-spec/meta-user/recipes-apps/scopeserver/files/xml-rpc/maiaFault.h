@@ -30,7 +30,6 @@
 #include <QtCore/QMap>
 #include <QtCore/QString>
 #include <QtCore/QObject>
-#include <QtCore/QMetaType>
 #include <QtCore/QVariant>
 
 class MaiaFault : public QObject {

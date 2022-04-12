@@ -134,13 +134,19 @@ void MaiaXmlRpcServerConnection::readFromSocket()
       }
       if(mContentLength <= clientConnection->bytesAvailable())
       {
-			/* all data complete */
-			parseCall(clientConnection->readAll());
-		}
+         /* all data complete */
+         try {
+            parseCall(clientConnection->readAll());
+         }
+         catch(std::bad_alloc& )
+         {
+            qWarning() << "caught std::bad_alloc";
+         }
+      }
    }
 }
 
-void MaiaXmlRpcServerConnection::parseCall(QByteArray call) {
+void MaiaXmlRpcServerConnection::parseCall(const QByteArray& call) {
    std::unique_ptr<MaiaStreamHandler> streamHandler;
    QString methodName;
    QList<QVariant> args;
@@ -169,7 +175,15 @@ void MaiaXmlRpcServerConnection::parseCall(QByteArray call) {
 
    Q_ASSERT(streamHandler);
 
-   ret = streamHandler->parseRequest(call, methodName, args);
+   try {
+      ret = streamHandler->parseRequest(call, methodName, args);
+   }
+   catch(std::bad_alloc)
+   {
+      MaiaFault fault(-32702, "out of memory: arguments too large");
+      streamHandler->sendError(fault);
+      return;
+   }
    if (ret.canConvert<MaiaFault>())
    {
       streamHandler->sendError(ret.value<MaiaFault>());
@@ -202,7 +216,11 @@ void MaiaXmlRpcServerConnection::parseCall(QByteArray call) {
    }
    catch(RTBoxError& e)
    {
-      ret = QVariant::fromValue(MaiaFault(-32500, "method execution error: " + e.errMsg));
+      ret = QVariant::fromValue(MaiaFault(-32603, "method execution error: " + e.errMsg));
+   }
+   catch(std::bad_alloc& )
+   {
+      ret = QVariant::fromValue(MaiaFault(-32604, "out of memory: arguments too large"));
    }
 
    mCallProcessing = false;

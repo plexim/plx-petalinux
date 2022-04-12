@@ -34,9 +34,11 @@ fi
 
 /bin/mount -t ubifs /dev/ubi0_0 /media/nand -o ro
 if [ -d /etc/dropbear ]; then
-   if [ ! -d /media/nand/etc/dropbear ]; then
+   if [ ! -f /media/nand/etc/dropbear/dropbear_rsa_host_key ]; then
    	mount -o remount,rw /media/nand
    	mkdir -p /media/nand/etc/dropbear
+        /usr/sbin/dropbearkey -t rsa -f /media/nand/etc/dropbear/dropbear_rsa_host_key
+        mount -o remount,ro /media/nand
    fi
    rmdir /etc/dropbear && ln -s /media/nand/etc/dropbear /etc
 fi

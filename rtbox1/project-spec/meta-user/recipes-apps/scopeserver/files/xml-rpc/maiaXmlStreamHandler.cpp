@@ -14,7 +14,7 @@
 
 #include <QtCore/QDebug>
 #include <QtCore/QXmlStreamWriter>
-#include <QtXml/QDomDocument>
+#include <QtCore/QXmlStreamReader>
 
 
 MaiaXmlStreamHandler::MaiaXmlStreamHandler(QIODevice& aStream)
@@ -24,25 +24,33 @@ MaiaXmlStreamHandler::MaiaXmlStreamHandler(QIODevice& aStream)
 
 QVariant MaiaXmlStreamHandler::parseRequest(const QByteArray& aRequest, QString& aMethodOut, QList<QVariant>& aArgsOut)
 {
-   QDomDocument doc;
+   QXmlStreamReader xml(aRequest);
 
-   if(!doc.setContent(aRequest)) // recieved invalid xml
-      return QVariant::fromValue(MaiaFault(-32700, "parse error: not well formed"));
-
-   QDomElement methodNameElement = doc.documentElement().firstChildElement("methodName");
-   QDomElement params = doc.documentElement().firstChildElement("params");
-   if(methodNameElement.isNull()) // invalid call
-      return QVariant::fromValue(MaiaFault(-32600, "server error: invalid xml-rpc. not conforming to spec"));
-
-   aMethodOut = methodNameElement.text();
-
-   QDomNode paramNode = params.firstChild();
-   while(!paramNode.isNull())
+   while(xml.readNextStartElement())
    {
-      aArgsOut << MaiaObject::fromXml( paramNode.firstChild().toElement());
-      paramNode = paramNode.nextSibling();
+      if (xml.name() == QLatin1String("methodName"))
+      {
+         aMethodOut = xml.readElementText();
+         break;
+      }
    }
 
+   if(xml.atEnd()) // received invalid xml
+      return QVariant::fromValue(MaiaFault(-32700, "parse error: not well formed"));
+   xml.readNextStartElement();
+   if (xml.name() == QLatin1String("params"))
+   {
+      while(xml.readNextStartElement())
+      {
+         if (xml.name() == QLatin1String("param"))
+            aArgsOut << MaiaObject::fromXml(xml);
+         xml.skipCurrentElement();
+      }
+   }
+   else
+   {
+      return QVariant::fromValue(MaiaFault(-32701, "parse error: not well formed"));
+   }
    return QVariant();
 }
 
