@@ -144,7 +144,7 @@ bool SimulationRPC::openConnection()
 
       QEventLoop eventLoop;
       connect(thread, &QThread::started, &eventLoop, &QEventLoop::quit);
-      thread->start(QThread::HighPriority);
+      thread->start(QThread::TimeCriticalPriority);
       eventLoop.exec();
       if (!mReceiver)
          return false;

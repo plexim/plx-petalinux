@@ -156,13 +156,14 @@ void CanHandler::receiveCanData()
       struct SimulationRPC::CanTransmitMsg transmitMsg;
    };
 
-   QByteArray buf;
-   buf.resize(sizeof (struct CanReceiveMsg));
-   struct CanReceiveMsg* msg = (struct CanReceiveMsg*)buf.data();
-   msg->mMsg = SimulationRPC::CAN_RECEIVE;
-   msg->mMsgLength = buf.length();
-   msg->transmitMsg.mModuleId = mCanModule;
+   static CanReceiveMsg msg = 
+   {
+      .mMsg = SimulationRPC::CAN_RECEIVE,
+      .mMsgLength = sizeof(struct CanReceiveMsg),
+   };
+   msg.transmitMsg.mModuleId = mCanModule;
 
+   static QByteArray buf = QByteArray::fromRawData((const char*)&msg, sizeof(msg));
 
    int readBytes = read(mCanFd,
                         buf.data() + offsetof(struct CanReceiveMsg, transmitMsg) +

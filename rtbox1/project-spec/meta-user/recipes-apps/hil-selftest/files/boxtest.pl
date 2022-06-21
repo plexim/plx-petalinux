@@ -378,14 +378,11 @@ sub testPullUps
    {
       makeOutput($base + $i);
       setDigitalOutput($base + $i, 0);
-      makeInput($base + $i);
    }
    for $i (@idx)
    {
-      makeOutput($base + $i);
       setDigitalOutput($base + $i, 1);
-      makeInput($base + $i);
-      usleep(10);
+      usleep(100);
       for my $j (@idx)
       {
          if (($i != $j) && (getDigitalInput($j) == 1))
@@ -399,8 +396,10 @@ sub testPullUps
             $errorFlag = 1;
          }
       }
-      makeOutput($base + $i);
       setDigitalOutput($base + $i, 0);
+   }
+   for $i (@idx)
+   {
       makeInput($base + $i);
    }
    if ($errorFlag)

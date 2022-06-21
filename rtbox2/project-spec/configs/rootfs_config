@@ -4390,7 +4390,7 @@ CONFIG_ethercat-firmware=y
 # CONFIG_fancontrol is not set
 # CONFIG_gpio-demo is not set
 CONFIG_hil-config=y
-CONFIG_hil-selftest=y
+# CONFIG_hil-selftest is not set
 CONFIG_hil-webserver=y
 # CONFIG_iio-tools is not set
 CONFIG_ioinit=y
@@ -4429,6 +4429,7 @@ CONFIG_qt5-platform-plugin-oled=y
 # CONFIG_cairomm is not set
 # CONFIG_can-utils is not set
 CONFIG_kernel-module-jailhouse=y
+CONFIG_lighttpd-module-alias=y
 CONFIG_lighttpd-module-fastcgi=y
 CONFIG_lighttpd-module-webdav=y
 CONFIG_ntp=y

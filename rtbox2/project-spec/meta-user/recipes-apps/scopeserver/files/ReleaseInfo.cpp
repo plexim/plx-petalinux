@@ -14,7 +14,7 @@
 
 #include "ReleaseInfo.h"
 
-#define VERSION 2002.002
+#define VERSION 2002.003
 
 #define _QUOTEME(x) #x
 #define QUOTEME(x) _QUOTEME(x)

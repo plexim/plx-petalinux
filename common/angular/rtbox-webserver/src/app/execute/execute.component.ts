@@ -1,5 +1,5 @@
 import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
-import { flatMap, tap } from 'rxjs/operators';
+import { mergeMap, tap } from 'rxjs/operators';
 import { RtboxCgiService } from '../shared/rtbox-cgi.service';
 import { RtboxCommunicationService } from '../shared/rtbox-communication.service';
 import { RefreshControlService } from '../shared/refresh-control.service';
@@ -7,6 +7,7 @@ import { TemplateRef } from '@angular/core';
 import { BsModalService, BsModalRef, ModalOptions } from 'ngx-bootstrap/modal';
 import { timer, interval } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'rtb-execute',
@@ -20,8 +21,9 @@ export class ExecuteComponent implements OnInit {
   canStop = true;
   canReboot = true;
   modalRef: BsModalRef;
-  startSimulationErrorMsg = '';
+  currentErrorMsg = '';
   secondsUntilReload: number = undefined;
+  fileBackground: string = 'neutral';
   private readonly modalConfig: ModalOptions = { class: 'modal-sm' };
   @ViewChild('modalError') modalError: TemplateRef<any>;
   @ViewChild('rebootWait') rebootWait: TemplateRef<any>;
@@ -41,7 +43,9 @@ export class ExecuteComponent implements OnInit {
 
     const upload = () => this.cgi.upload(this.fileToUpload, this.startAfterUpload, this.delayUntilFirstTrigger);
 
-    this.cgi.stopExecution().pipe(this.tapEnableCanStop(), flatMap(upload)).subscribe(this.noop, console.error);
+    this.cgi.stopExecution().pipe(this.tapEnableCanStop(), mergeMap(upload)).subscribe(
+      response => this.handleUploadSuccess(response),
+      error => this.handleUploadError(error));
   }
 
   private tapEnableCanStop() {
@@ -51,6 +55,7 @@ export class ExecuteComponent implements OnInit {
   fileInputChange(files: FileList): void
   {
     this.fileToUpload = files.item(0);
+    this.fileBackground = 'neutral';
   }
 
   start(event: MouseEvent): void
@@ -62,13 +67,13 @@ export class ExecuteComponent implements OnInit {
 
   private handleStartSuccess(response: any): void
   {
-    this.startSimulationErrorMsg = '';
+    this.currentErrorMsg = '';
   }
 
   private handleStartError(error: any): void
   {
     if (error.status === 500) {
-      this.startSimulationErrorMsg = error.error;
+      this.currentErrorMsg = error.error;
 
       this.modalRef = this.modalService.show(this.modalError, this.modalConfig);
     }
@@ -81,6 +86,20 @@ export class ExecuteComponent implements OnInit {
     const stop$ = this.cgi.stopExecution();
 
     stop$.pipe(this.tapEnableCanStop()).subscribe(this.noop, console.error);
+  }
+
+  handleUploadSuccess(message: any): void {
+    this.currentErrorMsg = '';
+    this.fileBackground = 'success'
+  }
+
+  handleUploadError(error: HttpErrorResponse): void {
+    if (error.status == 400) {
+      this.currentErrorMsg = error.error;
+      this.fileBackground = 'error';
+    }
+
+    this.modalRef = this.modalService.show(this.modalError, this.modalConfig)
   }
 
   reboot(): void {
