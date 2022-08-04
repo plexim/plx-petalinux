@@ -17,8 +17,6 @@ SRC_URI = "file://hil_config.sh \
 
 S = "${WORKDIR}"
 
-FILES_${PN} += "/lib/firmware"
-
 RDEPENDS_${PN} += "perl"
 RDEPENDS_${PN} += "perl-module-io-socket-unix"
 
@@ -28,7 +26,6 @@ do_install() {
         install -d ${D}/etc/rc5.d
         install -d ${D}/etc/avahi/services
         install -d ${D}/usr/bin
-        install -d ${D}/lib/firmware
         install -m 0755 ${S}/hil_config.sh ${D}/etc/init.d
         install -m 0644 ${S}/rtbox.service ${D}/etc/avahi/services
         ln -s /etc/init.d/hil_config.sh ${D}/etc/rcS.d/S08hil_config.sh

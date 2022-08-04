@@ -1,5 +1,8 @@
 #!/bin/sh
 
+mkdir /tmp/firmware
+ln -s /tmp/firmware /usr/lib/firmware
+
 mkdir -p /run/media/mmcblk0p1
 mount -t ext4 /dev/mmcblk0p1 /run/media/mmcblk0p1 -o ro
 if [ $? -ne 0 ]; then

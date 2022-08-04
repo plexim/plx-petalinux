@@ -5,7 +5,6 @@
 #include "SimulationRPC.h"
 #include <QtCore/QVector>
 #include "FileWriter.h"
-#include <QFuture>
 
 class RPCReceiver;
 class QFile;
@@ -22,11 +21,10 @@ public:
    void error(QString aString);
    static void staticInit() { mWorkingDir.clear(); }
 
- signals:
+signals:
+   void writeToFileBufferRequest(const QByteArray& aData);
 
- public slots:
-
- protected:
+protected:
    bool initToFileHandler();
    void writeData(char* aBufferIndex, int aSize);
    void writeBuffer(char* aBuffer, int aSize);
@@ -45,7 +43,6 @@ private:
    const int mBufferOffset;
    const int mFileType;
    Writer* mWriter;
-   QFuture<void> future;
    static QString mWorkingDir;
    int mFileCounter;
 };

@@ -6,7 +6,7 @@
 #include <QtCore/QIODevice>
 #include <QtCore/QTextStream>
 
-class Writer
+class Writer : public QObject
 {
 
 public:
@@ -14,7 +14,9 @@ public:
    virtual ~Writer();
    virtual void writeTerminate() = 0;
    void rotateFile(QFile* aFile);
-   void writeToFileBuffer(const char *aBuffer, int aSize);
+
+public slots:
+   void writeToFileBuffer(const QByteArray& aData);
 
 protected:
    QFile* mFile;

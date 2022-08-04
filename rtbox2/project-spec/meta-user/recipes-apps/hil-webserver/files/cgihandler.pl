@@ -8,14 +8,15 @@ use strict;
 use CGI::Fast;
 use CGI::Carp qw ( fatalsToBrowser );
 use File::Basename;
+use File::Copy;
 use IO::Socket::UNIX;
 use JSON::PP;
 use Fcntl;
 use Errno qw ( EAGAIN );
 
-$CGI::POST_MAX = 50 * 1024 * 1024;
+$CGI::POST_MAX = 200 * 1024 * 1024;
 my $safe_filename_characters = "a-zA-Z0-9_.-";
-my $upload_dir = "/lib/firmware";
+my $upload_file = "/usr/lib/firmware/firmware";
 my $cpuSerial;
 my $boardSerial;
 my $macAddress;
@@ -141,8 +142,13 @@ sub outputFile($)
    close FH;
 }
 
+sub uploadHook {
+    my ($filename, $buffer, $bytes_read, $data) = @_;
+    unlink($upload_file) if -e $upload_file;
+}
+
 my $query;
-while ($query = CGI::Fast->new) 
+while ($query = CGI::Fast->new(\&uploadHook))
 {
    my $file = basename ($ENV{'SCRIPT_FILENAME'}, ".cgi");
 
@@ -172,7 +178,6 @@ while ($query = CGI::Fast->new)
       if (/^upload/)
       {
          my $safe_filename_characters = "a-zA-Z0-9_.-";
-         my $upload_file = "/lib/firmware/firmware";
          my $filename = $query->param("filename");
 
          if ( !$filename )
@@ -182,22 +187,19 @@ while ($query = CGI::Fast->new)
             last SWITCH;
          }
 
-         my $upload_filehandle = $query->upload("filename");
-         if (!$upload_filehandle && $query->cgi_error)
+         my $tmpfile = $query->tmpFileName($filename);
+         if (!$tmpfile && $query->cgi_error)
          {
             print $query->header(-status=>$query->cgi_error);
             last SWITCH;
          }
 
-         open ( UPLOADFILE, ">$upload_file" ) or die "$!";
-         binmode UPLOADFILE;
-
-         while ( <$upload_filehandle> )
+         if (!move($tmpfile, $upload_file))
          {
-            print UPLOADFILE;
+            print $query->header(-status => 400);
+            print "$!\n";
+            last SWITCH;
          }
-
-         close UPLOADFILE;
          print $query->header();
          last SWITCH;         
       }
@@ -214,7 +216,7 @@ while ($query = CGI::Fast->new)
             print $query->header(-status => 501);
             last SWITCH;
          }
-         `cp /run/media/mmcblk1p1/testApp.elf /lib/firmware/firmware`;
+         `cp /run/media/mmcblk1p1/testApp.elf /usr/lib/firmware/firmware`;
          stopApplication();
          startApplication(0);
          %testProcessInfo = pipe_from_fork();

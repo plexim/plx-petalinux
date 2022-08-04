@@ -1,5 +1,8 @@
 #!/bin/sh
 
+mkdir /tmp/firmware
+ln -s /tmp/firmware /lib/firmware
+
 mkdir /media/mmcblk0p1
 /bin/mount /dev/mmcblk0p1 /media/mmcblk0p1 -o ro
 if [ -d /media/mmcblk0p1/config ]; then

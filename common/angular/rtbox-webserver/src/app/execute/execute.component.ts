@@ -72,7 +72,7 @@ export class ExecuteComponent implements OnInit {
 
   private handleStartError(error: any): void
   {
-    if (error.status === 500) {
+    if (error.status >= 400) {
       this.currentErrorMsg = error.error;
 
       this.modalRef = this.modalService.show(this.modalError, this.modalConfig);
@@ -94,7 +94,7 @@ export class ExecuteComponent implements OnInit {
   }
 
   handleUploadError(error: HttpErrorResponse): void {
-    if (error.status == 400) {
+    if (error.status >= 400) {
       this.currentErrorMsg = error.error;
       this.fileBackground = 'error';
     }

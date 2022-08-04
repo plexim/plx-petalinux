@@ -60,12 +60,12 @@ signals:
    void error(QString err);
    void sigLog(QString);
    void sigError(QString);
-   void sendRequest(const QByteArray);
+   void sendRequest(const QByteArray&);
    void logMessage(int, QByteArray);
    void simulationError();
 
 public slots:
-   void send(const QByteArray);
+   void send(const QByteArray&);
    void shutdown();
    void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, int aWriteDevice);
 

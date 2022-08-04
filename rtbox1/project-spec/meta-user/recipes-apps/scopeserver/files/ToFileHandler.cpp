@@ -9,7 +9,7 @@
 #include <QtCore/QTimer>
 #include <QtCore/QEventLoop>
 #include <QDebug>
-#include <QtConcurrent/QtConcurrent>
+#include <QtCore/QThread>
 
 QString ToFileHandler::mWorkingDir;
 
@@ -43,6 +43,13 @@ ToFileHandler::ToFileHandler(QString aModelName, QString aFileName,
       {
          mWriter = new CsvFileWriter(mFile, mWidth);
       }
+      QThread* writerThread = new QThread(this);
+      mWriter->moveToThread(writerThread);
+      QEventLoop eventLoop;
+      connect(writerThread, &QThread::started, &eventLoop, &QEventLoop::quit);
+      connect(this, &ToFileHandler::writeToFileBufferRequest, mWriter, &Writer::writeToFileBuffer);
+      writerThread->start(QThread::NormalPriority);
+      eventLoop.exec();
    }
    else
    {
@@ -56,6 +63,8 @@ void ToFileHandler::writeToFileBuffer(int aCurrentReadBuffer)
       return;
    if (checkFileSize() >= 2000000000) // Maximum file size is 2GB
    {
+      mWriter->thread()->quit();
+      mWriter->thread()->wait();
       mWriter->writeTerminate();
       mFile->close();
       delete mFile;
@@ -63,6 +72,7 @@ void ToFileHandler::writeToFileBuffer(int aCurrentReadBuffer)
       if (createFile())
       {
          mWriter->rotateFile(mFile);
+         mWriter->thread()->start(QThread::NormalPriority);
       }
       else
       {
@@ -70,11 +80,8 @@ void ToFileHandler::writeToFileBuffer(int aCurrentReadBuffer)
       }
    }
    int index = mBufferOffset + aCurrentReadBuffer * mWidth * mNumSamples;
-   const char* buf = (const char*)mParent->getToFileBuffer() + index * sizeof(float);
-   if (!future.isRunning())
-   {
-      future = QtConcurrent::run(mWriter, &Writer::writeToFileBuffer, buf, mWidth*mNumSamples);
-   }
+   QByteArray buf((const char*)mParent->getToFileBuffer() + index * sizeof(float), mWidth*mNumSamples*sizeof(float));
+   emit writeToFileBufferRequest(buf);
    if (mFile->error() != QFile::NoError)
    {
       mParent->reportError(QString("Error while writing file %1: %2").arg(mFile->fileName()).arg(mFile->errorString()));
@@ -89,12 +96,11 @@ bool ToFileHandler::initToFileHandler()
 
 void ToFileHandler::stop()
 {
-   if (future.isRunning())
-   {
-      future.waitForFinished();
-   }
    if (mWriter)
    {
+      mWriter->thread()->quit();
+      mWriter->thread()->wait();
+      mWriter->thread()->deleteLater();
       delete mWriter;
       mWriter = nullptr;
    }

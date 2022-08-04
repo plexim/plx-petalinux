@@ -95,6 +95,7 @@ void CanHandler::canInit(const struct SimulationRPC::CanSetupMsg& aSetupMsg, int
    {
       mParent->log(QString("Error while binding CAN socket: ") + strerror(errno));
    }
+   setsockopt(mCanFd, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0); // disable CAN reception as default
    mNotifier = new QSocketNotifier(mCanFd, QSocketNotifier::Read, this);
    connect(mNotifier, &QSocketNotifier::activated, this, &CanHandler::receiveCanData);
 }
@@ -153,7 +154,7 @@ void CanHandler::receiveCanData()
    {
       int mMsg;
       int mMsgLength;
-      struct SimulationRPC::CanTransmitMsg transmitMsg;
+      struct SimulationRPC::CanTransmitMsg mTransmitMsg;
    };
 
    static CanReceiveMsg msg = 
@@ -161,17 +162,15 @@ void CanHandler::receiveCanData()
       .mMsg = SimulationRPC::CAN_RECEIVE,
       .mMsgLength = sizeof(struct CanReceiveMsg),
    };
-   msg.transmitMsg.mModuleId = mCanModule;
-
-   static QByteArray buf = QByteArray::fromRawData((const char*)&msg, sizeof(msg));
+   msg.mTransmitMsg.mModuleId = mCanModule;
 
    int readBytes = read(mCanFd,
-                        buf.data() + offsetof(struct CanReceiveMsg, transmitMsg) +
+                        (char*)&msg + offsetof(struct CanReceiveMsg, mTransmitMsg) +
                         offsetof(struct  SimulationRPC::CanTransmitMsg, mCanId),
                         sizeof(struct can_frame));
    if (readBytes != sizeof(struct can_frame))
    {
       return;
    }
-   mParent->send(buf);
+   mParent->send(QByteArray::fromRawData((const char*)&msg, sizeof(msg)));
 }

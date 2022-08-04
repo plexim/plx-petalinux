@@ -25,9 +25,9 @@ void Writer::rotateFile(QFile* aFile)
    initFile();
 }
 
-void Writer::writeToFileBuffer(const char* aBuffer, int aSize)
+void Writer::writeToFileBuffer(const QByteArray& aData)
 {
-   appendData(aBuffer, (qint64)aSize);
+   appendData(aData.data(), aData.size()/sizeof(float));
 }
 
 bool Writer::getBuffer(QVector<float>& aBuffer, const char *aBufferAddress)

@@ -32,6 +32,7 @@ SRC_URI = "file://rtbox-webserver/ \
 DEPENDS = "lighttpd spawn-fcgi"
 RDEPENDS_${PN} += "perl"
 RDEPENDS_${PN} += "perl-module-file-basename"
+RDEPENDS_${PN} += "perl-module-file-copy"
 RDEPENDS_${PN} += "perl-module-json-pp"
 RDEPENDS_${PN} += "perl-module-io-socket-unix"
 RDEPENDS_${PN} += "perl-module-fcntl"

@@ -392,7 +392,7 @@ void RtBoxXmlRpcServer::readLineFile(const QString& aFilename, QByteArray& aCont
 QVariant RtBoxXmlRpcServer::loadElf(const QByteArray &aData)
 {
    mSimulation.shutdownSimulation();
-   QFile firmwareFile("/lib/firmware/firmware");
+   QFile firmwareFile("/usr/lib/firmware/firmware");
    if (firmwareFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Unbuffered))
    {
       if (firmwareFile.write(aData) != aData.size())

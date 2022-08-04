@@ -124,8 +124,7 @@ bool SimulationRPC::openConnection()
       p->moveToThread(thread);
       mReceiver = p;
       connect(p, SIGNAL (error(QString)), this, SLOT (receiveError(QString)));
-      connect(thread, SIGNAL (started()), p, SLOT (process()));
-      connect(p, SIGNAL (finished()), thread, SLOT (quit()));
+      connect(thread, SIGNAL (started()), p, SLOT (process()));      connect(p, SIGNAL (finished()), thread, SLOT (quit()));
       connect(p, SIGNAL (finished()), p, SLOT (deleteLater()));
       connect(thread, SIGNAL (finished()), thread, SLOT (deleteLater()));
       connect(p, &RPCReceiver::initComplete, this, &SimulationRPC::initComplete);
@@ -367,7 +366,7 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
 
    if (checkRunning())
       return QString("Simulation is already running.");
-   if (!QFile::exists("/lib/firmware/firmware"))
+   if (!QFile::exists("/usr/lib/firmware/firmware"))
       return QString("No simulation executable loaded.");
    mLastReceivedModelName = QByteArray();
    memset(&mLastReceivedModelResponse, 0, sizeof(mLastReceivedModelResponse));
@@ -387,7 +386,7 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    QEventLoop loop;
    connect(this, &SimulationRPC::initCompleteDone, &loop, &QEventLoop::quit);
    connect(mReceiver, &RPCReceiver::simulationError, &loop, &QEventLoop::quit);
-   QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/lib/firmware/firmware");
+   QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/usr/lib/firmware/firmware");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "start" << "1");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "shutdown" << "1");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/lib/firmware/firmware");

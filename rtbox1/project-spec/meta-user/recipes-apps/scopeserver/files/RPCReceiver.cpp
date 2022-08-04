@@ -247,6 +247,10 @@ bool RPCReceiver::processMessage(int aMessage, QByteArray& aMsgBuf)
          break;
        }
        case SimulationRPC::MSG_ERROR:
+          for (auto it = mToFileHandlers.begin(); it != mToFileHandlers.end(); ++it)
+          {
+             (*it)->stop();
+          }
           emit simulationError();
           break;
        default:
@@ -289,17 +293,17 @@ void RPCReceiver::readAll()
    }
 }
 
-void RPCReceiver::log(const QString &aMsg)
+void RPCReceiver::log(const QString& aMsg)
 {
    emit sigLog(aMsg);
 }
 
-void RPCReceiver::reportError(const QString &aMsg)
+void RPCReceiver::reportError(const QString& aMsg)
 {
    emit sigError(aMsg);
 }
 
-void RPCReceiver::send(const QByteArray aData)
+void RPCReceiver::send(const QByteArray& aData)
 {
    if (!mSimulationConnection.isOpen())
       return;

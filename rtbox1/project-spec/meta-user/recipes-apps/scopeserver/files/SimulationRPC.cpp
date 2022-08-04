@@ -126,8 +126,7 @@ bool SimulationRPC::openConnection(bool aVerbose)
       p->moveToThread(thread);
       mReceiver = p;
       connect(p, SIGNAL (error(QString)), this, SLOT (receiveError(QString)));
-      connect(thread, SIGNAL (started()), p, SLOT (process()));
-      connect(p, SIGNAL (finished()), thread, SLOT (quit()));
+      connect(thread, SIGNAL (started()), p, SLOT (process()));      connect(p, SIGNAL (finished()), thread, SLOT (quit()));
       connect(p, SIGNAL (finished()), p, SLOT (deleteLater()));
       connect(thread, SIGNAL (finished()), thread, SLOT (deleteLater()));
       connect(p, &RPCReceiver::initComplete, this, &SimulationRPC::syncModelInfos);
