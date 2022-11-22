@@ -193,6 +193,8 @@ public:
       int mStartOnFirstTrigger;
       uint64_t mStartSec;
       uint64_t mStartUSec;
+      uint16_t mHwVersionMajor;
+      uint16_t mHwVersionMinor;
    };
 
    SimulationRPC(ServerAsync& aServer);
@@ -308,6 +310,9 @@ private:
    SimulationStatus mSimulationStatus;
    std::chrono::steady_clock::time_point mLastScopeArmTime;
    bool mRTBoxCE;
+   uint16_t mHwVersionMajor;
+   uint16_t mHwVersionMinor;
+   uint8_t mHwVersionRevision;
 };
 
 #pragma pack(pop)

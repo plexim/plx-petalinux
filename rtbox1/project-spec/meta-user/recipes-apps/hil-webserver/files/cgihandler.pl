@@ -229,10 +229,120 @@ while ($query = CGI::Fast->new(\&uploadHook))
             print "$!\n";
             last SWITCH;
          }
+         close($filename);
          print $query->header();
          last SWITCH;         
       }
 
+      if (/^update/)
+      {
+         my $safe_filename_characters = "a-zA-Z0-9_.-";
+         my $boot = $query->param("boot");
+         my $image = $query->param("image");
+         my $uenv = $query->param("uenv");
+         my $bootSgn = $query->param("bootsgn");
+         my $imageSgn = $query->param("imagesgn");
+         my $uenvSgn = $query->param("uenvsgn");
+
+         if ( !$boot || !$image || !$uenv || !$bootSgn || !$imageSgn || !$uenvSgn)
+         {
+            print $query->header(-status => 400);
+            print "There was a problem uploading your file.\n";
+            last SWITCH;
+         }
+
+         if (!-d '/sys/block/mmcblk0')
+         {
+            print $query->header(-status => 400);
+            print "No SD card detected.\n";
+            last SWITCH;
+         }
+
+         if (readLineFile("/sys/block/mmcblk0/ro") == 1)
+         {
+            print $query->header(-status => 400);
+            print "SD card is write protected.\n";
+            last SWITCH;
+         }
+
+         my $tmpBoot = $query->tmpFileName($boot);
+         my $tmpImage = $query->tmpFileName($image);
+         my $tmpUenv = $query->tmpFileName($uenv);
+         my $tmpBootSgn = $query->tmpFileName($bootSgn);
+         my $tmpImageSgn = $query->tmpFileName($imageSgn);
+         my $tmpUenvSgn = $query->tmpFileName($uenvSgn);
+         if ((!$tmpBoot || !$tmpImage || !$tmpUenv || 
+              !$tmpBootSgn || !$tmpImageSgn || !$tmpUenvSgn)  && $query->cgi_error)
+         {
+            print $query->header(-status=>$query->cgi_error);
+            last SWITCH;
+         }
+
+         my $checkImage = `openssl dgst -sha256 -verify /etc/ssl/public/plexim.key -signature $tmpImageSgn $tmpImage`;
+         my $checkBoot = `openssl dgst -sha256 -verify /etc/ssl/public/plexim.key -signature $tmpBootSgn $tmpBoot`;
+         my $checkUenv = `openssl dgst -sha256 -verify /etc/ssl/public/plexim.key -signature $tmpUenvSgn $tmpUenv`;
+         my $expectedAnsw = "Verified OK\n";
+         if ($checkImage ne $expectedAnsw || $checkBoot ne $expectedAnsw || $checkUenv ne $expectedAnsw)
+         {
+            print $query->header(-status => 400);
+            print "Checksum verification failed.\n";
+            last SWITCH;
+         }
+
+         my $mmc = 'mmcblk0p1';
+         my $mmcdir = "/media/$mmc";
+
+         `mount /dev/$mmc -o remount,rw`;
+         if (!copy("$mmcdir/BOOT.BIN", "$mmcdir/BOOT.bak") ||
+             !copy("$mmcdir/image.ub", "$mmcdir/image.bak") ||
+             !copy("$mmcdir/uboot.env", "$mmcdir/uboot.bak"))
+         {
+            print $query->header(-status => 400);
+            print "$!\n";
+            `mount /dev/$mmc -o remount,ro`;
+            last SWITCH;
+         }
+         if (!move($tmpBoot, "$mmcdir/BOOT.new") ||
+             !move($tmpImage, "$mmcdir/image.new") ||
+             !move($tmpUenv, "$mmcdir/uboot.new"))
+         {
+            my $errmsg = $!;
+            move("$mmcdir/BOOT.bak", "$mmcdir/BOOT.BIN");
+            move("$mmcdir/image.bak", "$mmcdir/image.ub");
+            move("$mmcdir/uboot.bak", "$mmcdir/uboot.env");
+            unlink("$mmcdir/BOOT.new", 
+                   "$mmcdir/image.new", 
+                   "$mmcdir/uboot.new");
+            `mount /dev/$mmc -o remount,ro`;
+            print $query->header(-status => 400);
+            print "$errmsg\n";
+            last SWITCH;
+         }
+         `sync`;
+         if (!move("$mmcdir/BOOT.new", "$mmcdir/BOOT.BIN") ||
+             !move("$mmcdir/image.new", "$mmcdir/image.ub") ||
+             !move("$mmcdir/uboot.new", "$mmcdir/uboot.env"))
+         {
+            my $errmsg = $!;
+            move("$mmcdir/BOOT.bak", "$mmcdir/BOOT.BIN");
+            move("$mmcdir/image.bak", "$mmcdir/image.ub");
+            move("$mmcdir/uboot.bak", "$mmcdir/uboot.env");
+            unlink("$mmcdir/BOOT.new", 
+                   "$mmcdir/image.new", 
+                   "$mmcdir/uboot.new");
+            `mount /dev/$mmc -o remount,ro`;
+            print $query->header(-status => 400);
+            print "$errmsg\n";
+            last SWITCH;
+         }
+         unlink("$mmcdir/BOOT.bak", 
+                "$mmcdir/image.bak", 
+                "$mmcdir/uboot.bak");
+         `mount /dev/$mmc -o remount,ro`;
+         print $query->header();
+         last SWITCH;
+      }
+                                                                
       if (/^boxtest/)
       {
          my $boardhw_filename = '/media/mmcblk0p1/testHwVersion';

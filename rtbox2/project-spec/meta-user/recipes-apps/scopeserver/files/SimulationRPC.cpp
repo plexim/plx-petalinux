@@ -389,7 +389,7 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/usr/lib/firmware/firmware");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "start" << "1");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "shutdown" << "1");
-   QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/lib/firmware/firmware");
+   QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/usr/lib/firmware/firmware");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "start" << "1");
    mModelTimeStamp = QDateTime::currentDateTime().toTime_t();
 

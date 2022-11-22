@@ -16,6 +16,7 @@ SRC_URI = "file://rtbox-webserver/ \
 	file://cgi-bin/stop.cgi \
 	file://cgi-bin/start.cgi \
 	file://cgi-bin/upload.cgi \
+	file://cgi-bin/update.cgi \
         file://cgi-bin/front-panel.cgi \
         file://cgi-bin/netstate.cgi \
         file://cgi-bin/ipstate.cgi \
@@ -24,6 +25,7 @@ SRC_URI = "file://rtbox-webserver/ \
         file://js/webdav-min.js \
         file://css/webdavstyle-min.css \
         file://cgihandler \
+        file://plexim.key \
         file://lib/dirheader.html \
         "
 
@@ -37,8 +39,9 @@ RDEPENDS_${PN} += "perl-module-json-pp"
 RDEPENDS_${PN} += "perl-module-io-socket-unix"
 RDEPENDS_${PN} += "perl-module-fcntl"
 RDEPENDS_${PN} += "perl-module-errno"
+RDEPENDS_${PN} += "openssl"
 
-FILES_${PN} += "/www/cgi /www/pages /www/pages/js /www/pages/css /www/pages/dav/usb /www/lib /www/private"
+FILES_${PN} += "/www/cgi /www/pages /www/pages/js /www/pages/css /www/pages/dav/usb /www/lib /www/private /etc/ssl/public"
 
 S = "${WORKDIR}"
 
@@ -54,6 +57,7 @@ do_install() {
         install -d ${D}/www/pages/js
         install -d ${D}/www/pages/dav/usb
         install -d ${D}/www/lib
+        install -d ${D}/etc/ssl/public
         cp -R ${S}/js/* ${D}/www/pages/js/
 	cp -R ${S}/css ${D}/www/pages
 	cp -R ${S}/cgi-bin ${D}/www/pages
@@ -66,4 +70,5 @@ do_install() {
 	ln -s /etc/init.d/cgihandler ${D}/etc/rcS.d/S71cgihandler
 	cp -R ${S}/rtbox-webserver/rtbox1/* ${D}/www/pages
 	install ${S}/lib/dirheader.html ${D}/www/lib
+        install ${S}/plexim.key ${D}/etc/ssl/public
 }

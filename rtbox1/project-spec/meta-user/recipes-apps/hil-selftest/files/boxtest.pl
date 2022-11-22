@@ -429,6 +429,12 @@ sub testAnalogIOs
    setDigitalOutput($zynqbase + 87, 0); # +-10V
    print "Testing analog I/Os ...";
    enableAnalogOuts();
+   for $i (@idx)                      
+   {                                                                     
+      setAnalogInputScale($i, 1);
+      setAnalogInputOffset($i, 0);
+   }                                 
+                                                      
    my $scale = 1.5;
    if (isRtboxCE())
    {

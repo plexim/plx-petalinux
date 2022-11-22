@@ -16,6 +16,7 @@ SRC_URI = "file://rtbox-webserver/ \
 	file://cgi-bin/stop.cgi \
 	file://cgi-bin/start.cgi \
 	file://cgi-bin/upload.cgi \
+        file://cgi-bin/update.cgi \
         file://cgi-bin/front-panel.cgi \
         file://cgi-bin/netstate.cgi \
         file://cgi-bin/ipstate.cgi \
@@ -25,6 +26,7 @@ SRC_URI = "file://rtbox-webserver/ \
         file://private/syslog.cgi \
         file://private/scopeserverlog.cgi \
 	file://cgihandler \
+        file://plexim.key \
 	file://lib/dirheader.html \
 	file://js/webdav-min.js \
 	file://css/webdavstyle-min.css \
@@ -32,9 +34,10 @@ SRC_URI = "file://rtbox-webserver/ \
 
 
 DEPENDS = "lighttpd spawn-fcgi"
-RDEPENDS_${PN} = "perl"
+RDEPENDS_${PN} += "perl"
+RDEPENDS_${PN} += "openssl"
 
-FILES_${PN} += "/www/pages/js /www/pages/css /www/cgi /www/pages /www/lib /www/private /www/pages/dav/usb /www/pages/dav/ssd"
+FILES_${PN} += "/www/pages/js /www/pages/css /www/cgi /www/pages /www/lib /www/private /www/pages/dav/usb /www/pages/dav/ssd /etc/ssl/public"
 
 S = "${WORKDIR}"
 
@@ -52,6 +55,7 @@ do_install() {
 	install -d ${D}/www/pages/dav/usb
 	install -d ${D}/www/pages/dav/ssd
 	install -d ${D}/www/lib
+	install -d ${D}/etc/ssl/public
         cp -R ${S}/js/* ${D}/www/pages/js/
 	cp -R ${S}/css ${D}/www/pages
 	cp -R ${S}/cgi-bin ${D}/www/pages
@@ -64,4 +68,6 @@ do_install() {
 	ln -s /etc/init.d/cgihandler ${D}/etc/rcS.d/S71cgihandler
 	install ${S}/lib/dirheader.html ${D}/www/lib
 	cp -R ${S}/rtbox-webserver/rtbox2/* ${D}/www/pages
+        install ${S}/plexim.key ${D}/etc/ssl/public
 }
+

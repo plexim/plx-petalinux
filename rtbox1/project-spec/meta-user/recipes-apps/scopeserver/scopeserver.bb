@@ -69,6 +69,8 @@ S = "${WORKDIR}"
 
 require recipes-qt/qt5/qt5.inc
 
+do_compile[nostamp] ="1"
+
 # Add dependency packages
 DEPENDS += "qtbase libxslt libsocketcan"
 do_fetch[depends] = "fsbl:do_compile"

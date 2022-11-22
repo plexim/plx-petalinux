@@ -82,6 +82,20 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
    }
    const QDir i2cMultiplexer("/sys/bus/i2c/devices/i2c-1");
    mRTBoxCE = !i2cMultiplexer.exists();
+   QFile eeprom("/sys/bus/i2c/devices/0-0052/eeprom");
+
+   if (eeprom.open(QIODevice::ReadOnly))
+   {
+      uint16_t version;
+      eeprom.read((char*)&version, sizeof(version));
+      if (version == 1)
+      {
+         eeprom.read((char*)&mHwVersionMajor, sizeof(mHwVersionMajor));
+         eeprom.read((char*)&mHwVersionMinor, sizeof(mHwVersionMinor));
+         eeprom.read((char*)&mHwVersionRevision, sizeof(mHwVersionRevision));
+      }
+      eeprom.close();
+   }
 }
 
 
@@ -1021,6 +1035,8 @@ void SimulationRPC::syncModelInfos()
    gettimeofday(&tv, NULL);
    msg->mStartSec = tv.tv_sec;
    msg->mStartUSec = tv.tv_usec;
+   msg->mHwVersionMajor = mHwVersionMajor;
+   msg->mHwVersionMinor = mHwVersionMinor;
    emit sendRequest(buf);
 }
 
