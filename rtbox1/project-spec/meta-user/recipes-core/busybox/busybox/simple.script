@@ -1,0 +1,101 @@
+#!/bin/sh
+
+# udhcpc script edited by Tim Riker <Tim@Rikers.org>
+
+[ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
+
+update_classless_routes()
+{
+	if [ -n "${staticroutes}" ] ; then
+		max_routes=128
+		metric=
+		[ -n "${IF_METRIC}" ] && metric="metric ${IF_METRIC}"
+		while [ -n "$1" ] && [ -n "$2" ] && [ $max_routes -gt 0 ]; do
+			gw_arg=
+			if [ "$2" != '0.0.0.0' ]; then
+				gw_arg="gw $2"
+			fi
+
+			[ ${1##*/} -eq 32 ] && type=host || type=net
+			route add -$type "$1" ${gw_arg} ${metric} dev "${interface}"
+			max=$((max-1))
+			shift 2
+		done
+	fi
+}
+update_routes()
+{
+	# RFC 3442
+	[ -n "${staticroutes}" ] && update_classless_routes $staticroutes
+
+	# If the DHCP server returns both a Classless Static Routes option and
+	# a Router option, the DHCP client MUST ignore the Router option.
+	if [ -n "${router}" ] && [ -z "${staticroutes}" ] ; then
+		metric=
+		[ -n "${IF_METRIC}" ] && metric="metric ${IF_METRIC}"
+		for i in ${router} ; do
+			route add default gw "${i}" ${metric} dev "${interface}"
+		done
+	fi
+}
+
+RESOLV_CONF="/etc/resolv.conf"
+[ -n "$subnet" ] && NETMASK="netmask $subnet"
+
+# return 0 if root is mounted on a network filesystem
+root_is_nfs() {
+	sed -n 's/^[^ ]* \([^ ]*\) \([^ ]*\) .*$/\1 \2/p' /proc/mounts |
+	grep -q "^/ \(nfs\|smbfs\|ncp\|coda\)$"
+}
+
+have_bin_ip=0
+if [ -x /SBIN_DIR/ip ]; then
+  have_bin_ip=1
+  BROADCAST="broadcast +"
+fi
+
+[ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
+
+case "$1" in
+	deconfig)
+		if [ -x /SBIN_DIR/resolvconf ]; then
+			/SBIN_DIR/resolvconf -d "${interface}.udhcpc"
+		fi
+		if ! root_is_nfs ; then
+                        if [ $have_bin_ip -eq 1 ]; then
+                                /SBIN_DIR/ip addr flush dev $interface
+                                /SBIN_DIR/ip link set dev $interface up
+                        else
+                                /SBIN_DIR/ifconfig $interface 0.0.0.0
+                        fi
+		fi
+		;;
+
+	renew|bound)
+                if [ $have_bin_ip -eq 1 ]; then
+                        /SBIN_DIR/ip addr add dev $interface local $ip/$mask $BROADCAST
+                else
+                        /SBIN_DIR/ifconfig $interface $ip $BROADCAST $NETMASK
+                fi
+
+		update_routes
+
+		# Update resolver configuration file
+		R=""
+		[ -n "$domain" ] && R="domain $domain
+"
+		for i in $dns; do
+			echo "$0: Adding DNS $i"
+			R="${R}nameserver $i
+"
+		done
+
+		if [ -x /SBIN_DIR/resolvconf ]; then
+			echo -n "$R" | /SBIN_DIR/resolvconf -a "${interface}.udhcpc"
+		else
+			echo -n "$R" > "$RESOLV_CONF"
+		fi
+		;;
+esac
+
+exit 0
