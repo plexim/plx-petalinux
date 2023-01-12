@@ -1,0 +1,37 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+# This should usually take care of everything, but to be sure, we setup
+# extra rules below.
+* text=auto
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.c text
+*.h text
+*.vhd text
+*.v text
+*.vhdl text
+*.tcl text
+*.xdc text
+*.plecs text
+*.xml text
+*.html text
+*.dbc text
+# Declare files that will always have CRLF line endings on checkout.
+*.sln text eol=crlf
+# Declare files that will always have LF line endings on checkout.
+*.sed text eol=lf
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.jpg binary
+*.gif binary
+*.eps binary
+*.ps binary
+*.pdf binary
+*.a binary
+*.lib binary
+*.so binary
+*.dll binary
+*.exe binary
+*.sln binary
+*.slx binary
+*.ehx binary
+*.hdf filter=lfs diff=lfs merge=lfs -text
