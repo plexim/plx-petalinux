@@ -264,7 +264,12 @@ void ServerAsync::readyRead()
             QVector<qint32> requestedSignalIds;
             requestedSignalIds.resize(msg->mNumActiveSignals);
             ioHelper.read(requestedSignalIds.data(), msg->mNumActiveSignals);
-            msg->mLength = msg->mNumActiveSignals * requestedNumSamples * sizeof(float);
+            if (requestedNumSamples < 0)
+               continue;
+            else if (requestedNumSamples < std::numeric_limits<int>::max() / msg->mNumActiveSignals / sizeof(float))
+               msg->mLength = msg->mNumActiveSignals * requestedNumSamples * sizeof(float);
+            else
+               msg->mLength = std::numeric_limits<int>::max();
             if (mTcpSocket->bytesToWrite() > 3*msg->mLength)
                continue; // avoid congestion
             quint16* requestedSignalsPtr = &msg->mRequestedSignals;

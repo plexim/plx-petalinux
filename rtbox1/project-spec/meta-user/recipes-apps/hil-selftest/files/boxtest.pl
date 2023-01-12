@@ -158,6 +158,15 @@ sub getDigitalPinInput($)
    return $ret;
 }
 
+sub readLineFile($)
+{
+   my ($file) = @_;
+   open(my $fh, '<', $file);
+   my $ret = <$fh>;
+   close($fh);
+   return $ret;
+}
+
 sub peek($)                                                   
 {                                                             
    my ($addr) = @_;                                           
@@ -876,6 +885,45 @@ sub testCAN
    return $errorFlag;  
 }
 
+sub testVoltages()
+{
+   opendir(my $dh, "/sys/bus/i2c/devices/0-0040/hwmon");
+   my @entries = grep { /^hwmon/ } readdir($dh);
+   closedir($dh);
+   my $hwmon= "/sys/bus/i2c/devices/0-0040/hwmon/$entries[0]/";
+   print "Testing Voltages: 13.0V ";
+   my $errorFlag = 0;
+   my $volt12 = readLineFile($hwmon . "in3_input");
+   if ($volt12 < 12800 || $volt12 > 13100)
+   {
+      print "Error: " . $volt12/1000 . "V\n";
+      $errorFlag = 1;
+   }
+   print "3.3V ";
+   my $volt33 = readLineFile($hwmon . "in1_input");
+   if ($volt33 < 3200 || $volt33 > 3400)
+   {
+      print "Error: " . $volt33/1000 . "V\n";
+      $errorFlag = 1;
+   }
+   print "5.0V ";
+   my $volt50 = readLineFile($hwmon . "in2_input");
+   if ($volt50 < 4900 || $volt50 > 5100)
+   {
+      print "ERROR: " . $volt50/1000 . "V\n";
+      $errorFlag = 1;
+   }
+   if ($errorFlag == 0)
+   {
+      print "Ok.\n";
+   }
+   else
+   {
+      print "FAIL\n";
+   }
+   return $errorFlag;
+}
+
 initScaleCorrection();
 my $errorFlag = testDigitalIOs();
 $errorFlag |= testPullUps();
@@ -889,6 +937,7 @@ $errorFlag |= testLeds();
 if ($hwVer > 0x00010001 || isRtboxCE())
 {
    $errorFlag |= testCAN();
+   $errorFlag |= testVoltages();
 }
 
 if ($errorFlag)

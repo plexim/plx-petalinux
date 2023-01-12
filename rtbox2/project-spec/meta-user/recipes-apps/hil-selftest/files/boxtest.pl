@@ -791,6 +791,7 @@ sub testResolver($)
 
 sub testCAN
 {
+   # CAN transceiver standby must be disabled in test application
    print "Testing CAN ...";
    `/sbin/ip link set down can0`;
    `/sbin/ip link set down can1`;
@@ -881,8 +882,108 @@ sub testVoltages()
    }
    else
    {
-   	print "FAIL\n";
+      print "FAIL\n";
       $display->print("Voltage test failed!");
+   }
+   return $errorFlag;
+}
+
+sub testSerialPorts()
+{
+   my $errorFlag = 0;
+   print "Testing serial ports ";
+   `/bin/stty -F /dev/ttyPS0 115200 -ixon clocal -icrnl -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke -onlcr`;
+   `/bin/stty -F /dev/ttyPS1 115200 -ixon clocal -icrnl -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke -onlcr`;
+   my ($com1, $com2);
+   if (!open($com1, "+<","/dev/ttyPS0"))
+   {
+      print "Cannot open serial port 1: $!\n";
+      $errorFlag = 1;
+      return $errorFlag;
+   }
+   my %dumpProcessInfo = pipe_from_fork();
+   if (!$dumpProcessInfo{'pid'})
+   {
+      # child process
+      exec('/bin/cat', '/dev/ttyPS1');
+      exit;
+   }
+   usleep(100000);
+   my $errorFlag = 1;
+   my $msg1 = "Hello port1\n";
+   print $com1 $msg1;
+
+   my $rin = 0;
+   my $fh = $dumpProcessInfo{'pipe'};
+   vec($rin, fileno($fh), 1) =1;
+
+   my $nfound = select(my $rout = $rin, undef, my $eout = $rin, 1);
+   if ($nfound)
+   {
+      my $in1 = readline($fh);
+      if (defined($in1) && ($msg1 eq $in1))
+      {
+         $errorFlag = 0;
+      }
+   }
+   close $com1;
+   `echo ff010000.serial > /sys/bus/platform/drivers/xuartps/unbind`;
+   close($dumpProcessInfo{'pipe'});
+   waitpid($dumpProcessInfo{'pid'}, 0);
+   `echo ff010000.serial > /sys/bus/platform/drivers/xuartps/bind`;
+   if ($errorFlag)
+   {
+      print "\nSending from UART0 to UART1 FAILED.\n";
+      $display->print("Serial port test failed!");
+      return $errorFlag;
+   }
+
+   `/bin/stty -F /dev/ttyPS1 115200 -ixon clocal -icrnl -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke -onlcr`;
+   if (!open($com2, "+<","/dev/ttyPS1"))
+   {
+      print "Cannot open serial port 2: $!\n";
+      $errorFlag = 1;
+      return $errorFlag;
+   }
+   %dumpProcessInfo = pipe_from_fork();
+   if (!$dumpProcessInfo{'pid'})
+   {
+      # child process
+      exec('/bin/cat', '/dev/ttyPS0');
+      exit;
+   }
+   usleep(100000);
+   $errorFlag = 1;
+   my $msg2 = "2trop olleH\n";
+   print $com2 $msg2;
+
+   $rin = 0;
+   $fh = $dumpProcessInfo{'pipe'};
+   vec($rin, fileno($fh), 1) =1;
+
+   $nfound = select(my $rout = $rin, undef, my $eout = $rin, 1);
+   if ($nfound)
+   {
+      my $in2 = readline($fh);
+      if (defined($in2) && ($msg2 eq $in2))
+      {
+         $errorFlag = 0;
+      }
+   }
+   `echo ff000000.serial > /sys/bus/platform/drivers/xuartps/unbind`;
+   close($dumpProcessInfo{'pipe'});
+   waitpid($dumpProcessInfo{'pid'}, 0);
+   `echo ff000000.serial > /sys/bus/platform/drivers/xuartps/bind`;
+
+   close $com2;
+   if ($errorFlag == 0)
+   {
+      print "Ok.\n";
+   }
+   else
+   {
+      print "\nSending from UART1 to UART0 FAILED.\n";
+      $display->print("Serial port test failed!");
    }
    return $errorFlag;
 }
@@ -890,7 +991,9 @@ sub testVoltages()
 my $display = IO::Socket::UNIX->new(                  
 	Type => SOCK_STREAM,                              
    Peer => "/tmp/display_log_socket",                         
-);                                                   
+);
+
+
 $display->print("Starting test...");
 
 `poke 0x8000100c 0x0`; # turn off caching for DMA
@@ -915,7 +1018,7 @@ if ($rtbox3)
    $errorFlag |= testResolver(1);
 }
 $errorFlag |= testEthernet();
-
+$errorFlag |= testSerialPorts();
 
 if ($errorFlag)
 {
@@ -929,5 +1032,4 @@ else
    $display->print("All tests passed.");
    #setLedOutput(0x4);
 }
-
 
