@@ -891,10 +891,17 @@ sub testVoltages()
    my @entries = grep { /^hwmon/ } readdir($dh);
    closedir($dh);
    my $hwmon= "/sys/bus/i2c/devices/0-0040/hwmon/$entries[0]/";
-   print "Testing Voltages: 13.0V ";
+   my $volt12ref = 12800;
+   my $volt12disp = 13;
+   if (isRtboxCE())
+   {
+      $volt12ref = 11900;
+      $volt12disp = 12;
+   }
+   print "Testing Voltages: ${volt12disp}V ";
    my $errorFlag = 0;
    my $volt12 = readLineFile($hwmon . "in3_input");
-   if ($volt12 < 12800 || $volt12 > 13100)
+   if ($volt12 < $volt12ref || $volt12 > $volt12ref + 300)
    {
       print "Error: " . $volt12/1000 . "V\n";
       $errorFlag = 1;
