@@ -16,6 +16,12 @@ sub startApplication($)
 {
    my $startOnFirstTrigger = shift;
    my $errorString;
+   my $retry = 10;
+   while (! -e '/tmp/hilserver' && $retry > 0)
+   {
+      sleep(1);
+      $retry--;
+   }
    if (-e '/tmp/hilserver')                                
    {                                                       
       my $client = IO::Socket::UNIX->new(                  

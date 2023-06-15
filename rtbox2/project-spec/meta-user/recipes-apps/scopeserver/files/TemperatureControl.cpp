@@ -61,9 +61,9 @@ void TemperatureControl::timerEvent(QTimerEvent* aEvent)
 
    if (mControlFan)
    {
-      unsigned int fanSpeed = mTemperature * 4000/15 - 18000;
-      if (fanSpeed < 900)
-         fanSpeed = 900;
+      unsigned int fanSpeed = (mTemperature - 60) * 4000/15;
+      if (fanSpeed < 1200)
+         fanSpeed = 1200;
       if (fanSpeed > 6000)
          fanSpeed = 6000;
       //qDebug() << fanSpeed << mTemperature << rawTemp;

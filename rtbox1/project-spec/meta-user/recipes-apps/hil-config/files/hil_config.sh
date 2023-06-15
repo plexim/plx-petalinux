@@ -40,7 +40,7 @@ if [ -d /etc/dropbear ]; then
    if [ ! -f /media/nand/etc/dropbear/dropbear_rsa_host_key ]; then
    	mount -o remount,rw /media/nand
    	mkdir -p /media/nand/etc/dropbear
-        /usr/sbin/dropbearkey -t rsa -f /media/nand/etc/dropbear/dropbear_rsa_host_key
+        /usr/sbin/dropbearkey -t ecdsa -s 521 -f /media/nand/etc/dropbear/dropbear_rsa_host_key
         mount -o remount,ro /media/nand
    fi
    rmdir /etc/dropbear && ln -s /media/nand/etc/dropbear /etc
