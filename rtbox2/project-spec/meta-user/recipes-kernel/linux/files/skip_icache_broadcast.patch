@@ -1,0 +1,109 @@
+diff --git a/arch/arm64/include/asm/cacheflush.h b/arch/arm64/include/asm/cacheflush.h
+index 76d1cc85d5b1..a45663ed1887 100644
+--- a/arch/arm64/include/asm/cacheflush.h
++++ b/arch/arm64/include/asm/cacheflush.h
+@@ -124,10 +124,16 @@ extern void copy_to_user_page(struct vm_area_struct *, struct page *,
+ #define ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE 1
+ extern void flush_dcache_page(struct page *);
+ 
+-static inline void __flush_icache_all(void)
++static inline void __flush_icache_all(bool broadcast)
+ {
+-	asm("ic	ialluis");
+-	dsb(ish);
++	if (broadcast) {
++		asm("ic	ialluis");
++		dsb(ish);
++	}
++	else {
++		asm("ic	iallu");
++		dsb(nsh);
++	}
+ }
+ 
+ #define flush_dcache_mmap_lock(mapping) \
+diff --git a/arch/arm64/include/asm/pgtable.h b/arch/arm64/include/asm/pgtable.h
+index b46e54c2399b..d605caca9b46 100644
+--- a/arch/arm64/include/asm/pgtable.h
++++ b/arch/arm64/include/asm/pgtable.h
+@@ -196,7 +196,7 @@ static inline void set_pte(pte_t *ptep, pte_t pte)
+ struct mm_struct;
+ struct vm_area_struct;
+ 
+-extern void __sync_icache_dcache(pte_t pteval, unsigned long addr);
++extern void __sync_icache_dcache(pte_t pteval, unsigned long addr, struct mm_struct *mm);
+ 
+ /*
+  * PTE bits configuration in the presence of hardware Dirty Bit Management
+@@ -217,7 +217,7 @@ static inline void set_pte_at(struct mm_struct *mm, unsigned long addr,
+ 			      pte_t *ptep, pte_t pte)
+ {
+ 	if (pte_present(pte) && pte_user_exec(pte) && !pte_special(pte))
+-		__sync_icache_dcache(pte, addr);
++		__sync_icache_dcache(pte, addr, mm);
+ 
+ 	/*
+ 	 * If the existing pte is valid, check for potential race with
+diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
+index e36ed5087b5c..5d6d0db7a30b 100644
+--- a/arch/arm64/mm/flush.c
++++ b/arch/arm64/mm/flush.c
+@@ -25,24 +25,33 @@
+ #include <asm/cache.h>
+ #include <asm/tlbflush.h>
+ 
+-void sync_icache_aliases(void *kaddr, unsigned long len)
++static void sync_icache_aliases_bc(void *kaddr, unsigned long len, bool broadcast)
+ {
+ 	unsigned long addr = (unsigned long)kaddr;
+ 
+ 	if (icache_is_aliasing()) {
+ 		__clean_dcache_area_pou(kaddr, len);
+-		__flush_icache_all();
++		__flush_icache_all(broadcast);
+ 	} else {
+ 		flush_icache_range(addr, addr + len);
+ 	}
+ }
+ 
++void sync_icache_aliases(void *kaddr, unsigned long len)
++{
++   sync_icache_aliases_bc(kaddr, len, true);
++}
++
+ static void flush_ptrace_access(struct vm_area_struct *vma, struct page *page,
+ 				unsigned long uaddr, void *kaddr,
+ 				unsigned long len)
+ {
+-	if (vma->vm_flags & VM_EXEC)
+-		sync_icache_aliases(kaddr, len);
++	struct mm_struct *mm = vma->vm_mm;
++	enum tlb_flush_types flush;
++	if (vma->vm_flags & VM_EXEC) {
++		flush = tlb_flush_check(mm, get_cpu());
++		sync_icache_aliases_bc(kaddr, len, flush==TLB_FLUSH_BROADCAST);
++	}
+ }
+ 
+ /*
+@@ -58,13 +67,16 @@ void copy_to_user_page(struct vm_area_struct *vma, struct page *page,
+ 	flush_ptrace_access(vma, page, uaddr, dst, len);
+ }
+ 
+-void __sync_icache_dcache(pte_t pte, unsigned long addr)
++void __sync_icache_dcache(pte_t pte, unsigned long addr, struct mm_struct *mm)
+ {
+ 	struct page *page = pte_page(pte);
++	enum tlb_flush_types flush;
+ 
+-	if (!test_and_set_bit(PG_dcache_clean, &page->flags))
+-		sync_icache_aliases(page_address(page),
+-				    PAGE_SIZE << compound_order(page));
++	if (!test_and_set_bit(PG_dcache_clean, &page->flags)) {
++		flush = tlb_flush_check(mm, get_cpu());
++		sync_icache_aliases_bc(page_address(page),
++				    PAGE_SIZE << compound_order(page), flush==TLB_FLUSH_BROADCAST);
++	}
+ }
+ 
+ /*

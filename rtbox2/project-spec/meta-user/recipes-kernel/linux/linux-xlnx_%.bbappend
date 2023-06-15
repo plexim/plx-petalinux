@@ -46,4 +46,5 @@ SRC_URI += "file://cadence_mdio2.patch"
 SRC_URI += "file://0001-Fix-spidev-compatibility.patch"
 SRC_URI += "file://0001-Allow-normal-access-to-mapped-PCI-shmem.patch"
 SRC_URI += "file://xilinx-ams-driver.patch"
-
+SRC_URI += "file://skip_tlbi_broadcast.patch"
+SRC_URI += "file://skip_icache_broadcast.patch"

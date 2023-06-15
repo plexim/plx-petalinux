@@ -73,7 +73,15 @@ private:
 
 QString RPCReceiver::findUIODevice()
 {
-   QDir uioDir("/sys/devices/platform/fc000000.pci/pci0000:00/0000:00:00.0/uio");
+   QDir pciDir("/sys/devices/platform/fc000000.pci");
+   QStringList pciName = pciDir.entryList(QStringList() << "pci*");
+   if (pciName.empty())
+      return QString();
+   QDir pciDevDir(pciDir.filePath(pciName[0]));
+   QStringList pciDevName = pciDevDir.entryList(QStringList() << "00*");
+   if (pciDevName.empty())
+      return QString();
+   QDir uioDir(pciDevDir.filePath(pciDevName[0])+"/uio");
    QStringList uioName = uioDir.entryList(QStringList() << "uio*");
    return uioName.empty() ? QString() : uioName[0]; 
 }

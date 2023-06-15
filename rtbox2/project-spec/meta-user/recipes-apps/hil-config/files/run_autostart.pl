@@ -8,7 +8,7 @@ use strict;
 use IO::Socket::UNIX;
 use Errno qw ( EAGAIN );
 
-my $upload_dir = "/lib/firmware";
+my $upload_dir = "/usr/lib/firmware";
 
 $ENV{'PATH'} = '/bin:/usr/bin';
 

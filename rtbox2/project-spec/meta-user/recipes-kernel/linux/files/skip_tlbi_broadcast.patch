@@ -1,0 +1,346 @@
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 0df64a6a56d4..9f977c49e152 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -646,6 +646,7 @@ config NUMA
+ 	bool "Numa Memory Allocation and Scheduler Support"
+ 	select ACPI_NUMA if ACPI
+ 	select OF_NUMA
++	select CPUMASK_OFFSTACK
+ 	help
+ 	  Enable NUMA (Non Uniform Memory Access) support.
+ 
+diff --git a/arch/arm64/include/asm/efi.h b/arch/arm64/include/asm/efi.h
+index 650344d01124..c61d9b16912b 100644
+--- a/arch/arm64/include/asm/efi.h
++++ b/arch/arm64/include/asm/efi.h
+@@ -115,7 +115,7 @@ static inline void efifb_setup_from_dmi(struct screen_info *si, const char *opt)
+ 
+ static inline void efi_set_pgd(struct mm_struct *mm)
+ {
+-	__switch_mm(mm);
++	__switch_mm(mm, smp_processor_id());
+ 
+ 	if (system_uses_ttbr0_pan()) {
+ 		if (mm != current->active_mm) {
+diff --git a/arch/arm64/include/asm/mmu.h b/arch/arm64/include/asm/mmu.h
+index 0d34bf0a89c7..e27c7c57a5d4 100644
+--- a/arch/arm64/include/asm/mmu.h
++++ b/arch/arm64/include/asm/mmu.h
+@@ -22,6 +22,7 @@ typedef struct {
+ 	atomic64_t	id;
+ 	void		*vdso;
+ 	unsigned long	flags;
++	atomic_t	nr_active_mm;
+ } mm_context_t;
+ 
+ /*
+@@ -29,7 +30,8 @@ typedef struct {
+  * ASID change and therefore doesn't need to reload the counter using
+  * atomic64_read.
+  */
+-#define ASID(mm)	((mm)->context.id.counter & 0xffff)
++#define __ASID(asid)	((asid) & 0xffff)
++#define ASID(mm)	__ASID((mm)->context.id.counter)
+ 
+ extern void paging_init(void);
+ extern void bootmem_init(void);
+diff --git a/arch/arm64/include/asm/mmu_context.h b/arch/arm64/include/asm/mmu_context.h
+index 3257895a9b5e..5fe32f8532f8 100644
+--- a/arch/arm64/include/asm/mmu_context.h
++++ b/arch/arm64/include/asm/mmu_context.h
+@@ -154,7 +154,10 @@ static inline void cpu_replace_ttbr1(pgd_t *pgd)
+ #define destroy_context(mm)		do { } while(0)
+ void check_and_switch_context(struct mm_struct *mm, unsigned int cpu);
+ 
+-#define init_new_context(tsk,mm)	({ atomic64_set(&(mm)->context.id, 0); 0; })
++#define init_new_context(tsk,mm)			\
++	({ atomic64_set(&(mm)->context.id, 0);		\
++	   atomic_set(&(mm)->context.nr_active_mm, 0);	\
++	   0; })
+ 
+ /*
+  * This is called when "tsk" is about to enter lazy TLB mode.
+@@ -187,10 +190,8 @@ static inline void update_saved_ttbr0(struct task_struct *tsk,
+ }
+ #endif
+ 
+-static inline void __switch_mm(struct mm_struct *next)
++static inline void __switch_mm(struct mm_struct *next, unsigned int cpu)
+ {
+-	unsigned int cpu = smp_processor_id();
+-
+ 	/*
+ 	 * init_mm.pgd does not contain any user mappings and it is always
+ 	 * active for kernel addresses in TTBR1. Just set the reserved TTBR0.
+@@ -207,8 +208,19 @@ static inline void
+ switch_mm(struct mm_struct *prev, struct mm_struct *next,
+ 	  struct task_struct *tsk)
+ {
+-	if (prev != next)
+-		__switch_mm(next);
++	unsigned int cpu = smp_processor_id();
++
++	if (!per_cpu(cpu_not_lazy_tlb, cpu)) {
++		per_cpu(cpu_not_lazy_tlb, cpu) = true;
++		atomic_inc(&next->context.nr_active_mm);
++		__switch_mm(next, cpu);
++	} else if (prev != next) {
++		atomic_inc(&next->context.nr_active_mm);
++		__switch_mm(next, cpu);
++		atomic_dec(&prev->context.nr_active_mm);
++	}
++	VM_WARN_ON(!atomic_read(&next->context.nr_active_mm));
++	VM_WARN_ON(atomic_read(&prev->context.nr_active_mm) < 0);
+ 
+ 	/*
+ 	 * Update the saved TTBR0_EL1 of the scheduled-in task as the previous
+diff --git a/arch/arm64/include/asm/tlbflush.h b/arch/arm64/include/asm/tlbflush.h
+index af1c76981911..e8298168df73 100644
+--- a/arch/arm64/include/asm/tlbflush.h
++++ b/arch/arm64/include/asm/tlbflush.h
+@@ -54,6 +54,15 @@
+ 
+ #define __tlbi(op, ...)		__TLBI_N(op, ##__VA_ARGS__, 1, 0)
+ 
++/* This macro creates a properly formatted VA operand for the TLBI */
++#define __TLBI_VADDR(addr, asid)				\
++	({							\
++		unsigned long __ta = (addr) >> 12;		\
++		__ta &= GENMASK_ULL(43, 0);			\
++		__ta |= (unsigned long)(asid) << 48;		\
++		__ta;						\
++	})
++
+ /*
+  *	TLB Management
+  *	==============
+@@ -101,6 +110,14 @@ static inline void local_flush_tlb_all(void)
+ 	isb();
+ }
+ 
++static inline void local_flush_tlb_asid(unsigned long asid)
++{
++	asid = __TLBI_VADDR(0, __ASID(asid));
++	dsb(nshst);
++	__tlbi(aside1, asid);
++	dsb(nsh);
++}
++
+ static inline void flush_tlb_all(void)
+ {
+ 	dsb(ishst);
+@@ -109,9 +126,37 @@ static inline void flush_tlb_all(void)
+ 	isb();
+ }
+ 
++DECLARE_PER_CPU(bool, cpu_not_lazy_tlb);
++
++enum tlb_flush_types {
++        TLB_FLUSH_NO,
++        TLB_FLUSH_LOCAL,
++        TLB_FLUSH_BROADCAST,
++};
++extern enum tlb_flush_types tlb_flush_check(struct mm_struct *mm,
++                                            unsigned int cpu);
++  
+ static inline void flush_tlb_mm(struct mm_struct *mm)
+ {
+ 	unsigned long asid = ASID(mm) << 48;
++	enum tlb_flush_types flush;
++
++	flush = tlb_flush_check(mm, get_cpu());
++	switch (flush) {
++	case TLB_FLUSH_LOCAL:
++
++		dsb(nshst);
++		__tlbi(aside1, asid);
++		dsb(nsh);
++
++		/* fall through */
++	case TLB_FLUSH_NO:
++		put_cpu();
++		return;
++	case TLB_FLUSH_BROADCAST:
++		break;
++	}
++	put_cpu();
+ 
+ 	dsb(ishst);
+ 	__tlbi(aside1is, asid);
+@@ -123,6 +168,26 @@ static inline void flush_tlb_page(struct vm_area_struct *vma,
+ {
+ 	unsigned long addr = uaddr >> 12 | (ASID(vma->vm_mm) << 48);
+ 
++	struct mm_struct *mm = vma->vm_mm;
++	enum tlb_flush_types flush;
++
++	flush = tlb_flush_check(mm, get_cpu());
++	switch (flush) {
++	case TLB_FLUSH_LOCAL:
++
++		dsb(nshst);
++		__tlbi(vale1, addr);
++		dsb(nsh);
++
++		/* fall through */
++	case TLB_FLUSH_NO:
++		put_cpu();
++		return;
++	case TLB_FLUSH_BROADCAST:
++		break;
++	}
++	put_cpu();
++
+ 	dsb(ishst);
+ 	__tlbi(vale1is, addr);
+ 	dsb(ish);
+@@ -138,17 +203,42 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
+ 				     unsigned long start, unsigned long end,
+ 				     bool last_level)
+ {
+-	unsigned long asid = ASID(vma->vm_mm) << 48;
++	struct mm_struct *mm = vma->vm_mm;
++	unsigned long asid = ASID(mm) << 48;
+ 	unsigned long addr;
++	enum tlb_flush_types flush;
+ 
+ 	if ((end - start) > MAX_TLB_RANGE) {
+-		flush_tlb_mm(vma->vm_mm);
++		flush_tlb_mm(mm);
+ 		return;
+ 	}
+ 
+ 	start = asid | (start >> 12);
+ 	end = asid | (end >> 12);
+ 
++	flush = tlb_flush_check(mm, get_cpu());
++	switch (flush) {
++	case TLB_FLUSH_LOCAL:
++
++		dsb(nshst);
++		for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12)) {
++			if (last_level) {
++				__tlbi(vale1, addr);
++			} else {
++				__tlbi(vae1, addr);
++			}
++		}
++		dsb(nsh);
++
++		/* fall through */
++	case TLB_FLUSH_NO:
++		put_cpu();
++		return;
++	case TLB_FLUSH_BROADCAST:
++		break;
++	}
++	put_cpu();
++
+ 	dsb(ishst);
+ 	for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12)) {
+ 		if (last_level)
+diff --git a/arch/arm64/mm/context.c b/arch/arm64/mm/context.c
+index ab9f5f0fb2c7..046dcde6b7fa 100644
+--- a/arch/arm64/mm/context.c
++++ b/arch/arm64/mm/context.c
+@@ -36,6 +36,7 @@ static unsigned long *asid_map;
+ static DEFINE_PER_CPU(atomic64_t, active_asids);
+ static DEFINE_PER_CPU(u64, reserved_asids);
+ static cpumask_t tlb_flush_pending;
++DEFINE_PER_CPU(bool, cpu_not_lazy_tlb);
+ 
+ #define ASID_MASK		(~GENMASK(asid_bits - 1, 0))
+ #define ASID_FIRST_VERSION	(1UL << asid_bits)
+@@ -191,6 +192,12 @@ static u64 new_context(struct mm_struct *mm, unsigned int cpu)
+ set_asid:
+ 	__set_bit(asid, asid_map);
+ 	cur_idx = asid;
++	/*
++	 * check_and_switch_context() will change the ASID of this mm
++	 * so no need of extra ASID local TLB flushes: the new ASID
++	 * isn't stale anymore after the tlb_flush_pending was set.
++	 */
++	cpumask_clear(mm_cpumask(mm));
+ 	return asid | generation;
+ }
+ 
+@@ -227,6 +234,16 @@ void check_and_switch_context(struct mm_struct *mm, unsigned int cpu)
+ 	raw_spin_unlock_irqrestore(&cpu_asid_lock, flags);
+ 
+ switch_mm_fastpath:
++	/*
++	 * Enforce CPU ordering between the atomic_inc(nr_active_mm)
++	 * in switch_mm() and the below cpumask_test_cpu(mm_cpumask).
++	 */
++	smp_mb();
++	if (cpumask_test_cpu(cpu, mm_cpumask(mm))) {
++		cpumask_clear_cpu(cpu, mm_cpumask(mm));
++		local_flush_tlb_asid(asid);
++	}
++
+ 	/*
+ 	 * Defer TTBR0_EL1 setting for user threads to uaccess_enable() when
+ 	 * emulating PAN.
+@@ -256,3 +273,41 @@ static int asids_init(void)
+ 	return 0;
+ }
+ early_initcall(asids_init);
++
++enum tlb_flush_types tlb_flush_check(struct mm_struct *mm, unsigned int cpu)
++{
++	if (atomic_read(&mm->context.nr_active_mm) <= 1) {
++		bool is_local = current->active_mm == mm &&
++			per_cpu(cpu_not_lazy_tlb, cpu);
++		cpumask_t *stale_cpumask = mm_cpumask(mm);
++		unsigned int next_zero = cpumask_next_zero(-1, stale_cpumask);
++		bool local_is_clear = false;
++		if (next_zero < nr_cpu_ids &&
++		    (is_local && next_zero == cpu)) {
++			next_zero = cpumask_next_zero(next_zero, stale_cpumask);
++			local_is_clear = true;
++		}
++		if (next_zero < nr_cpu_ids) {
++			cpumask_setall(stale_cpumask);
++			local_is_clear = false;
++		}
++
++		/*
++		 * Enforce CPU ordering between the above
++		 * cpumask_setall(mm_cpumask) and the below
++		 * atomic_read(nr_active_mm).
++		 */
++		smp_mb();
++
++		if (likely(atomic_read(&mm->context.nr_active_mm)) <= 1) {
++			if (is_local) {
++				if (!local_is_clear)
++					cpumask_clear_cpu(cpu, stale_cpumask);
++				return TLB_FLUSH_LOCAL;
++			}
++			if (atomic_read(&mm->context.nr_active_mm) == 0)
++				return TLB_FLUSH_NO;
++		}
++	}
++	return TLB_FLUSH_BROADCAST;
++}
+diff --git a/mm/mmu_context.c b/mm/mmu_context.c
+index 3e612ae748e9..ced0e1218c0f 100644
+--- a/mm/mmu_context.c
++++ b/mm/mmu_context.c
+@@ -30,6 +30,7 @@ void use_mm(struct mm_struct *mm)
+ 		mmgrab(mm);
+ 		tsk->active_mm = mm;
+ 	}
++	mmget(mm);
+ 	tsk->mm = mm;
+ 	switch_mm(active_mm, mm, tsk);
+ 	task_unlock(tsk);
+@@ -57,6 +58,7 @@ void unuse_mm(struct mm_struct *mm)
+ 	task_lock(tsk);
+ 	sync_mm_rss(mm);
+ 	tsk->mm = NULL;
++	mmput(mm);
+ 	/* active_mm is still 'mm' */
+ 	enter_lazy_tlb(mm, tsk);
+ 	task_unlock(tsk);
