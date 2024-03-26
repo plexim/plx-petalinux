@@ -15,7 +15,7 @@ QString ToFileHandler::mWorkingDir;
 
 ToFileHandler::ToFileHandler(QString aModelName, QString aFileName,
    int aWidth, int aNumSamples, int aBufferOffset, int aFileType,
-   RPCReceiver* aParent)
+   bool aUseDouble, RPCReceiver* aParent)
  : QObject(aParent),
    mParent(aParent),
    mFileName(aFileName.simplified()),
@@ -26,7 +26,8 @@ ToFileHandler::ToFileHandler(QString aModelName, QString aFileName,
    mFileType(aFileType),
    mFile(nullptr),
    mWriter(nullptr),
-   mFileCounter(0)
+   mFileCounter(0),
+   mDataTypeSize(aUseDouble ? sizeof(double) : sizeof(float))
 {
    QProcess remount;
    remount.start("mount", QStringList() << "-o" << "remount,rw" << "/dev" + devicePath() << "/run/media/sda1");
@@ -37,12 +38,16 @@ ToFileHandler::ToFileHandler(QString aModelName, QString aFileName,
    {
       if (mFileType == 2)
       {
-         mWriter = new MatFileWriter(mFile, mWidth);
+         mWriter = new MatFileWriter(mFile, mWidth, aUseDouble);
       }
       else
       {
-         mWriter = new CsvFileWriter(mFile, mWidth);
+         if (aUseDouble)
+            mWriter = new CsvDoubleFileWriter(mFile, mWidth);
+         else
+            mWriter = new CsvFloatFileWriter(mFile, mWidth);
       }
+   
       QThread* writerThread = new QThread(this);
       mWriter->moveToThread(writerThread);
       QEventLoop eventLoop;
@@ -57,34 +62,40 @@ ToFileHandler::ToFileHandler(QString aModelName, QString aFileName,
    }
 }
 
-void ToFileHandler::writeToFileBuffer(int aCurrentReadBuffer)
+void ToFileHandler::writeToFileBuffer(int aCurrentReadBuffer, int aBufferLength)
 {
    if (!mWriter || !mFile)
       return;
    if (checkFileSize() >= 2000000000) // Maximum file size is 2GB
    {
-      mWriter->thread()->quit();
-      mWriter->thread()->wait();
-      mWriter->writeTerminate();
-      mFile->close();
-      delete mFile;
-      mFile = nullptr;
-      if (createFile())
-      {
-         mWriter->rotateFile(mFile);
-         mWriter->thread()->start(QThread::NormalPriority);
-      }
-      else
-      {
-         stop();
-      }
+      rotateFile();
    }
    int index = mBufferOffset + aCurrentReadBuffer * mWidth * mNumSamples;
-   QByteArray buf((const char*)mParent->getToFileBuffer() + index * sizeof(float), mWidth*mNumSamples*sizeof(float));
+   QByteArray buf((const char*)mParent->getToFileBuffer() + index * mDataTypeSize,
+                  aBufferLength*mDataTypeSize);
    emit writeToFileBufferRequest(buf);
    if (mFile->error() != QFile::NoError)
    {
       mParent->reportError(QString("Error while writing file %1: %2").arg(mFile->fileName()).arg(mFile->errorString()));
+      stop();
+   }
+}
+
+void ToFileHandler::rotateFile()
+{
+   mWriter->thread()->quit();
+   mWriter->thread()->wait();
+   mWriter->writeTerminate();
+   mFile->close();
+   delete mFile;
+   mFile = nullptr;
+   if (createFile())
+   {
+      mWriter->rotateFile(mFile);
+      mWriter->thread()->start(QThread::NormalPriority);
+   }
+   else
+   {
       stop();
    }
 }

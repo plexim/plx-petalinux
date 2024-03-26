@@ -63,14 +63,6 @@
 			reg = <9>;
 			xlnx,phy-type = <4>;
 		};
-/*
-		phy12_1: ethernet-phy@12 {
-			reg = <12>;
-	                ti,rx-internal-delay = <0x8>;
-	                ti,tx-internal-delay = <0xa>;
-	                ti,fifo-depth = <0x1>;
-		};
-*/
 	};
 	mdio2: mdio@ff0d0000 {
 		compatible = "cdns,macb-mdio";
@@ -83,38 +75,28 @@
 			reg = <10>;
 			xlnx,phy-type = <4>;
 		};
-/*
-		phy12_2: ethernet-phy@12 {
-			reg = <12>;
-	                ti,rx-internal-delay = <0x8>;
-	                ti,tx-internal-delay = <0xa>;
-	                ti,fifo-depth = <0x1>;
-		};
-*/
 	};
 };
 
 &gem0 {
-	/* phy-mode = "rgmii-id"; */
 	phy-handle = <&phy3>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gem0_default>;
 };
 
 &gem1 {
-	phy-mode = "rgmii-id";
+	local-mac-address = [02 0a 35 00 02 91];
+	phy-mode = "gmii";
 	phy-handle = <&phy9>;
 };
 
 &gem2 {
 	local-mac-address = [02 0a 35 00 02 92];
-	/* phy-mode = "rgmii-id"; */
+	phy-mode = "gmii";
 	phy-handle = <&phy10>;
 };
 
 &gem3 {
-	local-mac-address = [02 0a 35 00 02 91];
-	/* phy-mode = "rgmii-id"; */
 	phy-handle = <&phy7>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gem3_default>;
@@ -804,6 +786,17 @@
  * in the PL, the PS has no access to it.
  */
 &ams_pl {
+	status = "disabled";
+};
+
+&perf_monitor_ocm {
+	status = "disabled";
+};
+
+/*
+ * SMMU is used by jailhouse
+ */
+&smmu {
 	status = "disabled";
 };
 

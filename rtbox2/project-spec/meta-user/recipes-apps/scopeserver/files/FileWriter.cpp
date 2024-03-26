@@ -5,7 +5,9 @@
 #include <QDebug>
 #include <QElapsedTimer>
 
-Writer::Writer(){}
+Writer::Writer(bool aUseDouble)
+ : mUseDouble(aUseDouble)
+{}
 
 Writer::~Writer(){}
 
@@ -27,20 +29,14 @@ void Writer::rotateFile(QFile* aFile)
 
 void Writer::writeToFileBuffer(const QByteArray& aData)
 {
-   appendData(aData.data(), aData.size()/sizeof(float));
+   appendData(aData.data(), aData.size()/(mUseDouble ? sizeof(double) : sizeof(float)));
 }
 
-bool Writer::getBuffer(QVector<float>& aBuffer, const char *aBufferAddress)
-{
-   size_t len = aBuffer.size() * sizeof(float);
-   const char* buf = aBufferAddress;
-   memcpy(aBuffer.data(), buf, len);
-   return true;
-}
-
-
-MatFileWriter::MatFileWriter(QFile* aFile, int aWidth)
- : mTotalSize(0)
+MatFileWriter::MatFileWriter(QFile* aFile, int aWidth, bool aUseDouble)
+ : Writer(aUseDouble),
+   mTotalSize(0),
+   mUseDouble(aUseDouble),
+   mDataTypeSize(aUseDouble ? sizeof(double) : sizeof(float))
 {
    mFile = aFile;
    mWidth= aWidth;
@@ -58,13 +54,13 @@ MatFileWriter::~MatFileWriter()
 
 bool MatFileWriter::appendData(const char *aBuffer, qint64 aSize)
 {
-      if (mFile->size() + aSize * sizeof(float) > std::numeric_limits<unsigned int>::max())
+      if (mFile->size() + aSize * mDataTypeSize > std::numeric_limits<unsigned int>::max())
       {
          error(QString("Data file exeeds maximum size (%1 bytes).").arg(std::numeric_limits<unsigned int>::max()));
          return false;
       }
       bool success = false;
-      success = writeBuffer(aBuffer, aSize * sizeof(float));
+      success = writeBuffer(aBuffer, aSize * mDataTypeSize);
       mTotalSize += aSize;
       return success;
 }
@@ -137,12 +133,10 @@ QByteArray MatFileWriter::writeDataElement()
    QByteArray ret;
    ret.fill(0,56);
    *(unsigned int*)ret.data() = miMATRIX;
-   *(unsigned int*)(ret.data() + 4) = 48;
+   *(unsigned int*)(ret.data() + 4) = 48; // number of bytes
    *(unsigned int*)(ret.data() + 8) = miUINT32;
    *(unsigned int*)(ret.data() + 12) = 8;
-   *(unsigned char*)(ret.data() + 16) = 7;
-   *(unsigned char*)(ret.data() + 18) = 0;
-   *(unsigned char*)(ret.data() + 19) = 0;
+   *(unsigned int*)(ret.data() + 16) = mUseDouble ? DOUBLE_ARRAY : SINGLE_ARRAY;
    *(unsigned int*)(ret.data() + 24) = miINT32;
    *(unsigned int*)(ret.data() + 28) = 8;
    *(unsigned int*)(ret.data() + 32) = mWidth;
@@ -152,7 +146,7 @@ QByteArray MatFileWriter::writeDataElement()
    *(unsigned char*)(ret.data() + 45) = 'a';
    *(unsigned char*)(ret.data() + 46) = 't';
    *(unsigned char*)(ret.data() + 47) = 'a';
-   *(unsigned int*)(ret.data() + 48) = miSINGLE;
+   *(unsigned int*)(ret.data() + 48) = mUseDouble ? miDOUBLE : miSINGLE;
    return ret;
 }
 
@@ -189,7 +183,7 @@ void MatFileWriter::writeTerminate()
 {
    if (mFile->error() == QFile::NoError && mFile->flush())
    {
-      unsigned totalBytes = unsigned(mTotalSize * sizeof(float)) + 48;
+      unsigned totalBytes = unsigned(mTotalSize * mDataTypeSize) + 48;
       if (totalBytes % 8 != 0)
       {
          QByteArray paddingBytes;
@@ -200,11 +194,11 @@ void MatFileWriter::writeTerminate()
       mFile->seek(128 + 4);
       mFile->write(reinterpret_cast<const char*>(&totalBytes), 4);
       mFile->seek(128 + 32);
-      mFile->write(reinterpret_cast<const char*>(&mWidth));
+      mFile->write(reinterpret_cast<const char*>(&mWidth), 4);
       unsigned cols = (unsigned)mTotalSize / (unsigned)mWidth;
       mFile->seek(128 + 36);
       mFile->write(reinterpret_cast<const char*>(&cols), 4);
-      unsigned totalDataBytes = unsigned(mTotalSize * sizeof(float));
+      unsigned totalDataBytes = unsigned(mTotalSize * mDataTypeSize);
       mFile->seek(128 + 52);
       mFile->write(reinterpret_cast<const char*>(&totalDataBytes), 4);
       mTotalSize = 0;
@@ -218,7 +212,9 @@ void MatFileWriter::initFile()
 }
 
 
-CsvFileWriter::CsvFileWriter(QFile* aFile, int aWidth)
+CsvFileWriter::CsvFileWriter(QFile* aFile, int aWidth, bool aUseDouble)
+ : Writer(aUseDouble),
+   mDataTypeSize(aUseDouble ? sizeof(double) : sizeof(float))
 {
    mFile = aFile;
    mWidth = aWidth;
@@ -228,33 +224,6 @@ CsvFileWriter::CsvFileWriter(QFile* aFile, int aWidth)
 CsvFileWriter::~CsvFileWriter()
 {
    writeTerminate();
-}
-
-bool CsvFileWriter::appendData(const char *aBuffer, qint64 aSize)
-{
-   QVector<float> buffer(aSize);
-   if (!getBuffer(buffer, aBuffer))
-   {
-      return false;
-   }
-   QTextStream outStream(mFile);
-   outStream.setRealNumberPrecision(8);
-   int i = 0;
-   for (int j=0; j < buffer.size(); j++)
-   {
-      outStream << buffer[j];
-      i++;
-      if (i == mWidth)
-      {
-         outStream << '\n';  //endl provokes every time a flush, leave this task to the operating system
-         i = 0;
-      }
-      else
-      {
-          outStream << ",";
-      }
-   }
-   return checkFileStatus(outStream);
 }
 
 bool CsvFileWriter::checkFileStatus(QTextStream& aStream)
@@ -276,3 +245,79 @@ void CsvFileWriter::initFile()
 {
    return;
 }
+
+
+bool CsvDoubleFileWriter::appendData(const char *aBuffer, qint64 aSize)
+{
+   QVector<double> buffer(aSize);
+   if (!getBuffer(buffer, aBuffer))
+   {
+      return false;
+   }
+   QTextStream outStream(mFile);
+   outStream.setRealNumberNotation(QTextStream::SmartNotation);
+   outStream.setRealNumberPrecision(17);
+   int i = 0;
+   for (int j=0; j < buffer.size(); j++)
+   {
+      outStream << buffer[j];
+      i++;
+      if (i == mWidth)
+      {
+         outStream << '\n';  //endl provokes every time a flush, leave this task to the operating system
+         i = 0;
+      }
+      else
+      {
+          outStream << ",";
+      }
+   }
+   return checkFileStatus(outStream);
+}
+
+bool CsvDoubleFileWriter::getBuffer(QVector<double>& aBuffer, const char *aBufferAddress)
+{
+   size_t len = aBuffer.size() * sizeof(double);
+   const char* buf = aBufferAddress;
+   memcpy(aBuffer.data(), buf, len);
+   return true;
+}
+
+
+bool CsvFloatFileWriter::appendData(const char *aBuffer, qint64 aSize)
+{
+   QVector<float> buffer(aSize);
+   if (!getBuffer(buffer, aBuffer))
+   {
+      return false;
+   }
+   QTextStream outStream(mFile);
+   outStream.setRealNumberNotation(QTextStream::SmartNotation);
+   outStream.setRealNumberPrecision(9);
+   int i = 0;
+   for (int j=0; j < buffer.size(); j++)
+   {
+      outStream << buffer[j];
+      i++;
+      if (i == mWidth)
+      {
+         outStream << '\n';  //endl provokes every time a flush, leave this task to the operating system
+         i = 0;
+      }
+      else
+      {
+          outStream << ",";
+      }
+   }
+   return checkFileStatus(outStream);
+}
+
+bool CsvFloatFileWriter::getBuffer(QVector<float>& aBuffer, const char *aBufferAddress)
+{
+   size_t len = aBuffer.size() * sizeof(float);
+   const char* buf = aBufferAddress;
+   memcpy(aBuffer.data(), buf, len);
+   return true;
+}
+
+

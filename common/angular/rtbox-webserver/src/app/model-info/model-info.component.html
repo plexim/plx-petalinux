@@ -7,8 +7,13 @@
           <td>Model&nbsp;name:</td>
           <td width="99%">{{info?.modelName}}</td>
         </tr>
+        <tr *ngIf="rtboxType > 1">
+        <!-- tr-->
+          <td>FPGA&nbsp;step&nbsp;size:</td>
+          <td *ngIf="info?.fpgaSampleTime">{{info.fpgaSampleTime | number:'.0-2'}} ns</td>
+        </tr>
         <tr>
-          <td>Sample&nbsp;time:</td>
+          <td>CPU&nbsp;step&nbsp;size:</td>
           <td *ngIf="info?.sampleTime">{{info.sampleTime/1000 | number:'.0-2'}} &mu;s</td>
         </tr>
       </tbody>

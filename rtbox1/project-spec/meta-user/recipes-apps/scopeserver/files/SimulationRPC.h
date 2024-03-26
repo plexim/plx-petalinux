@@ -77,7 +77,10 @@ public:
       RSP_QUERY_DI_CONFIG,
       TO_FILE_BUFFER_FULL,
       MSG_GET_TO_FILE_INFO,
-      RSP_GET_TO_FILE_INFO //40
+      RSP_GET_TO_FILE_INFO, //40
+      MSG_RESOLVE_HOSTNAME,
+      RSP_RESOLVE_HOSTNAME,
+      MSG_TO_FILE_ROTATE
    };
 
    enum class SimulationStatus {
@@ -177,6 +180,12 @@ public:
    {
       int mInstance;
       int mCurrentReadBuffer;
+      uint32_t mBufferLength;
+   };
+
+   struct ToFileRotateMsg
+   {
+      int mInstance;
    };
 
    struct ToFileInfo
@@ -195,6 +204,7 @@ public:
       uint64_t mStartUSec;
       uint16_t mHwVersionMajor;
       uint16_t mHwVersionMinor;
+      uint16_t mIsRtBoxCE;
    };
 
    SimulationRPC(ServerAsync& aServer);
@@ -229,14 +239,16 @@ signals:
    void initComplete();
    void sendRequest(QByteArray);
    void shutdownRequest();
-   void initToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType);
+   void initToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, 
+                          int aNumSamples, int aBufferOffset, int aFileType,
+                          bool aUseDouble);
 
 public slots:
    void log(QString aMsg);
    void reportError(QString aMsg);
 
 protected slots:
-   void syncModelInfos();
+   void onInitComplete();
    void receiveError(QString aError);
    void scopeArmResponse(QByteArray);
    void tuneParameterResponse(int);
@@ -255,6 +267,7 @@ protected:
    bool syncDigitalInputConfig();
    void setRunning(bool aRun);
    inline void* getToFileBuffer() { return mToFileBuffer; }
+   void syncModelInfos();
 
 private:
    struct QueryModelResponse {
@@ -288,6 +301,7 @@ private:
       int mWidth;
    };
 
+
    ServerAsync& mServer;
    QFile mSharedMemoryFile;
    QFile mTxBufferFile;
@@ -313,6 +327,8 @@ private:
    uint16_t mHwVersionMajor;
    uint16_t mHwVersionMinor;
    uint8_t mHwVersionRevision;
+   bool mModelQueryDone;
+   bool mInitComplete;
 };
 
 #pragma pack(pop)

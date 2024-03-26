@@ -18,6 +18,7 @@
 #include <QtWidgets/QStackedLayout>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QVBoxLayout>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QProgressBar>
 
@@ -33,8 +34,7 @@
 SimulationInfo::SimulationInfo(SimulationRPC *aSimulation, QWidget *aParent)
 : QWidget(aParent),
   mSimulation(aSimulation),
-  mSimulationRunning(false),
-  mSampleTime(0)
+  mSimulationRunning(false)
 {
     mStackedLayout = new QStackedLayout;
     setLayout(mStackedLayout);
@@ -69,10 +69,15 @@ SimulationInfo::SimulationInfo(SimulationRPC *aSimulation, QWidget *aParent)
 
     mainLayout->addSpacing(4);
 
+    auto gridLayout = new QGridLayout;
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+    gridLayout->setHorizontalSpacing(4);
+    gridLayout->setVerticalSpacing(1);
+    mainLayout->addLayout(gridLayout);
+
     for (auto i: {0, 1, 2})
     {
-        mCpuLoadWidgets[i] = new CpuLoad(QString("CPU%1").arg(i+1));
-        mainLayout->addWidget(mCpuLoadWidgets[i]);
+        mCpuLoadWidgets[i] = new CpuLoad(i, gridLayout);
     }
 
     mStackedLayout->setCurrentWidget(mNoSimulationMessage);
@@ -112,24 +117,37 @@ void SimulationInfo::updateStaticSimulationProperties()
     int numScopeSignals;
     int numTuneableParameters;
     struct SimulationRPC::VersionType libraryVersion;
+    struct SimulationRPC::SampleTimeInfo sampleTime;
     QByteArray checksum;
     QByteArray modelName;
     int analogOutVoltageRange;
     int analogInVoltageRange;
     int digitalOutVoltage;
 
-    bool success = mSimulation->querySimulation(mSampleTime, numScopeSignals,numTuneableParameters, 
+    bool success = mSimulation->querySimulation(sampleTime, numScopeSignals,numTuneableParameters,
                                                 libraryVersion,checksum, modelName, analogOutVoltageRange,
                                                 analogInVoltageRange, digitalOutVoltage);
     if (success)
     {
         mModelText->setText(modelName);
-        mStepText->setText(QString("%1 µs").arg(mSampleTime * 1e6, 0, 'f', 1));
+        double fpgaSampleTimeUs = sampleTime.mFpgaSampleTime * 1e6;
+        if (!fpgaSampleTimeUs)
+            fpgaSampleTimeUs = sampleTime.mCore1SampleTime * 1e6;
+        if (fpgaSampleTimeUs < 1)
+            mStepText->setText(QString("%1 ns").arg((int)(fpgaSampleTimeUs*1000+0.5)));
+        else
+            mStepText->setText(QString("%1 µs").arg(fpgaSampleTimeUs, 0, 'f', 1));
+        mCpuLoadWidgets[0]->setSampleTime(sampleTime.mCore1SampleTime);
+        mCpuLoadWidgets[1]->setSampleTime(sampleTime.mCore2SampleTime);
+        mCpuLoadWidgets[2]->setSampleTime(sampleTime.mCore3SampleTime);
     }
     else
     {
         mModelText->setText("-");
         mStepText->setText(QString("- µs"));
+        mCpuLoadWidgets[0]->setSampleTime(0);
+        mCpuLoadWidgets[1]->setSampleTime(0);
+        mCpuLoadWidgets[2]->setSampleTime(0);
     }
 }
 

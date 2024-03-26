@@ -20,20 +20,22 @@
 class CpuIdLabel;
 class CpuLoadLabel;
 class CpuLoadBar;
+class ActivateableLabel;
+class QGridLayout;
 
-class CpuLoad : public QWidget
+class CpuLoad
 {
-    Q_OBJECT
-
 public:
-    CpuLoad(const QString &aLabel, QWidget *aParent = nullptr);
+    CpuLoad(int aCpu, QGridLayout* aLayout);
 
     void setLoad(double aLoad);
+    void setSampleTime(double aSampleTime);
 
 private:
     CpuIdLabel *mIdLabel;
     CpuLoadLabel *mLoadLabel;
     CpuLoadBar *mLoadBar;
+    ActivateableLabel *mSampleTimeLabel;
 };
 
 #endif // CPULOAD_H

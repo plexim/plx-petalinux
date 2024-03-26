@@ -25,6 +25,7 @@
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 #include "ToFileHandler.h"
+#include <QtNetwork/QHostInfo>
 
 #define IOC_GET_QUEUE_LENGTH	        _IOR('z', 1, unsigned int)
 #define IOC_GET_CURRENT_BUFFER_LENGTH   _IOR('z', 2, unsigned int)
@@ -236,15 +237,28 @@ bool RPCReceiver::processMessage(int aMessage, QByteArray& aMsgBuf)
        }
        case SimulationRPC::TO_FILE_BUFFER_FULL:
        {
-         if (readData(aMsgBuf))
-         {
-            const struct SimulationRPC::ToFileBufferFullMsg* toFileMsg = (const struct SimulationRPC::ToFileBufferFullMsg*)aMsgBuf.data();
-            if (toFileMsg->mInstance < mToFileHandlers.size())
-            {
-               mToFileHandlers[toFileMsg->mInstance]->writeToFileBuffer(toFileMsg->mCurrentReadBuffer);
-            }
-         }
-         break;
+          if (readData(aMsgBuf))
+          {
+             const struct SimulationRPC::ToFileBufferFullMsg* toFileMsg = (const struct SimulationRPC::ToFileBufferFullMsg*)aMsgBuf.data();
+             if (toFileMsg->mInstance < mToFileHandlers.size())
+             {
+                mToFileHandlers[toFileMsg->mInstance]->writeToFileBuffer(toFileMsg->mCurrentReadBuffer,
+                                                                         toFileMsg->mBufferLength);
+             }
+          }
+          break;
+       }
+       case SimulationRPC::MSG_TO_FILE_ROTATE:
+       {
+          if (readData(aMsgBuf))
+          {
+             const struct SimulationRPC::ToFileRotateMsg* rotateMsg = (const struct SimulationRPC::ToFileRotateMsg*)aMsgBuf.data();
+             if (rotateMsg->mInstance < mToFileHandlers.size())
+             {
+                mToFileHandlers[rotateMsg->mInstance]->rotateFile();
+             }
+          }
+          break;
        }
        case SimulationRPC::MSG_ERROR:
           for (auto it = mToFileHandlers.begin(); it != mToFileHandlers.end(); ++it)
@@ -253,12 +267,48 @@ bool RPCReceiver::processMessage(int aMessage, QByteArray& aMsgBuf)
           }
           emit simulationError();
           break;
+       case SimulationRPC::MSG_RESOLVE_HOSTNAME:
+          if (readData(aMsgBuf))
+          {
+             log(QString("Resolving hostname '%1'").arg(aMsgBuf.data()));
+             QHostInfo::lookupHost(aMsgBuf.data(), this, &RPCReceiver::hostnameResolved);
+          }
+          break;
        default:
           log(QString("Unexpected message from simulation core %1").arg(aMessage));
           readAll();
           return false;
     }
     return true;
+}
+
+void RPCReceiver::hostnameResolved(QHostInfo aInfo)
+{
+   QByteArray buf;
+   buf.resize(sizeof(struct HostnameResponse));
+   struct HostnameResponse* resp = (struct HostnameResponse*)buf.data();
+   resp->mMsg = SimulationRPC::RSP_RESOLVE_HOSTNAME;
+   resp->mMsgLength = buf.size();
+   resp->mErrorCode = 0;
+   resp->mIp = 0;
+   log(QString("Hostname resolved"));
+   if (aInfo.error() == QHostInfo::NoError)
+   {
+      for (const auto& addr : aInfo.addresses())
+      {
+         if (addr.protocol() == QAbstractSocket::IPv4Protocol)
+         {
+            resp->mIp = addr.toIPv4Address();
+            log(QString("IP = %1").arg(addr.toString()));
+            break;                   
+         }
+      }
+      if (!resp->mIp)
+         resp->mErrorCode = 3; // no IPV4 address found;                
+   }
+   else
+      resp->mErrorCode = aInfo.error();
+   send(buf);
 }
 
 bool RPCReceiver::readData(QByteArray& aData)
@@ -382,10 +432,14 @@ void RPCReceiver::openConnection()
    connect(mNotifier, SIGNAL(activated(int)), this, SLOT(receiveData()));
 }
 
-void RPCReceiver::initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType)
+void RPCReceiver::initializeToFileHandler(QString aFileName, QByteArray aModelName, 
+                                          int aWidth, int aNumSamples, int aBufferOffset, 
+                                          int aFileType, bool aUseDouble)
 {
    QString modelName = QString(aModelName);
-   ToFileHandler* newToFileHandler = new ToFileHandler(modelName, aFileName, aWidth, aNumSamples, aBufferOffset, aFileType, this);
+   ToFileHandler* newToFileHandler = new ToFileHandler(modelName, aFileName, aWidth, 
+                                                       aNumSamples, aBufferOffset, aFileType, 
+                                                       aUseDouble, this);
    mToFileHandlers.push_back(newToFileHandler);
 }
 

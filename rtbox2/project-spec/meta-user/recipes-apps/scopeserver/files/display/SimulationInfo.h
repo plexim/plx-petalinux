@@ -45,7 +45,6 @@ protected:
 private:
     SimulationRPC *mSimulation;
     bool mSimulationRunning;
-    double mSampleTime;
 
     QTimer *mDynamicSimulationPropertiesTimer;
 

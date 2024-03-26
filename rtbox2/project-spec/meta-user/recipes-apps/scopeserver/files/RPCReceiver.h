@@ -23,6 +23,7 @@
 #include <list>
 #include <vector>
 #include "xcpTl_if.h"
+#include <QtNetwork/QHostInfo>
 
 class SimulationRPC;
 class QSocketNotifier;
@@ -52,6 +53,7 @@ public:
    void reportErrorMessage(const QString& aMsg);
 
 signals:
+   void initStarted();
    void initComplete();
    void initEthercat(int);
    void scopeArmResponse(QByteArray);
@@ -67,11 +69,14 @@ signals:
 public slots:
    void send(const QByteArray&);
    void shutdown();
-   void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, int aWriteDevice);
+   void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, 
+                                int aNumSamples, int aBufferOffset, int aFileType, 
+                                int aWriteDevice, bool aUseDouble);
 
 protected slots:
    void receiveData();
    void process();
+   void hostnameResolved(QHostInfo aHostInfo);
 
 protected:
    bool readMsgData(QByteArray& aData);
@@ -84,6 +89,16 @@ protected:
    static QString findUIODevice();
 
 private:
+#pragma pack(push, 4)
+   struct HostnameResponse
+   {
+      uint32_t mMsg;
+      uint32_t mMsgLength;
+      uint32_t mErrorCode;
+      uint32_t mIp;
+   };
+#pragma pack(pop)
+
    struct MsgQueue* mSendQueue;
    struct MsgQueue* mReceiveQueue;
    volatile void* mRxBuffer;

@@ -30,7 +30,8 @@ export class ResponseConversion {
   {
     return {
       ...from,
-      sampleTime: from.sampleTime === '' ? undefined : from.sampleTime * 1.e9
+      sampleTime: from.sampleTime === '' ? undefined : from.sampleTime * 1.e9,
+      fpgaSampleTime: from.fpgaSampleTime === '' ? undefined : from.fpgaSampleTime * 1.e9
     };
   }
 

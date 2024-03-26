@@ -18,18 +18,41 @@
 #include <QtGui/QPainter>
 #include <QtGui/QLinearGradient>
 
-#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QLabel>
 
 #include "CpuLoad.h"
 
-
-class LoadAwareLabel: public QLabel
+class ActivateableLabel : public QLabel
 {
 public:
-    LoadAwareLabel(): QLabel()
+    ActivateableLabel(): QLabel()
     {
         setActive(false);
+    }
+
+    void setActive(bool aActive)
+    {
+        if (aActive)
+            setStyleSheet("");
+        else
+            setStyleSheet("* {color: gray}");
+
+        mIsActive = aActive;
+    }
+
+protected:
+    bool isActive() { return mIsActive; }
+
+private:
+    bool mIsActive;
+};
+
+class LoadAwareLabel: public ActivateableLabel
+{
+public:
+    LoadAwareLabel(): ActivateableLabel()
+    {
         setLoad(0);
     }
 
@@ -55,21 +78,8 @@ public:
 protected:
     virtual void updateLabel() {}
 
-    bool isActive() { return mIsActive; }
-
-    void setActive(bool aActive)
-    {
-        if (aActive)
-            setStyleSheet("");
-        else
-            setStyleSheet("* {color: gray}");
-
-        mIsActive = aActive;
-    }
-
 private:
     double mLoad;
-    bool mIsActive;
 };
 
 
@@ -146,26 +156,23 @@ private:
 };
 
 
-CpuLoad::CpuLoad(const QString &aLabel, QWidget *aParent)
-: QWidget(aParent)
+CpuLoad::CpuLoad(int aCpu, QGridLayout* aLayout)
 {
-    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-
-    auto *mainLayout = new QHBoxLayout;
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-
     mIdLabel = new CpuIdLabel;
-    mIdLabel->setText(aLabel);;
-    mainLayout->addWidget(mIdLabel);
+    mIdLabel->setText(QString("CPU%1").arg(aCpu+1));
+    aLayout->addWidget(mIdLabel, aCpu, 0);
+
+    mSampleTimeLabel = new ActivateableLabel;
+    aLayout->addWidget(mSampleTimeLabel, aCpu, 1, Qt::AlignRight);
 
     mLoadBar = new CpuLoadBar;
-    mainLayout->addWidget(mLoadBar);
+    aLayout->addWidget(mLoadBar, aCpu, 2);
 
     mLoadLabel = new CpuLoadLabel;
     mLoadLabel->setAlignment(Qt::AlignRight);
-    mainLayout->addWidget(mLoadLabel);
+    aLayout->addWidget(mLoadLabel, aCpu, 3);
 
-    setLayout(mainLayout);
+    setSampleTime(0.0);
 }
 
 
@@ -175,3 +182,18 @@ void CpuLoad::setLoad(double aLoad)
     mLoadLabel->setLoad(aLoad);
     mLoadBar->setLoad(aLoad);
 }
+
+void CpuLoad::setSampleTime(double aSampleTime)
+{
+    if (aSampleTime)
+    {
+        mSampleTimeLabel->setText(QString("%1 µs").arg(aSampleTime * 1e6, 0, 'f', 1));
+        mSampleTimeLabel->setActive(true);
+    }
+    else
+    {
+        mSampleTimeLabel->setText(QString("- µs"));
+        mSampleTimeLabel->setActive(false);
+    }
+}
+

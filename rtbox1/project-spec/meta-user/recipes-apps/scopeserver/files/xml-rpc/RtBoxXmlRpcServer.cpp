@@ -63,6 +63,7 @@ RtBoxXmlRpcServer::RtBoxXmlRpcServer(SimulationRPC& aSimulation, int aPort, QObj
    mServer->addMethod("rtbox.getDataCaptureBlocks", this, "getDataCaptureBlocks",
                       "Gets a list of the Data Capture blocks in the model.");
    mServer->addMethod("rtbox.reboot", this, "reboot", "");
+   mServer->addMethod("rtbox.getApplicationLog", this, "getApplicationLog", "");
 
    QProcess eepromProc;
    eepromProc.start("eeprom_config", QStringList() << "-s");
@@ -199,7 +200,8 @@ QVariant RtBoxXmlRpcServer::status(double aModelTimeStamp, double aLogPosition)
    return status(static_cast<int>(aModelTimeStamp), static_cast<int>(aLogPosition));
 }
 
-QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
+
+QVariantMap RtBoxXmlRpcServer::getLog(int aModelTimeStamp, int aLogPosition)
 {
    QVariantMap retValues;
    int logPosition = 0;
@@ -209,14 +211,6 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
       logPosition = aLogPosition;
       clearLog = 0;
    }
-   QByteArray temp;
-   readLineFile("/sys/devices/soc0/amba/f8007100.adc/iio:device0/in_temp0_raw", temp);
-   QVariantList temperatures;
-   temperatures.append(QVariant((temp.toUInt() * 503.975) / 4096 - 273.15));
-   QVariantList fanSpeeds;
-   QByteArray fanSpeed;
-   readLineFile(mFanFilename, fanSpeed);
-   fanSpeeds.append(fanSpeed.toInt());
    QString log;
    QFile logFile("/sys/kernel/debug/remoteproc/remoteproc0/trace0");
    if (logFile.open(QIODevice::ReadOnly))
@@ -226,6 +220,23 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
       logPosition = logFile.pos();
       logFile.close();  
    }
+   retValues["logPosition"] = logPosition;
+   retValues["applicationLog"] = log;
+   retValues["clearLog"] = clearLog;
+   return retValues;
+}
+
+QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
+{
+   QVariantMap retValues = getLog(aModelTimeStamp, aLogPosition);
+   QByteArray temp;
+   readLineFile("/sys/devices/soc0/amba/f8007100.adc/iio:device0/in_temp0_raw", temp);
+   QVariantList temperatures;
+   temperatures.append(QVariant((temp.toUInt() * 503.975) / 4096 - 273.15));
+   QVariantList fanSpeeds;
+   QByteArray fanSpeed;
+   readLineFile(mFanFilename, fanSpeed);
+   fanSpeeds.append(fanSpeed.toInt());
    QDir hwmonDir("/sys/bus/i2c/devices/0-0040/hwmon/hwmon0");
    if (hwmonDir.exists())
    {
@@ -248,11 +259,14 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
    }   
    retValues["temperature"] = temperatures;
    retValues["fanSpeed"] = fanSpeeds;
-   retValues["logPosition"] = logPosition;
-   retValues["applicationLog"] = log;
-   retValues["clearLog"] = clearLog;
    retValues["modelTimeStamp"] = mSimulation.getModelTimeStamp();
    return retValues;
+}
+
+QVariant RtBoxXmlRpcServer::getApplicationLog()
+{
+   QVariantMap logValues = getLog(0, 0);
+   return logValues["applicationLog"];
 }
 
 QVariant RtBoxXmlRpcServer::start(double aStartOnFirstTrigger)

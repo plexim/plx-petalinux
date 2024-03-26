@@ -52,9 +52,11 @@ protected slots:
    QVariant loadElf(const QByteArray& aData);
    QVariant loadElf(const QString& aData);
    QVariant reboot(const QString& aSecret);
+   QVariant getApplicationLog();
 
 protected:
    void readLineFile(const QString& aFilename, QByteArray& aContent);
+   QVariantMap getLog(int aModelTimeStamp, int aLogPosition);
 
 private:
    MaiaXmlRpcServer* mServer;

@@ -63,6 +63,7 @@ RtBoxXmlRpcServer::RtBoxXmlRpcServer(SimulationRPC& aSimulation, int aPort, QObj
    mServer->addMethod("rtbox.getDataCaptureBlocks", this, "getDataCaptureBlocks",
                       "Gets a list of the Data Capture blocks in the model.");
    mServer->addMethod("rtbox.reboot", this, "reboot", "");
+   mServer->addMethod("rtbox.getApplicationLog", this, "getApplicationLog", "");
 
    QProcess eepromProc;
    eepromProc.start("eeprom_config", QStringList() << "-s");
@@ -171,7 +172,7 @@ QVariant RtBoxXmlRpcServer::querySimulation()
 {
    QVariantMap retValues;
 
-   double sampleTime = 0.0;
+   struct SimulationRPC::SampleTimeInfo sampleTime;
    int numScopeSignals;
    int numTuneableParameters;
    QByteArray checksum;
@@ -190,7 +191,8 @@ QVariant RtBoxXmlRpcServer::querySimulation()
        counter)
 
    {
-      retValues["sampleTime"] = sampleTime;
+      retValues["sampleTime"] = sampleTime.mCore1SampleTime;
+      retValues["fpgaSampleTime"] = sampleTime.mFpgaSampleTime;
       retValues["modelName"] = QString(modelName);
       retValues["applicationVersion"] = QString::number(libraryVersion.mVersionMajor) + "." + 
                                         QString::number(libraryVersion.mVersionMinor) + "." +
@@ -243,7 +245,7 @@ QVariant RtBoxXmlRpcServer::status(double aModelTimeStamp, double aLogPosition)
    return status(static_cast<int>(aModelTimeStamp), static_cast<int>(aLogPosition));
 }
 
-QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
+QVariantMap RtBoxXmlRpcServer::getLog(int aModelTimeStamp, int aLogPosition)
 {
    QVariantMap retValues;
    int logPosition = 0;
@@ -253,6 +255,18 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
       logPosition = aLogPosition;
       clearLog = 0;
    }
+   const QByteArray& msgBuffer = mSimulation.getMessageBuffer();
+   QString log = msgBuffer.mid(logPosition);
+   logPosition = msgBuffer.size();
+   retValues["logPosition"] = logPosition;
+   retValues["applicationLog"] = log;
+   retValues["clearLog"] = clearLog;
+   return retValues;
+}
+
+QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
+{
+   QVariantMap retValues = getLog(aModelTimeStamp, aLogPosition);
    QByteArray temp;
    readLineFile("/sys/bus/iio/devices/iio:device0/in_temp0_ps_temp_raw", temp);
    QVariantList temperatures;
@@ -297,18 +311,18 @@ QVariant RtBoxXmlRpcServer::status(int aModelTimeStamp, int aLogPosition)
          currents.append(QVariant(measurement.toInt()/1000.0));
       }
    }
-   const QByteArray& msgBuffer = mSimulation.getMessageBuffer();
-   QString log = msgBuffer.mid(logPosition);
-   logPosition = msgBuffer.size();
    retValues["temperature"] = temperatures;
    retValues["fanSpeed"] = fanSpeeds;
-   retValues["logPosition"] = logPosition;
    retValues["voltages"] = voltages;
    retValues["currents"] = currents;
-   retValues["applicationLog"] = log;
-   retValues["clearLog"] = clearLog;
    retValues["modelTimeStamp"] = mSimulation.getModelTimeStamp();
    return retValues;
+}
+
+QVariant RtBoxXmlRpcServer::getApplicationLog()
+{
+   QVariantMap logValues = getLog(0, 0);
+   return logValues["applicationLog"];
 }
 
 QVariant RtBoxXmlRpcServer::start(double aStartOnFirstTrigger)

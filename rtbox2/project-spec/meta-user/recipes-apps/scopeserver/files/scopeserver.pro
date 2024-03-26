@@ -85,7 +85,7 @@ RESOURCES += \
    display/display.qrc
 
 # QMAKE_POST_LINK += $${QMAKE_STRIP} $(TARGET)
-GIT_REV = $$system(touch ReleaseInfo.cpp && git describe --tags --always)
+GIT_REV = $$system(touch ReleaseInfo.cpp && GIT_DISCOVERY_ACROSS_FILESYSTEM=1 git describe --tags --always)
 BUILD_DATE = $$system(date \"+%d.%m.%Y %H:%M\")
 QMAKE_CXXFLAGS += -DBUILD_DATE=\"$${BUILD_DATE}\" -DGIT_REV=\"$${GIT_REV}\"
 target.path = /bin

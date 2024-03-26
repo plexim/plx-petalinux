@@ -11,6 +11,7 @@ import { RtboxCommunicationService } from './rtbox-communication.service';
 @Injectable()
 export class RtboxCommunicationStubService implements RtboxCommunicationService {
   private readonly fixedFakeSampleTime = 2000;
+  private readonly fixedFakeFpgaSampleTime = 233;
   private currentLoad = [0.5 * Math.random(), 0.25 * Math.random(), 0.33 * Math.random()];
   private maxLoad = [0.0, 0.0, 0.0];
 
@@ -44,6 +45,7 @@ export class RtboxCommunicationStubService implements RtboxCommunicationService 
     const voltages = this.rtboxType > 1 ? [ 1, 2, 3, 4, 5, 6, 11, 12, 13] : [0];
     const info: SimulationInfo = {
       sampleTime: this.fixedFakeSampleTime,
+      fpgaSampleTime: this.fixedFakeFpgaSampleTime,
       modelName: 'some-plecs-model',
       applicationVersion: '1.2.3',
       modelTimeStamp: this.timeStamp(),

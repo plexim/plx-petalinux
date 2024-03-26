@@ -20,3 +20,6 @@ IMAGE_INSTALL_append = " eeprom-config"
 IMAGE_INSTALL_append = " hil-selftest"
 IMAGE_INSTALL_append = " ntp"
 IMAGE_INSTALL_append = " libgcc"
+IMAGE_INSTALL_append = " ntfs-3g"
+IMAGE_INSTALL_append = " fuse-exfat"
+

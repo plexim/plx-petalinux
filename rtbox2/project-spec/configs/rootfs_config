@@ -2430,14 +2430,14 @@ CONFIG_udev-extraconf=y
 #
 # fbset 
 #
-CONFIG_fbset=y
+# CONFIG_fbset is not set
 # CONFIG_fbset-dev is not set
 # CONFIG_fbset-dbg is not set
 
 #
 # fbset-modes 
 #
-CONFIG_fbset-modes=y
+# CONFIG_fbset-modes is not set
 # CONFIG_fbset-modes-dbg is not set
 # CONFIG_fbset-modes-dev is not set
 
@@ -4396,6 +4396,7 @@ CONFIG_hil-webserver=y
 CONFIG_ioinit=y
 CONFIG_jailhouse-init=y
 # CONFIG_libgd is not set
+# CONFIG_memtest is not set
 # CONFIG_modetest is not set
 CONFIG_peekpoke=y
 CONFIG_perl-cgi-fast=y
@@ -4428,10 +4429,12 @@ CONFIG_librpumsg=y
 CONFIG_qt5-platform-plugin-oled=y
 # CONFIG_cairomm is not set
 # CONFIG_can-utils is not set
+CONFIG_fuse-exfat=y
 CONFIG_kernel-module-jailhouse=y
 CONFIG_lighttpd-module-alias=y
 CONFIG_lighttpd-module-fastcgi=y
 CONFIG_lighttpd-module-webdav=y
+CONFIG_ntfs-3g=y
 CONFIG_ntp=y
 CONFIG_spawn-fcgi=y
 CONFIG_terminus-font-pcf=y

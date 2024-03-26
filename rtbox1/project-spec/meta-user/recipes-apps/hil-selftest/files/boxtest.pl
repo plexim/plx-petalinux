@@ -228,16 +228,16 @@ sub setAnalogInputScale($$)
    my ($idx, $val) = @_;
    my $scaledVal = $val * $scaleCorrection * 10/32767;
    my $intVal = unpack("L", pack("f", $scaledVal));
-   my $addr = 0x43C90000 + $idx * 4;
-   `poke $addr, $intVal`;
+   `poke 0x43c90000 $idx`;
+   `poke 0x43c90004 $intVal`;
 }
 
 sub setAnalogInputOffset($$)
 {
    my ($idx, $val) = @_;
    my $intVal = unpack("L", pack("f", $val));
-   my $addr = 0x43CA0000 + $idx * 4;
-   `poke $addr, $intVal`;
+   `poke 0x43ca0000 $idx`;
+   `poke 0x43ca0004 $intVal`;
 }
 
 sub setAnalogOutput($$)

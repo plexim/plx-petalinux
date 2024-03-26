@@ -20,6 +20,7 @@
 #include <QtCore/QWaitCondition>
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
+#include <QtNetwork/QHostInfo>
 #include <list>
 
 class SimulationRPC;
@@ -56,11 +57,14 @@ signals:
 public slots:
    void send(const QByteArray&);
    void shutdown();
-   void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType);
+   void initializeToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, 
+                                int aNumSamples, int aBufferOffset, int aFileType, 
+                                bool aUseDouble);
 
 protected slots:
    void receiveData();
    void process();
+   void hostnameResolved(QHostInfo aHostInfo);
 
 protected:
    bool readData(QByteArray& aData);
@@ -69,6 +73,14 @@ protected:
    void openConnection();
 
 private:
+   struct HostnameResponse
+   {
+      uint32_t mMsg;
+      uint32_t mMsgLength;
+      uint32_t mErrorCode;
+      uint32_t mIp;
+   };
+ 
    QFile mSimulationConnection;
    QSocketNotifier* mNotifier;
    QMutex mMutex;

@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Inject } from '@angular/core';
 
 import { SimulationInfo } from '../shared/interfaces';
+import { RTBOX_TYPE } from '../shared/rtbox-type';
 
 @Component({
   selector: 'rtb-model-info',
@@ -10,5 +11,5 @@ import { SimulationInfo } from '../shared/interfaces';
 export class ModelInfoComponent {
   @Input() info: SimulationInfo = undefined;
 
-  constructor() {}
+  constructor(@Inject(RTBOX_TYPE) public rtboxType: number) {}
 }

@@ -14,9 +14,11 @@ class ToFileHandler : public QObject
    Q_OBJECT
 
 public:
-   explicit ToFileHandler(QString aModelName, QString aFileName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, RPCReceiver* aParent);
+   explicit ToFileHandler(QString aModelName, QString aFileName, int aWidth, int aNumSamples, 
+                          int aBufferOffset, int aFileType,bool aUseDouble, RPCReceiver* aParent);
    void stop();
-   void writeToFileBuffer(int aCurrentReadBuffer);
+   void writeToFileBuffer(int aCurrentReadBuffer, int aBufferLength);
+   void rotateFile();
    void log(QString aString);
    void error(QString aString);
    static void staticInit() { mWorkingDir.clear(); }
@@ -45,6 +47,7 @@ private:
    Writer* mWriter;
    static QString mWorkingDir;
    int mFileCounter;
+   const int mDataTypeSize;
 };
 
 #endif // TOFILEHANDLER_H

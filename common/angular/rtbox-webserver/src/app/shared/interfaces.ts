@@ -15,6 +15,7 @@ export interface SimulationInfo {
   modelName: string;
   modelTimeStamp: number;
   sampleTime: number;
+  fpgaSampleTime: number;
   periodTicks: number[];
   analogInVoltageRange: number;
   analogOutVoltageRange: number;

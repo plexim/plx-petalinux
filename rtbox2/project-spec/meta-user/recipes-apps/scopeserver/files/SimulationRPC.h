@@ -83,7 +83,11 @@ public:
       MSG_XCP_CMD,
       RSP_XCP_SEND_DTO,
       RSP_XCP_SEND_CTO,
-      NOTIFICATION_INIT_ETHERCAT
+      NOTIFICATION_INIT_ETHERCAT,
+      MSG_RESOLVE_HOSTNAME,
+      RSP_RESOLVE_HOSTNAME,
+      NOTIFICATION_INIT_STARTED,
+      MSG_TO_FILE_ROTATE
    };
 
    enum class SimulationStatus {
@@ -187,6 +191,12 @@ public:
    {
       uint8_t mInstance;
       int mCurrentReadBuffer;
+      uint32_t mBufferLength;
+   };
+
+   struct ToFileRotateMsg
+   {
+      uint8_t mInstance;
    };
 
    struct ToFileInfo
@@ -214,15 +224,23 @@ public:
       char mData[1]; // dummy placeholder array of length 1
    };
 
+   struct SampleTimeInfo
+   {
+      double mCore1SampleTime;
+      double mCore2SampleTime;
+      double mCore3SampleTime;
+      double mFpgaSampleTime;
+   };
+
    SimulationRPC(ServerAsync& aServer);
    ~SimulationRPC();
    bool armScope(const struct ArmMessage& aMsg);
-   bool querySimulation(double& aSampleTime, int& aNumScopeSignals, 
-                        int& aNumTuneableParameters, struct VersionType& aLibraryVersion, 
+   bool querySimulation(struct SampleTimeInfo& aSampleTimeInfo, int& aNumScopeSignals,
+                        int& aNumTuneableParameters, struct VersionType& aLibraryVersion,
                         QByteArray& aChecksum, QByteArray& aModelName, int& aAnalogOutVoltageRange,
                         int& aAnalogInVoltageRange, int& aDigitalOutVoltage);
    bool verifyAPIVersion(int& aVersion);
-   bool getScopeBuffer(uint8_t* aData, int aLength, int aBufferIndex, int aOffset);
+   bool getScopeBuffer(void* aData, int aLength, int aBufferIndex, int aOffset);
    bool openConnection();
    bool checkConnection(bool aVerbose=true);
    void shutdownSimulation();
@@ -234,7 +252,7 @@ public:
    inline quint32 getScopeBufferSize() { return mLastReceivedModelResponse.mScopeBufferSize / 2; }
    int getDataCaptureTriggerCount(const QString& aDataCapturePath);
    void getDataCaptureData(const QString& aDataCapturePath, QVariantList& aData, int& aTriggerCount, double& aSampleTime);
-   inline double getSampleTime() const { return mLastReceivedModelResponse.mSampleTime; }
+   inline double getSampleTime() const { return mLastReceivedModelResponse.mBaseSampleTime; }
    void setProgrammableValueData(const QString& aDataCapturePath, const QVariant& aData);
    bool sendRawMessage(const QByteArray& aMessage);
    QStringList getDataCaptureBlocks() const;
@@ -247,19 +265,21 @@ public:
 signals:
    void sendRequest(QByteArray);
    void shutdownRequest();
-   void initCompleteDone();
+   void initStartReceived();
    void simulationStartRequested();
    void simulationStarted();
    void simulationAboutToStop();
    void logMessage(int, QByteArray);
-   void initToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, int aBufferOffset, int aFileType, int aWriteDevice);
+   void initToFileHandler(QString aFileName, QByteArray aModelName, int aWidth, int aNumSamples, 
+                          int aBufferOffset, int aFileType, int aWriteDevice, bool aUseDouble);
 
 public slots:
    void log(QString aMsg);
    void reportError(QString aMsg);
 
 protected slots:
-   void initComplete();
+   void initStarted();
+   void onInitComplete();
    void initEthercat(int);
    void receiveError(QString aError);
    void scopeArmResponse(QByteArray);
@@ -277,10 +297,14 @@ protected:
    bool syncDataCaptureInfo(int aInstance);
    bool syncDataBlockInfos();
    bool setDigitalOut(int aGpio, bool aValue);
+   void syncModelInfos();
 
 private:
    struct QueryModelResponse {
-      double mSampleTime;
+      double mBaseSampleTime;
+      double mFpgaSampleTime;
+      double mCore2SampleTime;
+      double mCore3SampleTime;
       uint32_t mNumScopeSignals;
       uint32_t mNumTuneableParameters;
       uint32_t mCorePeriodTicks[3];
@@ -324,7 +348,7 @@ private:
    bool mRtBox3;
    TemperatureControl* mTemperatureControl;
    QByteArray mMessageBuffer;
-   bool mInitComplete;
+   bool mInitStarted;
    QPointer<PerformanceCounter> mPerformanceCounter;
    bool mWaitForFirstTrigger;
    SimulationStatus mSimulationStatus;
@@ -332,6 +356,8 @@ private:
    uint16_t mHwVersionMajor;
    uint16_t mHwVersionMinor;
    uint8_t mHwVersionRevision;
+   bool mInitComplete;
+   bool mModelQueryDone;
 };
 
 #pragma pack(pop)

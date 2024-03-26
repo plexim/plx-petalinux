@@ -103,7 +103,3 @@ if [ ${BOARD_REV} -ge 1002 ]; then
   echo out > /sys/class/gpio/gpio$((SFP_RS_BASE+13))/direction
 fi
 
-
-# Copy version information to RAM
-/etc/init.d/versionInit.pl
-

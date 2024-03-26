@@ -60,7 +60,9 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
    mReceiver(nullptr),
    mWaitForFirstTrigger(false),
    mSimulationStatus(SimulationStatus::STOPPED),
-   mLastScopeArmTime(std::chrono::steady_clock::now())
+   mLastScopeArmTime(std::chrono::steady_clock::now()),
+   mModelQueryDone(false),
+   mInitComplete(false)
 {
    unsigned thisVersion = static_cast<unsigned>(floor(sqrt(ReleaseInfo::SCOPESERVER_VERSION)*1000+.5));
    mFirmwareVersion.mVersionMajor = thisVersion/1000000;
@@ -143,7 +145,7 @@ bool SimulationRPC::openConnection(bool aVerbose)
       connect(thread, SIGNAL (started()), p, SLOT (process()));      connect(p, SIGNAL (finished()), thread, SLOT (quit()));
       connect(p, SIGNAL (finished()), p, SLOT (deleteLater()));
       connect(thread, SIGNAL (finished()), thread, SLOT (deleteLater()));
-      connect(p, &RPCReceiver::initComplete, this, &SimulationRPC::syncModelInfos);
+      connect(p, &RPCReceiver::initComplete, this, &SimulationRPC::onInitComplete);
       connect(p, &RPCReceiver::scopeArmResponse, this, &SimulationRPC::scopeArmResponse);
       connect(p, &RPCReceiver::tuneParameterResponse, this, &SimulationRPC::tuneParameterResponse);
       connect(p, &RPCReceiver::sigLog, this, &SimulationRPC::log);
@@ -289,6 +291,9 @@ bool SimulationRPC::doQuerySimulation()
       log("Can't map memory for tx buffer.");
       return false;
    }
+   mModelQueryDone = true;
+   if (mInitComplete)
+      syncModelInfos();
    return true;
 }
 
@@ -431,8 +436,8 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    mDataCaptureMap.clear();
    mProgrammableValueConstMap.clear();
    mSimulationStatus = SimulationStatus::STOPPED;
-   //QProcess::execute("/sbin/modprobe", QStringList() << "zynq_remoteproc");
-   //QProcess::execute("/sbin/modprobe", QStringList() << "virtio_rpmsg_bus");
+   mModelQueryDone = false;
+   mInitComplete = false;
    QProcess::execute("/sbin/modprobe", QStringList() << "rpmsg_user_dev_driver");
    setRunning(true);
    mModelTimeStamp = QDateTime::currentDateTime().toTime_t();
@@ -794,6 +799,7 @@ bool SimulationRPC::syncDataBlockInfos()
                int mWidth;
                int mBufferOffset;
                int mFileNameLength;
+               int mUseDouble;
             };
 
             struct ToFileInfoResponse rsp;
@@ -806,7 +812,9 @@ bool SimulationRPC::syncDataBlockInfos()
             volatile char* fileName = (volatile char*)getToFileBuffer();
             const QString fileNameStr((const char*)fileName);
             log(QString("Registering ToFile block with file name: %1").arg(fileNameStr));
-            emit initToFileHandler(fileNameStr, mLastReceivedModelName, rsp.mWidth, rsp.mNumSamples, rsp.mBufferOffset, rsp.mFileType);
+            emit initToFileHandler(fileNameStr, mLastReceivedModelName, rsp.mWidth, 
+                                   rsp.mNumSamples, rsp.mBufferOffset, rsp.mFileType,
+                                   rsp.mUseDouble);
          }
       }
    }
@@ -1019,6 +1027,15 @@ bool SimulationRPC::syncDigitalInputConfig()
    return true;
 }
 
+
+void SimulationRPC::onInitComplete()
+{
+   mInitComplete = true;
+   if (mModelQueryDone)
+      syncModelInfos();
+}
+
+
 void SimulationRPC::syncModelInfos()
 {
    syncDataBlockInfos();
@@ -1031,12 +1048,13 @@ void SimulationRPC::syncModelInfos()
    msg->mMsg = MSG_START_SIMULATION;
    msg->mMsgLength = buf.size();
    msg->mStartOnFirstTrigger = mWaitForFirstTrigger;
+   msg->mHwVersionMajor = mHwVersionMajor;
+   msg->mHwVersionMinor = mHwVersionMinor;
+   msg->mIsRtBoxCE = QFile::exists("/sys/bus/i2c/devices/i2c-1") ? 0 : 1;
    struct timeval tv;
    gettimeofday(&tv, NULL);
    msg->mStartSec = tv.tv_sec;
    msg->mStartUSec = tv.tv_usec;
-   msg->mHwVersionMajor = mHwVersionMajor;
-   msg->mHwVersionMinor = mHwVersionMinor;
    emit sendRequest(buf);
 }
 

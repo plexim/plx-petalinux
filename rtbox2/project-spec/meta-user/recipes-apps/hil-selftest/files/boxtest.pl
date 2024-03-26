@@ -263,23 +263,6 @@ sub disableAnalogOuts()
    #`poke 0x43c00004 0`;
 }
 
-sub setAnalogInputScale($$)
-{
-   my ($idx, $val) = @_;
-   my $scaledVal = $val * $scaleCorrection * 10/32767;
-   my $intVal = unpack("L", pack("f", $scaledVal));
-   my $addr = 0x43C90000 + $idx * 4;
-   `poke $addr, $intVal`;
-}
-
-sub setAnalogInputOffset($$)
-{
-   my ($idx, $val) = @_;
-   my $intVal = unpack("L", pack("f", $val));
-   my $addr = 0x43CA0000 + $idx * 4;
-   `poke $addr, $intVal`;
-}
-
 sub setAnalogOutput($$)
 {
    my @idxLookup = (17, 0, 20, 1, 21, 4, 24, 5, 25, 8, 28, 9, 29, 12, 32, 13, 19, 2, 22, 3, 23, 6, 26, 7, 27, 10, 30, 11, 31, 14, 34, 15, 33, 16, 35, 18);
@@ -562,80 +545,6 @@ sub testAnalogIOs()
    return $errorFlag
 }
 
-sub testAnalogInputScaleOffset()
-{
-   my $errorFlag = 0;
-   my @idx = (0..15);
-   my $i;
-
-   exportPin(993); # Analog input voltage
-   makeOutput(993);
-   setDigitalOutput(993, 0); # +-10V
-   print "Testing analog input scale ...";
-   enableAnalogOuts();
-   for $i (@idx)
-   {
-      setAnalogOutput($i, 1);
-      setAnalogInputScale($i, $i/3);
-   }
-   usleep(10);
-   for $i (@idx)
-   {
-      my $setValue = $i/$idx[-1]*5;
-      my $input = getAveragedAnalogInput($i, 3);
-      if (abs($input - $setValue) > 0.03)
-      {
-         print "\nERROR: Input $i is $input Volt, expected $setValue Volt";
-         $errorFlag = 1;
-      }
-   }   
-   if ($errorFlag)
-   {
-      print " FAIL\n";
-   }
-   else
-   {
-      print(" ok\n");
-   }
-
-   print "Testing analog input offset ...";
-   my $errorFlagOffset = 0;
-   for $i (@idx)
-   {
-      setAnalogOutput($i, 0);
-      setAnalogInputScale($i, 1);
-      setAnalogInputOffset($i, $i/$idx[-1]*10);
-   }
-   usleep(10);
-   for $i (@idx)
-   {
-      my $setValue = $i/1.5;
-      my $input = getAveragedAnalogInput($i, 3);
-      if (abs($input - $setValue) > 0.03)
-      {
-         print "\nERROR: Input $i is $input Volt, expected $setValue Volt";
-         $errorFlagOffset = 1;
-      }
-   }
-   for $i (@idx)
-   {
-      setAnalogInputScale($i, 1);
-      setAnalogInputOffset($i, 0);
-   }
-   disableAnalogOuts();
-   unexportPin(993);
-   if ($errorFlagOffset)
-   {
-      print " FAIL\n";
-   }
-   else
-   {
-      print " ok\n";
-   }
-   return $errorFlag || $errorFlagOffset;
-}
-
-
 sub testSFP
 {
    my $errorFlag = 0;
@@ -687,6 +596,7 @@ sub testEthernet
    {
       `/sbin/ip netns exec ns_server /sbin/ip link set dev eth1 up`;
    }
+   `/sbin/ip netns exec ns_server /usr/bin/phy-reset eth1`;
    `/sbin/ip netns add ns_client`;
    `/sbin/ip link set eth2 netns ns_client`;
    `/sbin/ip netns exec ns_client /sbin/ip addr add dev eth2 192.168.101.2/24`;
@@ -695,7 +605,8 @@ sub testEthernet
    {
       `/sbin/ip netns exec ns_client /sbin/ip link set dev eth2 up`;
    }
-   sleep(1);
+   `/sbin/ip netns exec ns_client /usr/bin/phy-reset eth2`;
+   sleep(2);
    `/sbin/ip netns exec ns_client /bin/ping -c 1 192.168.101.1`;
    if ($?)
    {
@@ -1009,7 +920,6 @@ if ($rtbox3)
    $errorFlag |= testPullUps(1);
 }
 $errorFlag |= testAnalogIOs();
-#$errorFlag |= testAnalogInputScaleOffset();
 $errorFlag |= testSFP();
 $errorFlag |= testCAN();
 $errorFlag |= testResolver(0);

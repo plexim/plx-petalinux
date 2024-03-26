@@ -23,7 +23,7 @@
 struct {
 	struct jailhouse_system header;
 	__u64 cpus[1];
-	struct jailhouse_memory mem_regions[12];
+	struct jailhouse_memory mem_regions[11];
 	struct jailhouse_irqchip irqchips[1];
 	struct jailhouse_pci_device pci_devices[1];
 	__u32 allowed_sip_ids[16];
@@ -83,21 +83,21 @@ struct {
 				JAILHOUSE_MEM_EXECUTE,
 		},
 		/* RAM for inmates */ {
-			.phys_start = 0x802d00000,
-			.virt_start = 0x802d00000,
-			.size =        0x2d300000,
+			.phys_start = 0x800000000,
+			.virt_start = 0x800000000,
+			.size =        0x30000000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_EXECUTE,
 		},
 		/* IVSHMEM state region for 00:00.0 */ {
-			.phys_start = 0x800400000,
-			.virt_start = 0x800400000,
+			.phys_start = 0x87c000000,
+			.virt_start = 0x87c000000,
 			.size =            0x1000,
 			.flags = JAILHOUSE_MEM_READ,
 		},
 		/* IVSHMEM shared memory region for 00:00.0 */ {
-			.phys_start = 0x800401000,
-			.virt_start = 0x800401000,
+			.phys_start = 0x87c001000,
+			.virt_start = 0x87c001000,
 			.size =       0x0028ff000, // 0x2000000 Scope buffer
                                                    // 0x0800000 ToFile buffer
                                                    // 0x0041000 MsgQueue
@@ -115,18 +115,11 @@ struct {
 				JAILHOUSE_MEM_IO,
 		},
 		/* AXI Peripherals */ {
-			.phys_start = 0x80001000,
-			.virt_start = 0x80001000,
-			.size =          0x8f000,
+			.phys_start = 0x80000000,
+			.virt_start = 0x80000000,
+			.size =         0x100000,
 			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
 				JAILHOUSE_MEM_IO,
-		},
-		/* DAC8822 Driver */ {
-			.phys_start = 0x80000000,
-			.virt_start = 0x82000000,
-			.size = 0x1000,
-			.flags = JAILHOUSE_MEM_READ | JAILHOUSE_MEM_WRITE |
-				JAILHOUSE_MEM_IO | JAILHOUSE_MEM_ROOTSHARED,
 		},
 		/* r5_1_tcm_a */ {
 			.phys_start = 0xFFE90000,

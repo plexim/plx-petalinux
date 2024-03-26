@@ -119,8 +119,9 @@ void ServerAsync::acceptConnection()
       int analogOutVoltageRange;
       int analogInVoltageRange;
       int digitalOutVoltage;
-      if (!mSimulation->querySimulation(mSampleTime, mNumScopeSignals, 
-                                        mNumTuneableParameters, mExeVersion, 
+      struct SimulationRPC::SampleTimeInfo sampleTime;
+      if (!mSimulation->querySimulation(sampleTime, mNumScopeSignals,
+                                        mNumTuneableParameters, mExeVersion,
                                         mChecksum, mModelName, analogOutVoltageRange,
                                         analogInVoltageRange,digitalOutVoltage))
       {
@@ -128,6 +129,7 @@ void ServerAsync::acceptConnection()
          closeConnection();
          return;
       }
+      mSampleTime = sampleTime.mCore1SampleTime;
       connect(mTcpSocket, SIGNAL(readyRead()), this, SLOT(readyRead()));
       readyRead();
    }
@@ -315,7 +317,7 @@ void ServerAsync::receiveScopeData(const struct SimulationRPC::ArmResponse& aRes
       int32_t mNumActiveSignals;
    };
 
-   static std::vector<uint8_t> buf;
+   static QByteArray buf;
    int newSize = aResp.mLength + aResp.mNumActiveSignals * sizeof(int32_t) + sizeof(struct header);
    if (buf.size() != newSize)
       buf.resize(newSize);

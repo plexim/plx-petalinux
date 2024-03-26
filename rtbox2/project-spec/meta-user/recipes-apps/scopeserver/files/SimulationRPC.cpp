@@ -55,13 +55,15 @@ SimulationRPC::SimulationRPC(ServerAsync& aServer)
    mPageSize(sysconf(_SC_PAGESIZE)),
    mModelTimeStamp(0),
    mReceiver(nullptr),
-   mInitComplete(false),
+   mInitStarted(false),
    mWaitForFirstTrigger(false),
    mSimulationStatus(SimulationStatus::STOPPED),
    mLastScopeArmTime(std::chrono::steady_clock::now()),
    mHwVersionMajor(0),
    mHwVersionMinor(0),
-   mHwVersionRevision(0)
+   mHwVersionRevision(0),
+   mModelQueryDone(false),
+   mInitComplete(false)
 {
    unsigned thisVersion = static_cast<unsigned>(floor(sqrt(ReleaseInfo::SCOPESERVER_VERSION)*1000+.5));
    mFirmwareVersion.mVersionMajor = thisVersion/1000000;
@@ -127,7 +129,8 @@ bool SimulationRPC::openConnection()
       connect(thread, SIGNAL (started()), p, SLOT (process()));      connect(p, SIGNAL (finished()), thread, SLOT (quit()));
       connect(p, SIGNAL (finished()), p, SLOT (deleteLater()));
       connect(thread, SIGNAL (finished()), thread, SLOT (deleteLater()));
-      connect(p, &RPCReceiver::initComplete, this, &SimulationRPC::initComplete);
+      connect(p, &RPCReceiver::initStarted, this, &SimulationRPC::initStarted);
+      connect(p, &RPCReceiver::initComplete, this, &SimulationRPC::onInitComplete);
       connect(p, &RPCReceiver::initEthercat, this, &SimulationRPC::initEthercat);
       connect(p, &RPCReceiver::scopeArmResponse, this, &SimulationRPC::scopeArmResponse);
       connect(p, &RPCReceiver::tuneParameterResponse, this, &SimulationRPC::tuneParameterResponse);
@@ -231,6 +234,9 @@ bool SimulationRPC::doQuerySimulation()
          closeConnection();
          return false;
       }
+      mModelQueryDone = true;
+      if (mInitComplete)
+         syncModelInfos();
    }
    else
       return false;
@@ -239,16 +245,19 @@ bool SimulationRPC::doQuerySimulation()
 }
 
 
-bool SimulationRPC::querySimulation(double& aSampleTime, int& aNumScopeSignals, 
-                                    int& aNumTuneableParameters, 
-                                    struct VersionType& aLibraryVersion, 
+bool SimulationRPC::querySimulation(struct SampleTimeInfo& aSampleTimeInfo, int& aNumScopeSignals,
+                                    int& aNumTuneableParameters,
+                                    struct VersionType& aLibraryVersion,
                                     QByteArray& aChecksum, QByteArray& aModelName,
                                     int& aAnalogOutputVoltageRange, int& aAnalogInputVoltageRange,
                                     int& aDigitalOutputVoltage)
 {
-   if (mLastReceivedModelResponse.mSampleTime == 0.0) // no response received yet
+   if (mLastReceivedModelResponse.mBaseSampleTime == 0.0) // no response received yet
       return false;
-   aSampleTime = mLastReceivedModelResponse.mSampleTime;
+   aSampleTimeInfo.mCore1SampleTime = mLastReceivedModelResponse.mBaseSampleTime;
+   aSampleTimeInfo.mCore2SampleTime = mLastReceivedModelResponse.mCore2SampleTime;
+   aSampleTimeInfo.mCore3SampleTime = mLastReceivedModelResponse.mCore3SampleTime;
+   aSampleTimeInfo.mFpgaSampleTime = mLastReceivedModelResponse.mFpgaSampleTime;
    aNumScopeSignals = mLastReceivedModelResponse.mNumScopeSignals;
    aNumTuneableParameters = mLastReceivedModelResponse.mNumTuneableParameters;
    aLibraryVersion = mLastReceivedLibraryVersion;
@@ -301,11 +310,11 @@ bool SimulationRPC::tuneParameters(QByteArray& aParameters)
 }
 
 
-bool SimulationRPC::getScopeBuffer(uint8_t* aData, int aLength, int aBufferIndex, int aOffset)
+bool SimulationRPC::getScopeBuffer(void* aData, int aLength, int aBufferIndex, int aOffset)
 {
    uint8_t* buf = (uint8_t*)mReceiver->getScopeBuffer() + aBufferIndex * (mLastReceivedModelResponse.mScopeBufferSize / 2);
-   memcpy(aData, buf + aOffset, aLength - aOffset);
-   memcpy(aData + aLength-aOffset, buf, aOffset);
+   memcpy((uint8_t*)aData, buf + aOffset, aLength - aOffset);
+   memcpy((uint8_t*)aData + aLength-aOffset, buf, aOffset);
    return true;
 }
 
@@ -374,17 +383,19 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    QByteArray inputConfig(32, 0);
    mDataCaptureMap.clear();
    mProgrammableValueConstMap.clear();
-   mInitComplete = false;
+   mInitStarted = false;
    mWaitForFirstTrigger = aWaitForFirstTrigger;
    mSimulationStatus = SimulationStatus::STOPPED;
    mMessageBuffer.clear();
+   mInitComplete = false;
+   mModelQueryDone = false;
 
    if (!openConnection())
    {
       return QString("Cannot initialize communication.");
    }
    QEventLoop loop;
-   connect(this, &SimulationRPC::initCompleteDone, &loop, &QEventLoop::quit);
+   connect(this, &SimulationRPC::initStartReceived, &loop, &QEventLoop::quit);
    connect(mReceiver, &RPCReceiver::simulationError, &loop, &QEventLoop::quit);
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "load" << "1" << "/usr/lib/firmware/firmware");
    QProcess::execute("/usr/sbin/jailhouse", QStringList() << "cell" << "start" << "1");
@@ -394,12 +405,12 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    mModelTimeStamp = QDateTime::currentDateTime().toTime_t();
 
    QTimer::singleShot(2000, &loop, &QEventLoop::quit);
-   if (!mInitComplete && mSimulationStatus != SimulationStatus::ERROR)
+   if (!mInitStarted && mSimulationStatus != SimulationStatus::ERROR)
    {
       // Wait gracefully for 2 seconds until model startup is completed
       loop.exec();
    }
-   if (mInitComplete && checkConnection(false))
+   if (mInitStarted && checkConnection(false))
    {
       doQuerySimulation();
       if ((mFirmwareVersion.mVersionMajor != mLastReceivedLibraryVersion.mVersionMajor) ||
@@ -412,22 +423,6 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
                    .arg(mFirmwareVersion.mVersionMajor)
                    .arg(mFirmwareVersion.mVersionMinor));
       }
-      mPerformanceCounter->init(mReceiver->getCpuPerformanceCounters(), mLastReceivedModelResponse.mCorePeriodTicks);
-      syncDataBlockInfos();
-
-      QByteArray buf;
-      buf.resize(sizeof(struct SimulationStartMsg));
-      struct SimulationStartMsg* msg = (struct SimulationStartMsg*)buf.data();
-      msg->mMsg = MSG_START_SIMULATION;
-      msg->mMsgLength = buf.size();
-      msg->mStartOnFirstTrigger = mWaitForFirstTrigger;
-      struct timeval tv;
-      gettimeofday(&tv, NULL);
-      msg->mStartSec = tv.tv_sec;
-      msg->mStartUSec = tv.tv_usec;
-      msg->mHwVersionMajor = mHwVersionMajor;
-      msg->mHwVersionMinor = mHwVersionMinor;
-      emit sendRequest(buf);
    }
    else if (mSimulationStatus == SimulationStatus::ERROR)
       return QString("Simulation startup failed.");
@@ -440,6 +435,33 @@ QString SimulationRPC::startSimulation(bool aWaitForFirstTrigger)
    return QString();
 }
 
+void SimulationRPC::onInitComplete()
+{
+   mInitComplete = true;
+   if (mModelQueryDone)
+      syncModelInfos();
+}
+
+void SimulationRPC::syncModelInfos()
+{
+   log("Sync model infos");
+   mPerformanceCounter->init(mReceiver->getCpuPerformanceCounters(), mLastReceivedModelResponse.mCorePeriodTicks);
+   syncDataBlockInfos();
+
+   QByteArray buf;
+   buf.resize(sizeof(struct SimulationStartMsg));
+   struct SimulationStartMsg* msg = (struct SimulationStartMsg*)buf.data();
+   msg->mMsg = MSG_START_SIMULATION;
+   msg->mMsgLength = buf.size();
+   msg->mStartOnFirstTrigger = mWaitForFirstTrigger;
+   struct timeval tv;
+   gettimeofday(&tv, NULL);
+   msg->mStartSec = tv.tv_sec;
+   msg->mStartUSec = tv.tv_usec;
+   msg->mHwVersionMajor = mHwVersionMajor;
+   msg->mHwVersionMinor = mHwVersionMinor;
+   emit sendRequest(buf);
+}
 
 bool SimulationRPC::checkRunning()
 {
@@ -633,7 +655,8 @@ bool SimulationRPC::syncDataBlockInfos()
             {
                .mInstance = rsp->mInstance,
                .mWidth = rsp->mWidth,
-               .mNumSamples = rsp->mNumSamples
+               .mNumSamples = rsp->mNumSamples,
+               .mSampleTime = 0
             };
             if (buffer.size() == (int)sizeof(struct DataCaptureInfoResponseV2))
                entry.mSampleTime = rsp->mSampleTime;
@@ -714,6 +737,7 @@ bool SimulationRPC::syncDataBlockInfos()
                int mWidth;
                int mBufferOffset;
                int mFileNameLength;
+               int mUseDouble;
             };
 
             struct ToFileInfoResponse rsp;
@@ -726,7 +750,8 @@ bool SimulationRPC::syncDataBlockInfos()
             volatile char* fileName = (volatile char*)mReceiver->getToFileBuffer();
             const QString fileNameStr((const char*)fileName);
             log(QString("Registering ToFile block with file name: %1").arg(fileNameStr));
-            emit initToFileHandler(fileNameStr, mLastReceivedModelName, rsp.mWidth, rsp.mNumSamples, rsp.mBufferOffset, rsp.mFileType, rsp.mWriteDevice);
+            emit initToFileHandler(fileNameStr, mLastReceivedModelName, rsp.mWidth, rsp.mNumSamples, 
+                                   rsp.mBufferOffset, rsp.mFileType, rsp.mWriteDevice, rsp.mUseDouble);
          }
       }
    }
@@ -924,10 +949,10 @@ void SimulationRPC::logMessageForWeb(int aFlags, QByteArray aMessage)
    mMessageBuffer += aMessage;
 }
 
-void SimulationRPC::initComplete()
+void SimulationRPC::initStarted()
 {
-   mInitComplete = true;
-   emit initCompleteDone();
+   mInitStarted = true;
+   emit initStartReceived();
 }
 
 void SimulationRPC::initEthercat(int aUseEthercat)
